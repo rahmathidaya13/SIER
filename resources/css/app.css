@@ -1,3 +1,9 @@
 @import url('bootstrap');
 @import url('./partial.css');
 @import url('./xpart.css');
+@import url('./button.css');
+@import url('./badge.css');
+@import url('./alert.css');
+@import url('./table.css');
+@import url('./forminput.css');
+@import url('./pagination.css');

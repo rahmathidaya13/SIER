@@ -85,10 +85,9 @@ const visibleHeaders = computed(() => props.headers.filter(col => col.visible !=
 </script>
 <template>
     <div class="table-wrapper">
-
         <slot name="filter-action" />
         <div class="table-responsive">
-            <table class="table table-custom table-hover align-middle">
+            <table class="table table-hover align-middle">
                 <thead>
                     <tr>
                         <th v-if="markAll" class="text-center" style="width: 50px;">

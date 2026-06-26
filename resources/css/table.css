@@ -1,0 +1,81 @@
+/* A. Kerangka Utama Tabel Wrapper */
+.table-wrapper {
+    background: #ffffff;
+    border: 1px solid #f0e6da;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+}
+
+.table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    margin-bottom: 0;
+}
+
+/* B. Desain Header Tabel (The Th-Glow) */
+.table thead th {
+    background-color: #f8fafc !important;
+    color: #475569 !important;
+    font-weight: 600 !important;
+    font-size: 0.850rem !important;
+    letter-spacing: 0.75px !important;
+    padding: 1rem 1rem !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    text-transform: uppercase;
+}
+
+/* C. Desain Baris & Sel Data (Table Body) */
+.table tbody td {
+    padding: 1.1rem 1rem !important;
+    color: #334155 !important;
+    font-size: 1rem !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    background-color: #ffffff;
+    vertical-align: middle !important;
+}
+
+
+
+/* Efek Zebra Garis Halus (Optional tapi dianjurkan untuk data padat) */
+.table-striped>tbody>tr:nth-of-type(odd)>* {
+    background-color: #f8fafc !important;
+    box-shadow: none !important;
+}
+
+/* Kolom Nomor Urut yang Rapi */
+.td-number {
+    width: 60px;
+    text-align: center;
+    color: #94a3b8 !important;
+    font-feature-settings: "tnum";
+}
+
+/* Timpa warna hover default bootstrap agar sesuai dengan palet kita */
+.table-hover>tbody>tr:hover>* {
+    background-color: #f8fafc;
+    transition: background-color 0.15s ease-in-out;
+}
+
+/* Sorotan Khusus untuk Baris Tabel (Cth: Prospek Baru vs Lama) */
+.tr-highlight-primary>td {
+    background-color: var(--c-primary-subtle) !important;
+}
+
+.tr-highlight-success>td {
+    background-color: var(--c-success-subtle) !important;
+}
+
+.tr-highlight-warning>td {
+    background-color: var(--c-warning-subtle) !important;
+}
+
+.tr-highlight-danger>td {
+    background-color: var(--c-danger-subtle) !important;
+}
+
+/* Kelas untuk membuat baris yang non-aktif/terhapus terlihat pudar */
+.tr-dimmed {
+    opacity: 0.55;
+    background-color: #f1f5f9;
+}

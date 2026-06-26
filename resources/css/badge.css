@@ -1,0 +1,35 @@
+.badge-soft-primary {
+    background-color: var(--c-primary-subtle);
+    color: var(--c-primary);
+    border: 1px solid rgba(255, 94, 108, 0.2);
+}
+
+.badge-soft-success {
+    background-color: var(--c-success-subtle);
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.badge-soft-warning {
+    background-color: var(--c-warning-subtle);
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.badge-soft-danger {
+    background-color: var(--c-danger-subtle);
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.badge-soft-info {
+    background-color: var(--c-info-subtle);
+    color: #075985;
+    border: 1px solid #bae6fd;
+}
+
+.badge-soft-dark {
+    background-color: var(--c-dark-subtle);
+    color: var(--c-dark);
+    border: 1px solid #cbd5e1;
+}

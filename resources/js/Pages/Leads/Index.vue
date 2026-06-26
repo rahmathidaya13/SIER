@@ -1,9 +1,94 @@
 <script setup>
-import { Head } from '@inertiajs/vue3';
+import { Form, Head, usePage, router } from '@inertiajs/vue3';
+import { onMounted, ref } from 'vue';
+import { useFilter } from '@/Composables/useFilter';
+import { useConfirm } from "@/Composables/useConfirm"
+import { highlight } from "@/Helpers/Highlight";
+import FormModal from './FormModal.vue';
 const props = defineProps({
-    leads: Object
-})
-console.log(props.leads);
+    leads: Object,
+    filters: Object,
+    channels: Array,
+    products: Array
+});
+
+const {
+    filters,
+    isLoading,
+} = useFilter({
+    routeName: "leads.index",
+    initialFilters: {
+        keyword: props.filters.keyword ?? '',
+        limit: props.filters.limit ?? 10,
+        status: props.filters.status ?? 'all',
+        temperature: props.filters.temperature ?? 'all',
+        order_by: props.filters.order_by ?? 'latest',
+        page: props.filters.page ?? 1,
+    },
+    watchFields: [
+        'keyword',
+        'limit',
+        'status',
+        'temperature',
+        'order_by',
+    ],
+    only: ['leads', 'filters', 'channels', 'products'],
+    debounceTime: 500,
+});
+const header = [
+    {
+        label: "No",
+        key: "__index",
+        attrs: {
+            class: 'text-center td-number',
+        },
+    },
+    {
+        label: "PROSPEK & KONTAK",
+        key: "prospect",
+    },
+    {
+        label: "SUMBER & PAKET",
+        key: "source",
+    },
+    {
+        label: "SUHU",
+        key: "temperature",
+        attrs: {
+            class: 'text-center',
+        },
+    },
+    {
+        label: "STATUS",
+        key: "status",
+        attrs: {
+            class: 'textt-center',
+        },
+    },
+    {
+        label: "JADWAL FOLL-UP",
+        key: "price",
+        attrs: {
+            class: 'text-center',
+        },
+    },
+
+    {
+        label: "Aksi",
+        key: "actions",
+        attrs: {
+            class: 'text-center'
+        },
+    },
+];
+
+const showModal = ref(false);
+const selectedData = ref(null);
+const loadDataById = ref(null);
+const openCreateModal = () => {
+    showModal.value = true;
+    selectedData.value = {};
+}
 </script>
 <template>
 
@@ -13,136 +98,89 @@ console.log(props.leads);
             <div class="row g-3">
                 <div class="col-12">
                     <callout />
-                    <div class="card p-4">
-                        <div class="card-header">
+                    <div class="card border-0 rounded-4 overflow-hidden">
+
+                        <div class="card-header p-4 bg-white">
                             <div
-                                class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                                class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                                 <div>
-                                    <h5 class="fw-bold mb-0">Database Prospek (Leads)</h5>
+                                    <h5 class="fw-bold mb-1">Database Prospek (Leads)</h5>
                                     <small class="text-muted">Prospek yang belum melakukan pembayaran deal</small>
                                 </div>
-                                <button class="btn btn-celestial px-3 py-2" data-bs-toggle="modal"
-                                    data-bs-target="#modalAddLead">
+                                <button @click.prevent="openCreateModal" class="btn btn-c-primary px-4 py-2">
                                     <i class="bi bi-plus-lg me-1"></i> Tambah Lead Baru
                                 </button>
                             </div>
                         </div>
 
-                        <div class="row g-2 mb-3 bg-light p-2.5 rounded-3 border">
-                            <div class="col-12 col-md-4">
-                                <input type="text" id="filter-lead-name" class="form-control form-control-sm border-0"
-                                    placeholder="🔍 Cari nama klien/instansi...">
+                        <div class="row p-3 g-2 align-items-center">
+                            <div class="col-12 col-md-12 col-lg-12 col-xl-6">
+                                <div class="position-relative">
+                                    <i class="bi bi-search input-icon-left"></i>
+                                    <input-text ref="keywordRef" :isValid="false" v-model="filters.keyword"
+                                        inputClass="input-fixed-height input-height-1 rounded-pill"
+                                        placeholder="Cari nama...." />
+                                </div>
                             </div>
-                            <div class="col-6 col-md-4">
-                                <select id="filter-lead-temp" class="form-select form-select-sm border-0 fw-medium">
-                                    <option value="ALL">🟣 Semua Suhu Prospek</option>
-                                    <option value="HOT">🔥 Suhu: HOT (Siap Bayar)</option>
-                                    <option value="WARM">⚡ Suhu: WARM (Tanya Detail)</option>
-                                    <option value="COLD">❄️ Suhu: COLD (Hanya Kepo)</option>
-                                </select>
+                            <div class="col-xl-2 col-3 col-md-3 col-lg-3">
+                                <select-input :isValid="false" name="temperature" v-model="filters.temperature"
+                                    text="Suhu Prospek" :options="[
+                                        { label: 'Semua Suhu Prospek', value: 'all' },
+                                        { label: 'Suhu: HOT (Siap Bayar)', value: 'hot' },
+                                        { label: 'Suhu: WARM (Tanya Detail)', value: 'warm' },
+                                        { label: 'Suhu: COLD (Hanya Kepo)', value: 'cold' }
+                                    ]" />
                             </div>
-                            <div class="col-6 col-md-4 text-md-end align-self-center">
-                                <span class="text-muted small">Total: <b>3</b> Prospek aktif</span>
+                            <div class="col-xl-2 col-3 col-md-3 col-lg-3">
+                                <select-input :isValid="false" name="status" v-model="filters.status"
+                                    text="Status Prospek" :options="[
+                                        { label: 'Semua Status Prospek', value: 'all' },
+                                        { label: 'New', value: 'new' },
+                                        { label: 'Follow Up', value: 'follow_up' },
+                                        { label: 'closed won', value: 'closed_won' },
+                                        { label: 'closed lost', value: 'closed_lost' }
+                                    ]" />
                             </div>
+                            <div class="col-xl-1 col-3 col-md-3 col-lg-3">
+                                <select-input :isValid="false" name="limit" v-model="filters.limit"
+                                    text="Pilih Batas Data" :options="[
+                                        { label: '10 Data', value: 10 },
+                                        { label: '25 Data', value: 25 },
+                                        { label: '50 Data', value: 50 },
+                                        { label: '100 Data', value: 100 },
+                                    ]" />
+                            </div>
+                            <div class="col-xl-1 col-3 col-md-3 col-lg-3">
+                                <select-input :isValid="false" name="sort_order" v-model="filters.sort_order"
+                                    text="Pilih Urutan" :options="[
+                                        { label: 'Terbaru', value: 'latest' },
+                                        { label: 'Terlama', value: 'oldest' }
+                                    ]" />
+                            </div>
+
                         </div>
 
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle" id="leads-table">
-                                <thead class="bg-light text-muted small">
-                                    <tr>
-                                        <th scope="col" style="width: 40px;">#</th>
-                                        <th scope="col">PROSPEK</th>
-                                        <th scope="col">PRODUK MINAT</th>
-                                        <th scope="col">SUHU</th>
-                                        <th scope="col">TGL MASUK</th>
-                                        <th scope="col">NEXT FOLLOW-UP</th>
-                                        <th scope="col" class="text-end">AKSI</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="small">
-                                    <tr data-temp="HOT">
-                                        <td class="text-muted">1</td>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="client-avatar bg-danger-subtle text-danger me-2">HB</div>
-                                                <div>
-                                                    <h6 class="mb-0 fw-bold">Hendra Budi</h6>
-                                                    <span class="text-muted small">0812-9988-1122</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="fw-medium">Paket Enterprise VIP</td>
-                                        <td><span class="badge bg-danger">🔥 HOT</span></td>
-                                        <td>12 Jun 2026</td>
-                                        <td><span class="badge bg-warning-subtle text-dark border">Besok Pagi</span>
-                                        </td>
-                                        <td class="text-end">
-                                            <button class="btn btn-sm btn-outline-success me-1 py-1"
-                                                onclick="konversiClosing(this)" title="Deal! Jadikan Closing"><i
-                                                    class="bi bi-check-circle-fill"></i></button>
-                                            <button class="btn btn-sm btn-light me-1" onclick="editData('Hendra Budi')"
-                                                title="Edit"><i class="bi bi-pencil"></i></button>
-                                            <button class="btn btn-sm btn-light text-danger btn-delete-row"
-                                                title="Hapus"><i class="bi bi-trash3"></i></button>
-                                        </td>
-                                    </tr>
-                                    <tr data-temp="WARM">
-                                        <td class="text-muted">2</td>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="client-avatar bg-warning-subtle text-warning me-2">PT</div>
-                                                <div>
-                                                    <h6 class="mb-0 fw-bold">PT. Angkasa Jaya</h6>
-                                                    <span class="text-muted small">0857-4433-9900</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="fw-medium">Paket Premium Pro</td>
-                                        <td><span class="badge bg-warning text-dark">⚡ WARM</span></td>
-                                        <td>10 Jun 2026</td>
-                                        <td><span class="text-muted">18 Jun 2026</span></td>
-                                        <td class="text-end">
-                                            <button class="btn btn-sm btn-outline-success me-1 py-1"
-                                                onclick="konversiClosing(this)" title="Deal! Jadikan Closing"><i
-                                                    class="bi bi-check-circle-fill"></i></button>
-                                            <button class="btn btn-sm btn-light me-1"
-                                                onclick="editData('PT. Angkasa Jaya')" title="Edit"><i
-                                                    class="bi bi-pencil"></i></button>
-                                            <button class="btn btn-sm btn-light text-danger btn-delete-row"
-                                                title="Hapus"><i class="bi bi-trash3"></i></button>
-                                        </td>
-                                    </tr>
-                                    <tr data-temp="COLD">
-                                        <td class="text-muted">3</td>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="client-avatar bg-info-subtle text-info me-2">RN</div>
-                                                <div>
-                                                    <h6 class="mb-0 fw-bold">Ibu Ratna</h6>
-                                                    <span class="text-muted small">0811-2233-4455</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="fw-medium">Paket Basic</td>
-                                        <td><span class="badge bg-info text-white">❄️ COLD</span></td>
-                                        <td>01 Jun 2026</td>
-                                        <td><span class="text-danger small fw-medium">Terlewat</span></td>
-                                        <td class="text-end">
-                                            <button class="btn btn-sm btn-outline-success me-1 py-1"
-                                                onclick="konversiClosing(this)" title="Deal! Jadikan Closing"><i
-                                                    class="bi bi-check-circle-fill"></i></button>
-                                            <button class="btn btn-sm btn-light me-1" onclick="editData('Ibu Ratna')"
-                                                title="Edit"><i class="bi bi-pencil"></i></button>
-                                            <button class="btn btn-sm btn-light text-danger btn-delete-row"
-                                                title="Hapus"><i class="bi bi-trash3"></i></button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="card-body p-0">
+                            <table-wrapper :loader="isLoading" loaderText="Sedang memuat data..." :headers="header"
+                                :items="leads?.data" row-key="product_id"
+                                @update:selected="(val) => selectedData = val">
+
+                                <template #empty>
+                                    <div class="text-center py-5">
+                                        <i class="bi bi-funnel fa-3x text-muted opacity-25 mb-3 d-block"></i>
+                                        <h6 class="text-muted fw-bold">Pipeline Anda Masih Kosong</h6>
+                                        <p class="text-muted small mb-0">Klik tombol "Tambah Lead Baru" di pojok kanan
+                                            atas untuk memasukkan lead pertama.</p>
+                                    </div>
+                                </template>
+
+
+                            </table-wrapper>
                         </div>
                     </div>
                 </div>
             </div>
+            <FormModal :leads="selectedData" :show="showModal" @update:show="showModal = $event" />
         </template>
     </app-layout>
 </template>

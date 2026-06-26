@@ -136,7 +136,7 @@ const togglePasswordVisibilty = () => {
                 <template #body>
 
                     <div v-if="form.errors.unauthorized_action"
-                        class="alert alert-danger d-flex justify-content-between align-items-center" role="alert">
+                        class="alert alert-c-danger d-flex justify-content-between align-items-center" role="alert">
                         <div class="d-flex align-items-center gap-2 fw-semibold">
                             <i class="fas fa-exclamation-triangle"></i>
                             {{ form.errors.unauthorized_action }}

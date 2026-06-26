@@ -1,0 +1,249 @@
+.btn {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn:active {
+    transform: scale(0.950);
+}
+
+.btn-c-primary {
+    background-color: var(--c-primary);
+    color: white;
+    border: none;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.btn-c-primary:hover {
+    background-color: var(--c-primary-hover);
+    color: white;
+}
+
+.btn-c-primary:active,
+.btn-c-primary.active,
+.btn-c-primary.show {
+    background-color: var(--c-primary-active) !important;
+    color: white !important;
+}
+
+.btn-c-primary:disabled,
+.btn-c-primary.disabled,
+.btn-c-primary[disabled] {
+    background-color: var(--c-slate-disabled);
+    color: white;
+    border: none;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.btn-gradient-primary {
+    background: var(--c-gradient-primary);
+    color: white;
+    border: none;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.btn-c-success {
+    background-color: var(--c-success);
+    color: white;
+    border: none;
+    font-weight: 600;
+    border-radius: 15px;
+    transition: 0.2s;
+}
+
+.btn-c-success:hover {
+    background-color: var(--c-success-hover);
+    color: white;
+}
+
+.btn-c-success:active,
+.btn-c-success.active,
+.btn-c-success.show {
+    background-color: var(--c-success-active) !important;
+    color: white !important;
+}
+
+.btn-c-success:disabled,
+.btn-c-success.disabled,
+.btn-c-success[disabled] {
+    background-color: var(--c-slate-disabled);
+    color: white;
+    border: none;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.btn-c-info {
+    background-color: var(--c-info);
+    color: white;
+    border: none;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.btn-c-info:hover {
+    background-color: var(--c-info-hover);
+    color: white;
+}
+
+.btn-c-info:active,
+.btn-c-info.active,
+.btn-c-info.show {
+    background-color: var(--c-info-active) !important;
+    color: white !important;
+}
+
+.btn-c-info:disabled,
+.btn-c-info.disabled,
+.btn-c-info[disabled] {
+    background-color: var(--c-slate-disabled);
+    color: white;
+    border: none;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.btn-c-warning {
+    background-color: var(--c-warning);
+    color: #ffffff;
+    border: none;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.btn-c-warning:hover {
+    background-color: var(--c-warning-hover);
+    color: #ffffff;
+}
+
+.btn-c-warning:active,
+.btn-c-warning.active,
+.btn-c-warning.show {
+    background-color: var(--c-warning-active) !important;
+    color: white !important;
+}
+
+.btn-c-warning:disabled,
+.btn-c-warning.disabled,
+.btn-c-warning[disabled] {
+    background-color: var(--c-slate-disabled);
+    color: white;
+    border: none;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.btn-c-danger {
+    background-color: var(--c-danger);
+    color: white;
+    border: none;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.btn-c-danger:hover {
+    background: var(--c-danger-hover);
+    color: white;
+}
+
+.btn-c-danger:active,
+.btn-c-danger.active,
+.btn-c-danger.show {
+    background-color: var(--c-danger-active) !important;
+    color: white !important;
+}
+
+.btn-c-danger:disabled,
+.btn-c-danger.disabled,
+.btn-c-danger[disabled] {
+    background-color: var(--c-slate-disabled);
+    color: white;
+    border: none;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.btn-c-slate {
+    background-color: var(--c-slate);
+    color: white;
+    border: none;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.btn-c-slate:hover {
+    background-color: var(--c-slate-hover);
+    color: white;
+}
+
+.btn-light:active,
+.btn-light.active,
+.btn-c-slate:active,
+.btn-c-slate.active,
+.btn-c-slate.show {
+    background-color: var(--c-slate-active) !important;
+    color: white !important;
+}
+
+.btn-c-slate:disabled,
+.btn-c-slate.disabled,
+.btn-c-slate[disabled] {
+    background-color: var(--c-slate-disabled);
+    color: white;
+    border: none;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.btn-action {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    transition: 0.2s;
+}
+
+.btn-action.edit {
+    background: var(--coffee-soft);
+    color: var(--coffee-primary);
+}
+
+.btn-action.edit:hover {
+    background: #e4d3c0;
+}
+
+.btn-action.delete {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.btn-action.delete:hover {
+    background: #ffcdd2;
+}
+
+.btn-action:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.btn-action:disabled:hover {
+    background: var(--coffee-soft);
+    color: var(--coffee-primary);
+}
+
+.btn:focus,
+.btn:focus-visible {
+    box-shadow: none !important;
+}

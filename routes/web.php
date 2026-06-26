@@ -32,10 +32,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 
     Route::controller(HomeController::class)->group(function () {
-        Route::get('/home', action: 'index')->name('home');
+        Route::get('/home',  'index')->name('home');
     });
     Route::controller(LeadController::class)->group(function () {
         Route::get('/leads/list', 'index')->name('leads.index');
+        Route::post('/leads/store', 'store')->name('leads.store');
+        Route::put('/leads/update/{id}', 'update')->name('leads.update');
+        Route::delete('/leads/delete/{id}', 'destroy')->name('leads.delete');
     });
     Route::controller(UserController::class)->group(function () {
         Route::get('/employee/list', 'index')->name('employee.index');

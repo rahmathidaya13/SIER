@@ -1,0 +1,83 @@
+/* A. Base Form Control & Select (Seragam Dasar) */
+.form-control,
+.form-select {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 0.925rem;
+    font-weight: 500;
+    color: var(--c-dark);
+    background-color: #ffffff;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+/* B. Placeholder yang elegan (Tidak terlalu gelap, tidak terlalu hilang) */
+.form-control::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+    font-size: 0.885rem;
+}
+
+/* C. HOVER STATE (Mengajak diklik sebelum disentuh) */
+.form-control:hover:not(:disabled):not([readonly]),
+.form-select:hover:not(:disabled) {
+    border-color: #a2b0c4;
+}
+
+/* D. FOCUS STATE (The Celestial Ring) -> Ini pembunuh utama glow biru! */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--c-primary);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3.5px rgba(255, 94, 108, 0.18);
+    outline: 0;
+}
+
+/* E. DISABLED & READONLY (Terkunci secara visual) */
+.form-control:disabled,
+.form-control[readonly],
+.form-select:disabled {
+    background-color: #f8fafc;
+    border-color: #e2e8f0;
+    color: #64748b;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* F. ERROR STATE (Saat Inertia melempar form.errors) */
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: var(--c-danger);
+    background-image: none;
+}
+
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+    border-color: var(--c-danger);
+    box-shadow: 0 0 0 3.5px rgba(239, 68, 68, 0.18);
+}
+
+
+
+.input-group .input-group-text {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    border-radius: 10px;
+    transition: border-color 0.15s ease-in-out;
+}
+
+.input-group:focus-within .input-group-text {
+    border-color: var(--c-primary);
+    color: var(--c-primary);
+}
+
+.input-group:focus-within .form-control {
+    border-color: var(--c-primary);
+    box-shadow: none;
+}
+
+.input-group:focus-within {
+    box-shadow: 0 0 0 3.5px rgba(255, 94, 108, 0.18);
+    border-radius: 10px;
+}

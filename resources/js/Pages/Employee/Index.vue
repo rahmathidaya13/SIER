@@ -79,7 +79,7 @@ const header = [
         label: "No",
         key: "__index",
         attrs: {
-            class: 'ps-4 py-3 font-medium',
+            class: 'ps-4 py-3 font-medium td-number',
         },
     },
     {
@@ -172,7 +172,7 @@ onMounted(() => {
 </script>
 <template>
 
-    <Head title="Halaman Data Karyawan" />
+    <Head title="Halaman Data Pegawai" />
     <app-layout>
         <template #content>
             <div class="row">
@@ -188,8 +188,7 @@ onMounted(() => {
                                     <small class="text-muted">Kelola akses portal dan penempatan cabang
                                         internal.</small>
                                 </div>
-                                <button @click.prevent="openCreateModal"
-                                    class="btn btn-primary rounded-pill px-4 py-2 fw-medium shadow-sm">
+                                <button @click.prevent="openCreateModal" class="btn btn-c-primary px-4 py-2">
                                     <i class="bi bi-person-plus-fill me-1"></i> Tambah Pegawai
                                 </button>
                             </div>
@@ -200,7 +199,8 @@ onMounted(() => {
                                 <div class="position-relative">
                                     <i class="bi bi-search input-icon-left"></i>
                                     <input-text ref="keywordRef" :isValid="false" v-model="filters.keyword"
-                                        inputClass="input-fixed-height rounded-pill" placeholder="Cari nama...." />
+                                        inputClass="input-fixed-height input-height-1 rounded-pill"
+                                        placeholder="Cari nama...." />
                                 </div>
                             </div>
                             <div class="col-xl-1 col-4 col-md-4 col-lg-4">
@@ -240,7 +240,7 @@ onMounted(() => {
                                 </template>
 
                                 <template #row="{ item, index }">
-                                    <td class="text-muted text-center fw-medium align-middle">
+                                    <td class="td-number">
                                         {{ index + 1 + (employee?.current_page - 1) * employee?.per_page }}
                                     </td>
                                     <td class="ps-4 py-3">

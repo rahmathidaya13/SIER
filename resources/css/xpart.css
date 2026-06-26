@@ -17,9 +17,7 @@
     height: 42px;
     line-height: 1.5;
     padding-left: 45px;
-    /* memberi ruang untuk icon kiri */
     padding-right: 45px;
-    /* opsional kalau nanti ada icon kanan */
     transition: border 0.2s ease-in-out;
 }
 
@@ -194,30 +192,6 @@
     border-color: #86b7fe;
     outline: 0;
     box-shadow: 0 0 0 0.1rem rgba(13, 110, 253, 0.25);
-}
-
-.sosmed {
-    width: 50px;
-    height: 50px;
-    padding: 1px;
-    font-size: 1.9em;
-    color: #172d5c;
-}
-
-.sosmed:hover {
-    color: #2297c5;
-    /* border: 1px solid #dfdfdf; */
-    transform: scale(1.2);
-    transition: transform 0.1s ease-in-out;
-}
-
-@media only screen and (max-width: 651px) {
-    .sosmed {
-        width: 35px;
-        height: 35px;
-        padding: 0px;
-        font-size: 1.5em;
-    }
 }
 
 .page-link:focus,
