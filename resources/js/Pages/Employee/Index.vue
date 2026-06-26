@@ -5,6 +5,7 @@ import { onMounted, ref } from 'vue';
 import { useFilter } from '@/Composables/useFilter';
 import { useConfirm } from "@/Composables/useConfirm"
 import { highlight } from "@/Helpers/Highlight";
+import { dateConvert } from "@/Helpers/dateConvert";
 
 const confirm = useConfirm();
 const props = defineProps({
@@ -277,10 +278,7 @@ onMounted(() => {
                                     </td>
 
                                     <td class="py-3 text-center text-muted small">
-                                        {{ new Date(item.created_at).toLocaleDateString('id-ID', {
-                                            day: 'numeric',
-                                            month: 'short', year: 'numeric'
-                                        }) }}
+                                        {{ dateConvert(item.created_at, "DD-MM-YYYY") }}
                                     </td>
                                     <td>
                                         <action-button :item="item" :actions="employeeActions"

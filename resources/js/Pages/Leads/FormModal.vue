@@ -16,12 +16,14 @@ const form = useForm({
     name: '',
     phone: '',
     email: '',
-    id_channel: '',
+    id_channel: null,
     id_product: '',
     temperature: 'WARM',
     status: 'NEW',
     follow_up_date: '',
-    notes: ''
+    notes: '',
+    product_name: '',
+    new_activity: ''
 });
 
 const channelOptions = computed(() => [
@@ -36,7 +38,40 @@ const productOptions = computed(() => [
         value: data.id_product,
     }))
 ]);
-
+const selectedProduct = {
+    width: '100%',
+    placeholder: 'Ketik nama produk...',
+    allowClear: true,
+    minimumInputLength: 2,
+    ajax: {
+        url: route('product.search'), // Arahkan ke endpoint controller Anda
+        dataType: 'json',
+        delay: 300, // Tunggu 300ms setelah user berhenti mengetik baru request ke backend (Debounce)
+        data: function (params) {
+            return {
+                keyword: params.term // Kata kunci yang diketik user dikirim sebagai ?keyword=...
+            };
+        },
+        processResults: function (data) {
+            // Mapping respon backend menjadi format {id, text} yang dipahami Select2
+            const rawArray = Array.isArray(data) ? data : (data.data || []);
+            return {
+                results: rawArray.map(item => ({
+                    id: item.id_product,
+                    text: item.name,
+                    product_name: item.name
+                }))
+            };
+        }
+    }
+}
+const onProductSelected = (selectedOption) => {
+    if (selectedOption && selectedOption.product_name) {
+        form.product_name = selectedOption.product_name;
+    } else {
+        form.product_name = '';
+    }
+}
 const submit = () => {
     const url = isEdit.value
         ? route('leads.update', props.data?.id_lead)
@@ -60,7 +95,7 @@ const submit = () => {
         }
     });
 };
-
+console.log(props);
 watch(
     () => props.show,
     (isOpen) => {
@@ -76,6 +111,8 @@ watch(
                 form.status = props.leads.status;
                 form.follow_up_date = props.leads.follow_up_date ? props.leads.follow_up_date.substring(0, 10) : '';
                 form.notes = props.leads.notes || '';
+                form.product_name = props.leads?.product?.product_name || '';
+                form.new_activity = props.leads?.activity?.description || '';
             } else {
                 form.reset();
                 form.clearErrors();
@@ -128,66 +165,117 @@ const submitTextButton = computed(() => {
                     <form-wrapper @submit.prevent="submit">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">NAMA PROSPEK *</label>
-                                <input v-model="form.name" type="text" class="form-control"
-                                    placeholder="Cth: Budi Santoso" required>
-                                <div v-if="form.errors.name" class="text-danger small mt-1">{{ form.errors.name }}</div>
+                                <label for="name_input" class="form-label small fw-bold text-muted">NAMA PROSPEK
+                                    *</label>
+                                <input-text :error="form.errors.name" v-model="form.name" name="name"
+                                    placeholder="Cth: Budi Santoso" />
+                                <input-error :message="form.errors.name" />
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">NO. WHATSAPP *</label>
-                                <input v-model="form.phone" type="text" class="form-control" placeholder="081233445566"
-                                    required>
-                                <div v-if="form.errors.phone" class="text-danger small mt-1">{{ form.errors.phone }}
-                                </div>
+                                <label for="phone_input" class="form-label small fw-bold text-muted">NO. WHATSAPP
+                                    *</label>
+                                <input-number :maxChar="15" :error="form.errors.phone" v-model="form.phone" name="phone"
+                                    placeholder="081233445566" />
+                                <input-error :message="form.errors.phone" />
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">SUMBER TRAFIK (CHANNEL) *</label>
-                                <select v-model="form.channel_id" class="form-select fw-medium" required>
-                                    <option value="" disabled>-- Pilih Sumber --</option>
-                                    <option v-for="c in channels" :key="c.id" :value="c.id">{{ c.name }}</option>
-                                </select>
+                                <label for="channels_select" class="form-label small fw-bold text-muted">SUMBER TRAFIK
+                                    (CHANNEL) *</label>
+                                <select-input text="-- Pilih Channel --" name="channels" v-model="form.id_channel"
+                                    :error="form.errors.id_channel" :options="channelOptions" />
+                                <input-error :message="form.errors.id_channel" />
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-muted">PRODUK YANG DIMINATI</label>
-                                <select v-model="form.product_id" class="form-select">
-                                    <option value="">-- Belum Menentukan --</option>
-                                    <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
-                                </select>
+                                <label for="product_select" class="form-label small fw-bold text-muted">PRODUK YANG
+                                    DIMINATI</label>
+                                <select-2 @select="onProductSelected" :settings="selectedProduct" name="product"
+                                    v-model="form.id_product" />
+                                <input-error :message="form.errors.id_product" />
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">SUHU KETERTARIKAN</label>
-                                <select v-model="form.temperature" class="form-select fw-bold"
-                                    :class="{ 'text-danger': form.temperature === 'COLD', 'text-warning': form.temperature === 'WARM', 'text-success': form.temperature === 'HOT' }">
-                                    <option value="HOT">🔥 HOT (Siap Bayar)</option>
-                                    <option value="WARM">⏳ WARM (Tanya-tanya)</option>
-                                    <option value="COLD">❄️ COLD (Sekedar Lewat)</option>
-                                </select>
+                                <label for="temp_select" class="form-label small fw-bold text-muted">SUHU
+                                    KETERTARIKAN</label>
+                                <select-input text="-- Pilih Suhu --" name="temp" v-model="form.temperature"
+                                    :error="form.errors.temperature"
+                                    :selectClass="{ 'text-danger': form.temperature === 'COLD', 'text-warning': form.temperature === 'WARM', 'text-success': form.temperature === 'HOT' }"
+                                    :options="[
+                                        { label: '🔥 HOT (Siap Bayar)', value: 'HOT' },
+                                        { label: '⏳ WARM (Tanya-tanya)', value: 'WARM' },
+                                        { label: '❄️ COLD (Sekedar Lewat)', value: 'COLD' },
+                                    ]" />
+                                <input-error :message="form.errors.temperature" />
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">STATUS PROSPEK</label>
-                                <select v-model="form.status" class="form-select fw-medium"
-                                    :disabled="form.status === 'CLOSED_WON'">
-                                    <option value="NEW">⭐ Baru Masuk</option>
-                                    <option value="FOLLOW_UP">💬 Sedang Follow Up</option>
-                                    <option value="CLOSED_LOST">✖ Lost / Batal</option>
-                                    <option v-if="form.status === 'CLOSED_WON'" value="CLOSED_WON">✔ CLOSED WON</option>
-                                </select>
+                                <label for="status_select" class="form-label small fw-bold text-muted">STATUS
+                                    PROSPEK</label>
+                                <select-input text="-- Pilih Status --" v-model="form.status" name="status"
+                                    :error="form.errors.status" :disabled="!form.status === 'CLOSED_WON'" :options="[
+                                        { label: '⭐ Baru Masuk', value: 'NEW' },
+                                        { label: '💬 Sedang Follow Up', value: 'FOLLOW_UP' },
+                                        { label: '✖ Lost / Batal', value: 'CLOSED_LOST' },
+                                        { label: '✔ Closing (Terjual)', value: 'CLOSED_WON' },
+                                    ]" />
+                                <input-error :message="form.errors.status" />
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">JADWAL FOLLOW UP</label>
-                                <input v-model="form.follow_up_date" type="date" class="form-control">
+                                <label for="follow_up_date_input" class="form-label small fw-bold text-muted">JADWAL
+                                    FOLLOW UP</label>
+                                <input-text name="follow_up_date" v-model="form.follow_up_date" type="date" />
                             </div>
 
                             <div class="col-12">
-                                <label class="form-label small fw-bold text-muted">CATATAN / RIWAYAT CHAT</label>
-                                <textarea v-model="form.notes" class="form-control" rows="3"
-                                    placeholder="Tuliskan kendala atau permintaan khusus dari klien..."></textarea>
+                                <label for="notes_input" class="form-label small fw-bold text-muted">CATATAN / RIWAYAT
+                                    CHAT</label>
+                                <text-area :error="form.errors.new_activity" name="notes" v-model="form.new_activity"
+                                    :rows="5" placeholder="Tuliskan kendala atau permintaan khusus dari klien..." />
+                                <input-error :message="form.errors.new_activity" />
+
+
+                                <div v-if="props.leads?.activity && props.leads?.activity.length > 0" class="mt-4 pt-2">
+                                    <label class="form-label small fw-bold text-muted mb-3 d-block"
+                                        style="letter-spacing: 0.5px;">
+                                        🕒 JEJAK REKAM KONSUMEN (ACTIVITY TIMELINE):
+                                    </label>
+
+                                    <div class="ps-1 pe-2" style="max-height: 240px; overflow-y: auto;">
+                                        <div class="d-flex gap-3 mb-3 position-relative" v-for="act in leads.activity"
+                                            :key="act.id_lead_activity">
+
+                                            <div class="timeline-line"></div>
+
+                                            <div class="badge bg-primary-subtle text-primary rounded-circle p-0 d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
+                                                style="width: 34px; height: 34px; z-index: 2;">
+                                                <i class="bi bi-person-fill fs-6"></i>
+                                            </div>
+
+                                            <div class="bg-light p-2 px-3 rounded-3 border flex-grow-1 shadow-sm">
+                                                <div
+                                                    class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1">
+                                                    <span class="fw-bold text-dark" style="font-size: 12px;">
+                                                        {{ act.user?.activity_creator_name || 'Sistem' }}
+                                                    </span>
+                                                    <span class="text-muted" style="font-size: 10px;">
+                                                        {{ new Date(act.created_at).toLocaleString('id-ID',
+                                                            {
+                                                                day: 'numeric', month: 'short', hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            }) }}
+                                                    </span>
+                                                </div>
+                                                <p class="mb-0 text-slate-700 mt-1"
+                                                    style="font-size: 12.5px; white-space: pre-line;">{{ act.description
+                                                    }}</p>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -212,3 +300,14 @@ const submitTextButton = computed(() => {
         </div>
     </div>
 </template>
+<style scoped>
+.timeline-line {
+    position: absolute;
+    left: 16px;
+    top: 34px;
+    bottom: -18px;
+    width: 2px;
+    background-color: #cbd5e1;
+    z-index: 1;
+}
+</style>

@@ -32,7 +32,7 @@ class ProductModel extends Model
     {
         return $this->hasMany(SalesModel::class);
     }
-    public function productPrice()
+    public function prices()
     {
         return $this->hasMany(ProductPriceModel::class, 'id_product', 'id_product');
     }

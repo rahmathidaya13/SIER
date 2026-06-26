@@ -9,6 +9,7 @@ use App\Http\Controllers\Leads\LeadController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Product\ProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,6 +46,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/employee/store', 'store')->name('employee.store');
         Route::put('/employee/update/{id}', 'update')->name('employee.update');
         Route::delete('/employee/delete/{id}', 'destroy')->name('employee.delete');
+    });
+
+    Route::controller(ProductController::class)->group(function () {
+        Route::get('/product/keyword', 'productSearch')->name('product.search');
     });
 });
 

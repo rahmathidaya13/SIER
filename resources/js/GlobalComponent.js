@@ -17,6 +17,7 @@ import Selectinput from "./Component/Selectinput.vue";
 import ActionButtonToolbar from "./Component/ActionButtonToolbar.vue";
 import Pagination from "./Component/Pagination.vue";
 import Alert from "./Component/Alert.vue";
+import Selects2 from "./Component/Selects2.vue";
 export default {
     install(app) {
         app.component("app-layout", AppLayout);
@@ -38,5 +39,6 @@ export default {
         app.component("action-button", ActionButtonToolbar);
         app.component("pagination", Pagination);
         app.component("alert", Alert);
+        app.component("select-2", Selects2);
     },
 };

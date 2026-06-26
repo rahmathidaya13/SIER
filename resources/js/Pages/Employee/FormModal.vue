@@ -212,10 +212,10 @@ const togglePasswordVisibilty = () => {
 
                 <template #footer>
                     <div class="d-flex justify-content-end gap-2 p-2 bg-transparent">
-                        <button type="button" class="btn btn btn-light border-0 fw-medium px-4"
+                        <button type="button" class="btn btn-c-slate border-0 fw-medium px-4"
                             @click.prevent="close">Batal</button>
                         <button @click.prevent="submit" type="button" :disabled="form.processing"
-                            class="btn btn-height-1 fw-semibold" :class="isEdit ? 'btn-success' : 'btn-primary'">
+                            class="btn btn-height-1 fw-semibold" :class="isEdit ? 'btn-c-success' : 'btn-c-primary'">
                             <span v-if="form.processing" class="spinner-border spinner-border-sm me-2"></span>
                             <i v-else :class="isEdit ? 'bi bi-check-circle me-1' : 'bi bi-save me-1'"></i>
                             {{ submitTextButton }}

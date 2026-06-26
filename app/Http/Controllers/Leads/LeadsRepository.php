@@ -18,6 +18,7 @@ class LeadsRepository extends BaseCacheRepository
                 'user:id,name as creator_name',
                 'channel:id_channel,name as channel_name,icon',
                 'product:id_product,name as product_name',
+                'activity.user:id,name as activity_creator_name',
             ]);
 
 
@@ -69,9 +70,9 @@ class LeadsRepository extends BaseCacheRepository
     {
         return match ($filters['order_by'] ?? 'latest') {
 
-            'oldest' => ['addons.created_at', 'asc'],
+            'oldest' => ['created_at', 'asc'],
 
-            default => ['addons.created_at', 'desc'],
+            default => ['created_at', 'desc'],
         };
     }
 }

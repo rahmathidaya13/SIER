@@ -64,4 +64,9 @@ class LeadModel extends Model
     {
         return $this->hasOne(SalesModel::class);
     }
+
+    public function activity()
+    {
+        return $this->hasMany(LeadActivityModel::class, 'id_lead', 'id_lead');
+    }
 }

@@ -1,6 +1,6 @@
 <script setup>
 import { Form, Head, usePage, router } from '@inertiajs/vue3';
-import { onMounted, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { useFilter } from '@/Composables/useFilter';
 import { useConfirm } from "@/Composables/useConfirm"
 import { highlight } from "@/Helpers/Highlight";
@@ -89,6 +89,36 @@ const openCreateModal = () => {
     showModal.value = true;
     selectedData.value = {};
 }
+const openEditModal = (data) => {
+    showModal.value = true;
+    selectedData.value = data;
+}
+const keywordRef = ref(null);
+onMounted(() => {
+    keywordRef.value.focus();
+})
+
+const leadActions = [
+    {
+        label: 'Ubah Data Lead',
+        action: 'edit',
+        protectedSelf: true,
+        icon: 'bi bi-pencil-square',
+        title: 'Ubah Data Lead',
+        buttonClass: 'btn-action',
+        variant: 'edit',
+    },
+    {
+        label: 'Hapus Data Lead',
+        action: 'delete',
+        protectedSelf: true,
+        icon: 'bi bi-trash',
+        buttonClass: 'btn-action',
+        variant: 'delete',
+        title: 'Hapus Data Lead',
+    },
+];
+
 </script>
 <template>
 
@@ -168,9 +198,41 @@ const openCreateModal = () => {
                                 <template #empty>
                                     <div class="text-center py-5">
                                         <i class="bi bi-funnel fa-3x text-muted opacity-25 mb-3 d-block"></i>
-                                        <h6 class="text-muted fw-bold">Pipeline Anda Masih Kosong</h6>
+                                        <h6 class="text-muted fw-bold">Data leads Anda Masih Kosong</h6>
                                         <p class="text-muted small mb-0">Klik tombol "Tambah Lead Baru" di pojok kanan
                                             atas untuk memasukkan lead pertama.</p>
+                                    </div>
+                                </template>
+
+                                <template #row="{ item, index }">
+                                    <td class="td-number">
+                                        {{ index + 1 + (leads?.current_page - 1) * leads?.per_page }}
+                                    </td>
+
+                                    <td>
+                                        <action-button :item="item" :actions="leadActions" @edit="openEditModal(item)"
+                                            @delete="deleted('leads.delete', item)" />
+                                    </td>
+                                </template>
+
+
+                                <template #pagination>
+                                    <div
+                                        class="border-top py-2 px-2 d-flex flex-column flex-md-row justify-content-between align-items-center ">
+                                        <small class="text-muted mb-2 mb-md-0">
+                                            Menampilkan <strong>{{ leads.from ?? 0 }}</strong> - <strong>{{
+                                                leads.to ?? 0 }}</strong> dari <strong>{{ leads.total
+                                                    ?? 0
+                                                }}</strong>
+                                        </small>
+                                        <pagination size="pagination-sm" :links="leads?.links" routeName="leads.index"
+                                            :additionalQuery="{
+                                                keyword: filters.keyword,
+                                                status: filters.status,
+                                                limit: filters.limit,
+                                                order_by: filters.order_by,
+                                                temperature: filters.temperature
+                                            }" :only="['leads', 'filters', 'channels', 'products']" />
                                     </div>
                                 </template>
 
@@ -179,8 +241,9 @@ const openCreateModal = () => {
                         </div>
                     </div>
                 </div>
+                <FormModal :channels="props.channels" :products="props.products" :leads="selectedData" :show="showModal"
+                    @update:show="showModal = $event" />
             </div>
-            <FormModal :leads="selectedData" :show="showModal" @update:show="showModal = $event" />
         </template>
     </app-layout>
 </template>

@@ -24,7 +24,19 @@ const props = defineProps({
     maxChar: {
         type: Number,
         default: 250
-    }
+    },
+    error: {
+        type: String,
+        default: ""
+    },
+    isValid: {
+        type: Boolean,
+        default: true,
+    },
+    isInvalid: {
+        type: Boolean,
+        default: true,
+    },
 })
 const model = defineModel({
     type: String,
@@ -56,11 +68,11 @@ defineExpose({ focus: () => textarea.value.focus() });
 
 <template>
     <div class="textarea-wrapper  border rounded-3 p-2 transition" :class="{
-        'border-danger': $page.props.errors[props.name],
-        'border-success': model && !$page.props.errors[props.name],
+        'border-danger': props.isInvalid && props.error,
+        'border-success': props.isValid && model && !props.error,
     }">
-        <textarea ref="textarea" v-model="model" :rows="rows" :cols="cols" :name="props.name" :id="props.name"
-            :placeholder="props.placeholder || 'Masukkan deskripsi...'"
+        <textarea ref="textarea" v-model="model" :rows="rows" :cols="cols" :name="props.name"
+            :id="props.name + '_input'" :placeholder="props.placeholder || 'Masukkan deskripsi...'"
             class="form-control border-0 shadow-none resize-none" :class="inputClass"></textarea>
 
         <div class="d-flex justify-content-end align-items-center mt-1 px-1">
@@ -71,17 +83,3 @@ defineExpose({ focus: () => textarea.value.focus() });
     </div>
 
 </template>
-<style scoped>
-.textarea-wrapper {
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.textarea-wrapper:focus-within {
-    border-color: var(--bs-primary);
-    box-shadow: 0 0 0 0.1rem rgba(13, 110, 253, 0.15);
-}
-
-.resize-none {
-    resize: none;
-}
-</style>
