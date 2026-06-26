@@ -1,0 +1,42 @@
+import AppLayout from "./Layout/AppLayout.vue";
+import BreadCrumbs from "./Component/Breadcrumbs.vue";
+import Callout from "./Component/Callout.vue";
+import FormWrapper from "./Component/FormWrapper.vue";
+import InputDecimal from "./Component/InputDecimal.vue";
+import InputError from "./Component/InputError.vue";
+import InputLabel from "./Component/InputLabel.vue";
+import InputNumber from "./Component/InputNumber.vue";
+import InputText from "./Component/InputText.vue";
+import TextArea from "./Component/TextArea.vue";
+import Toasts from "./Component/Toasts.vue";
+import CheckBox from "./Component/CheckBox.vue";
+import BaseButton from "./Component/BaseButton.vue";
+import Modal from "./Component/Modal.vue";
+import TableWrapper from "./Component/TableWrapper.vue";
+import Selectinput from "./Component/Selectinput.vue";
+import ActionButtonToolbar from "./Component/ActionButtonToolbar.vue";
+import Pagination from "./Component/Pagination.vue";
+import Alert from "./Component/Alert.vue";
+export default {
+    install(app) {
+        app.component("app-layout", AppLayout);
+        app.component("breadcrumbs", BreadCrumbs);
+        app.component("callout", Callout);
+        app.component("form-wrapper", FormWrapper);
+        app.component("input-decimal", InputDecimal);
+        app.component("input-error", InputError);
+        app.component("input-label", InputLabel);
+        app.component("input-number", InputNumber);
+        app.component("input-text", InputText);
+        app.component("text-area", TextArea);
+        app.component("toasts", Toasts);
+        app.component("check-box", CheckBox);
+        app.component("base-button", BaseButton);
+        app.component("modal", Modal);
+        app.component("table-wrapper", TableWrapper);
+        app.component("select-input", Selectinput);
+        app.component("action-button", ActionButtonToolbar);
+        app.component("pagination", Pagination);
+        app.component("alert", Alert);
+    },
+};

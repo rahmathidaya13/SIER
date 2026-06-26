@@ -1,0 +1,248 @@
+:root {
+    --primary-color: #ff5e6c;
+    --primary-hover: #e04856;
+    --sidebar-bg: #ffffff;
+    --sidebar-width: 260px;
+    --header-height: 70px;
+    --bg-body: #f4f6f9;
+
+
+    /* =========================
+       Core Coffee Colors
+    ========================== */
+    --coffee-primary: #6f4e37;
+    --coffee-dark: #2b1b12;
+    --coffee-light: #fdfbf7;
+    --coffee-soft: #f4ece1;
+    --coffee-accent: #c8a27a;
+    --coffee-hover: #5a3f2c;
+
+    /* =========================
+       Espresso / Dark Coffee
+    ========================== */
+    --coffee-espresso: #3e2723;
+    --coffee-espresso-dark: #1b0f0a;
+    --coffee-roast: #4e342e;
+    --coffee-roast-soft: #6d4c41;
+    --coffee-chocolate: #3b2417;
+    --coffee-cocoa: #5c4033;
+
+    /* =========================
+       Latte / Cream / Milk
+    ========================== */
+    --coffee-latte: #d7b899;
+    --coffee-latte-light: #f5deb3;
+    --coffee-cream: #fff1d6;
+    --coffee-milk: #f8ede3;
+    --coffee-beige: #ede0d4;
+    --coffee-vanilla: #f2e8cf;
+
+    /* =========================
+       Caramel / Cinnamon / Gold
+    ========================== */
+    --coffee-caramel: #b87333;
+    --coffee-caramel-light: #d9a066;
+    --coffee-cinnamon: #a0522d;
+    --coffee-honey: #e6a157;
+    --coffee-gold: #d4af37;
+    --coffee-rustic-gold: #b8860b;
+
+    /* =========================
+       Warm Accent Colors
+    ========================== */
+    --coffee-terracotta: #b85c38;
+    --coffee-clay: #a45c40;
+    --coffee-orange: #d2691e;
+    --coffee-toast: #ffb347;
+    --coffee-brown-soft: #a98467;
+    --coffee-brown-muted: #b08968;
+
+    /* =========================
+       Natural / Organic Colors
+    ========================== */
+    --coffee-olive: #556b2f;
+    --coffee-olive-soft: #a8b56a;
+    --coffee-earth: #4b5320;
+    --coffee-sage: #a3b18a;
+    --coffee-matcha: #6b8e23;
+
+    /* =========================
+       Status Colors
+       Masih dibuat soft agar cocok dengan tema coffee
+    ========================== */
+    --coffee-success: #6b8e23;
+    --coffee-success-soft: #e6f0d5;
+
+    --coffee-warning: #d6a756;
+    --coffee-warning-soft: #fff3d8;
+
+    --coffee-danger: #ce6a42;
+    --coffee-danger-soft: #f8ded3;
+
+    --coffee-info: #8d6e63;
+    --coffee-info-soft: #eee2dc;
+
+    /* =========================
+       Border / Shadow / Text
+    ========================== */
+    --coffee-border: #e5d3c0;
+    --coffee-border-dark: #c9a27e;
+    --coffee-text: #2b1b12;
+    --coffee-text-muted: #8d6e63;
+    --coffee-shadow: rgba(43, 27, 18, 0.12);
+    --coffee-shadow-dark: rgba(43, 27, 18, 0.24);
+
+    /* =========================
+       Gradient Colors
+    ========================== */
+    --coffee-gradient-primary: linear-gradient(135deg, #6f4e37, #c8a27a);
+    --coffee-gradient-dark: linear-gradient(135deg, #2b1b12, #6f4e37);
+    --coffee-gradient-latte: linear-gradient(135deg, #c8a27a, #f5deb3);
+    --coffee-gradient-caramel: linear-gradient(135deg, #b87333, #d9a066);
+    --coffee-gradient-cream: linear-gradient(135deg, #ede0d4, #fff1d6);
+    --coffee-gradient-gold: linear-gradient(135deg, #5e412f, #d4af37);
+    --coffee-gradient-organic: linear-gradient(135deg, #556b2f, #a8b56a);
+    --coffee-gradient-soft: linear-gradient(135deg, #f4ece1, #fdfbf7);
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg-body);
+    overflow-x: hidden;
+    color: #333;
+}
+
+/* Global Reusable Component */
+.card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    background: #fff;
+}
+
+.table-wrapper {
+    background: #ffffff;
+    border: 1px solid #f0e6da;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+}
+
+.table-custom {
+    margin-bottom: 0;
+}
+
+.table-custom th {
+    background: var(--coffee-soft);
+    color: var(--coffee-primary);
+    font-weight: 600;
+    border-bottom: none;
+    padding: 16px;
+    white-space: nowrap;
+}
+
+.table-custom td {
+    padding: 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f8f3ec;
+}
+
+.table-custom tbody tr:hover {
+    background-color: #faf7f2;
+}
+
+.stats-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+}
+
+.btn-celestial {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.btn-celestial:hover {
+    background-color: var(--primary-hover);
+    color: white;
+}
+
+.client-avatar {
+    width: 42px; 
+    height: 42px; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center;
+    font-weight: 700; 
+    font-size: 14px; 
+    flex-shrink: 0;
+    letter-spacing: 1px;
+}
+
+.view-section {
+    animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.row-removing {
+    transition: all 0.3s ease !important;
+    opacity: 0 !important;
+    transform: translateX(-30px);
+}
+
+.btn-action {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    transition: 0.2s;
+}
+
+.btn-action.edit {
+    background: var(--coffee-soft);
+    color: var(--coffee-primary);
+}
+
+.btn-action.edit:hover {
+    background: #e4d3c0;
+}
+
+.btn-action.delete {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.btn-action.delete:hover {
+    background: #ffcdd2;
+}
+
+.btn-action:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.btn-action:disabled:hover {
+    background: var(--coffee-soft);
+    color: var(--coffee-primary);
+}
