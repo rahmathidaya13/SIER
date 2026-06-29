@@ -15,11 +15,11 @@ return new class extends Migration
             $table->uuid('id_lead')->primary();
             $table->foreignUuid('id_user')->constrained('users', 'id')->onDelete('cascade'); // CS/Admin yang memegang lead ini
             $table->foreignUuid('id_channel')->constrained('channels', 'id_channel')->cascadeOnDelete(); // Datang dari mana?
-            $table->foreignUuid('id_product')->nullable()->constrained('products', 'id_product')->cascadeOnDelete(); // Tertarik produk apa?
+            $table->foreignUuid('id_product')->constrained('products', 'id_product')->cascadeOnDelete(); // Tertarik produk apa?
 
             $table->string('name', 100)->index();
             $table->string('phone', 25)->index(); // WAJIB DI-INDEX karena bakal sering dicari via form pencarian!
-            $table->string('email', 100)->nullable();
+            $table->string('email', 100)->unique()->nullable();
 
             // Suhu Ketertarikan
             $table->enum('temperature', ['HOT', 'WARM', 'COLD'])->default('WARM');

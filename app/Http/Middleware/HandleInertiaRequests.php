@@ -53,6 +53,8 @@ class HandleInertiaRequests extends Middleware
                 'action_label' => fn() => $request->session()->get('action_label'),
                 'action_url' => fn() => $request->session()->get('action_url'),
                 'unauthorized_action' => fn() => $request->session()->get('unauthorized_action'),
+
+                'activity_message' => fn() => $request->session()->get('activity_message'),
             ],
             'old' => fn() => session()->getOldInput(),
             'path' => fn() => $request->path(),

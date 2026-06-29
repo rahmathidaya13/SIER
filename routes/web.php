@@ -9,6 +9,7 @@ use App\Http\Controllers\Leads\LeadController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Leads\LeadActivityController;
 use App\Http\Controllers\Product\ProductController;
 
 /*
@@ -37,9 +38,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::controller(LeadController::class)->group(function () {
         Route::get('/leads/list', 'index')->name('leads.index');
+        Route::get('/leads/show/{id}', 'show')->name('leads.show');
         Route::post('/leads/store', 'store')->name('leads.store');
         Route::put('/leads/update/{id}', 'update')->name('leads.update');
         Route::delete('/leads/delete/{id}', 'destroy')->name('leads.delete');
+    });
+    Route::controller(LeadActivityController::class)->group(function () {
+        Route::put('/leads/activity/update/{id}', 'update')->name('leads.activity.update');
     });
     Route::controller(UserController::class)->group(function () {
         Route::get('/employee/list', 'index')->name('employee.index');

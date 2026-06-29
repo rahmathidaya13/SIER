@@ -33,6 +33,10 @@ const props = defineProps({
     mobileFullscreen: {
         type: Boolean,
         default: true // Default aktif agar di HP otomatis full-screen
+    },
+    isLoading: {
+        type: Boolean,
+        default: false
     }
 })
 
@@ -122,8 +126,18 @@ watch(() => props.show, async (v) => {
                         aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body p-3 px-md-4 pb-md-4 bg-transparent">
-                    <slot name="body" />
+                <div class="modal-body">
+                    <div class="position-relative">
+                        <div v-if="isLoading" class="modal-loader">
+                            <div class="text-center">
+                                <div class="spinner-border text-light"></div>
+                                <div class="text-light mt-3 fw-semibold">
+                                    Mengambil data...
+                                </div>
+                            </div>
+                        </div>
+                        <slot name="body" />
+                    </div>
                 </div>
 
                 <div v-if="footer" class="modal-footer bg-white border-top rounded-bottom-4 p-3">
@@ -192,5 +206,17 @@ watch(() => props.show, async (v) => {
 
 .modal-backdrop.show {
     opacity: var(--bs-backdrop-opacity);
+}
+
+.modal-loader {
+    position: absolute;
+    inset: 0;
+    z-index: 999;
+    background: rgba(0, 0, 0, 0.205);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
 }
 </style>

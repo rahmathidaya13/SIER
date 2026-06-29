@@ -29,17 +29,15 @@ class LeadModel extends Model
     ];
     protected $dates    = ["deleted_at"];
 
-    public function scopeAllowedForUser($query)
+    public function scopeAllowedForUser($query, User $user)
     {
-        $user = auth()->user();
-
         // Jika yang login Orang Pusat (Superadmin), BUKA SEMUA DATA!
         if ($user->hasRole('super_admin')) {
             return $query;
         }
 
         // Jika yang login SPV/Sales/Admin Cabang, KUNCI HANYA DI CABANG DIA!
-        return $query->where('id_branch', $user->id_branch);
+        return $query->where('leads.id_branch', $user->id_branch);
     }
     public function user()
     {
@@ -67,6 +65,7 @@ class LeadModel extends Model
 
     public function activity()
     {
-        return $this->hasMany(LeadActivityModel::class, 'id_lead', 'id_lead');
+        return $this->hasMany(LeadActivityModel::class, 'id_lead', 'id_lead')
+            ->latest('created_at');
     }
 }

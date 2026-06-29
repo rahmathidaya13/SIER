@@ -7,7 +7,9 @@ use App\Traits\UserScope;
 use App\Models\ChannelModel;
 use App\Models\ProductModel;
 use Illuminate\Http\Request;
+use App\Traits\LeadsValidation;
 use App\Http\Controllers\Controller;
+use App\Services\LeadServices;
 use App\Traits\BranchMutationHelper;
 
 class LeadController extends Controller
@@ -15,11 +17,13 @@ class LeadController extends Controller
     /**
      * Display a listing of the resource.
      */
-    use UserScope, BranchMutationHelper;
+    use UserScope, BranchMutationHelper, LeadsValidation;
     protected $leadRepository;
-    public function __construct(LeadsRepository $leadRepository)
+    protected $leadServices;
+    public function __construct(LeadsRepository $leadRepository, LeadServices $leadServices)
     {
         $this->leadRepository = $leadRepository;
+        $this->leadServices = $leadServices;
     }
     public function index(Request $request)
     {
@@ -42,7 +46,7 @@ class LeadController extends Controller
                 'leads' => $leads,
                 'filters' => $filters,
                 'channels' => $channels,
-                'products' => $products
+                'products' => $products,
             ]
         );
     }
@@ -50,33 +54,35 @@ class LeadController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        $leads = new LeadModel();
-        $leads->id_user = $user->id;
-        $leads->id_channel = $request['id_channel'];
-        $leads->id_product = $request['id_product'];
-        $leads->id_branch = $user->id_branch;
-        $leads->name = $request['name'];
-        $leads->email = $request['email'];
-        $leads->phone = $request['phone'];
-        $leads->status = $request['status'];
-        $leads->follow_up_date = $request['follow_up_date'];
-        $leads->temperature = $request['temperature'];
-        $leads->notes = $request['notes'];
-        $leads->save();
+        $this->validateLeads($request->all());
+        $this->leadServices->store($request->all(), $user);
         $this->invalidateCaches(LeadsRepository::class, ['global', $user->id_branch]);
         return redirect()->back()->with('message', 'Lead berhasil ditambahkan');
     }
 
-
-
-
-    public function update(Request $request, LeadModel $leadModel)
+    public function update(Request $request, string $id)
     {
-
-
+        $user = auth()->user();
+        $this->validateLeads($request->all(), $id);
+        $this->leadServices->update($id, $request->all(), $user);
+        $this->invalidateCaches(LeadsRepository::class, ['global', $user->id_branch]);
+        return redirect()->back()->with('activity_message', 'Lead berhasil diperbarui');
     }
 
-    public function destroy(LeadModel $leadModel)
+    public function show(string $id)
+    {
+        $leads = LeadModel::allowedForUser(auth()->user())
+            ->with([
+                'user:id,name as creator_name',
+                'channel:id_channel,name as channel_name,icon',
+                'product:id_product,name as product_name',
+                'activity.user:id,name as activity_creator_name',
+                'user.roles'
+            ])
+            ->findOrFail($id);
+        return response()->json($leads);
+    }
+    public function destroy(LeadModel $leadModel, string $id)
     {
         //
     }

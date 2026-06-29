@@ -1,16 +1,45 @@
 <script setup>
-import { computed, ref, watch } from "vue";
-import { router, useForm, usePage } from "@inertiajs/vue3";
+import { computed, reactive, ref, watch } from "vue";
+import { useForm, router, usePage } from "@inertiajs/vue3";
 import { hasRole } from '@/Composables/useAuth';
+import { useRowAlert } from '@/Composables/useAlert';
+const { show, __alert, hide } = useRowAlert();
+import axios from "axios";
 const props = defineProps({
-    leads: Object,
+    idLead: {
+        type: String,
+        default: null
+    },
     show: Boolean,
     channels: Array,
     products: Array
 });
+const isEdit = computed(() => !!props.idLead);
+const isChangingProduct = ref(false);
+const isLoading = ref(false);
+const dataLead = ref(null);
 
-
-const isEdit = computed(() => !!props.leads?.id_lead);
+// 1. STATE SAKELAR TAB
+const activeTab = ref('prospect');
+const tabList = computed(() => {
+    if (isEdit.value) {
+        return [
+            {
+                id: 'activity',
+                name: '💬 Aktivitas Follow-up',
+                badge: dataLead.value?.activity?.length || 0
+            },
+            {
+                id: 'prospect',
+                name: '📋 Data Prospek'
+            }
+        ];
+    }
+    return [
+        { id: 'prospect', name: '📋 Data Prospek' },
+        { id: 'activity', name: '💬 Aktivitas Follow-up' }
+    ];
+})
 
 const form = useForm({
     name: '',
@@ -18,13 +47,72 @@ const form = useForm({
     email: '',
     id_channel: null,
     id_product: '',
-    temperature: 'WARM',
-    status: 'NEW',
+    temperature: null,
+    status: null,
     follow_up_date: '',
     notes: '',
     product_name: '',
-    new_activity: ''
+    new_activity: '',
+    role_name: ''
 });
+const fillForm = (data) => {
+    form.defaults({
+        name: data.name,
+        phone: data.phone,
+        email: data.email,
+        id_channel: data.id_channel,
+        id_product: data.id_product,
+        temperature: data.temperature,
+        status: data.status,
+        follow_up_date: data.follow_up_date || '',
+        notes: data.notes,
+        product_name: data.product?.product_name || '',
+        new_activity: '',
+        role_name: data.user?.roles[0].name ?? 'Sistem'
+    })
+    dataLead.value = data
+    form.reset();
+}
+const resetForm = () => {
+    form.defaults({
+        name: '',
+        phone: '',
+        email: '',
+        id_channel: null,
+        id_product: '',
+        temperature: null,
+        status: null,
+        follow_up_date: '',
+        notes: '',
+        product_name: '',
+        new_activity: '',
+        role_name: ''
+    })
+    form.reset();
+    form.clearErrors();
+    dataLead.value = null
+}
+const loadLead = async () => {
+    isLoading.value = true
+
+    if (!props.idLead) {
+        resetForm();
+        return
+    }
+
+    try {
+        const { data } = await axios.get(`/leads/show/${props.idLead}`);
+        fillForm(data);
+        activeTab.value = 'activity';
+    } catch (error) {
+        console.error("Gagal mengambil data:", error);
+        alert("Terjadi kesalahan saat memuat data.");
+    }
+    finally {
+        isLoading.value = false
+    }
+
+}
 
 const channelOptions = computed(() => [
     ...props.channels.map(data => ({
@@ -32,12 +120,7 @@ const channelOptions = computed(() => [
         value: data.id_channel,
     }))
 ]);
-const productOptions = computed(() => [
-    ...props.products.map(data => ({
-        label: data.name,
-        value: data.id_product,
-    }))
-]);
+
 const selectedProduct = {
     width: '100%',
     placeholder: 'Ketik nama produk...',
@@ -54,9 +137,8 @@ const selectedProduct = {
         },
         processResults: function (data) {
             // Mapping respon backend menjadi format {id, text} yang dipahami Select2
-            const rawArray = Array.isArray(data) ? data : (data.data || []);
             return {
-                results: rawArray.map(item => ({
+                results: data.map(item => ({
                     id: item.id_product,
                     text: item.name,
                     product_name: item.name
@@ -66,15 +148,11 @@ const selectedProduct = {
     }
 }
 const onProductSelected = (selectedOption) => {
-    if (selectedOption && selectedOption.product_name) {
-        form.product_name = selectedOption.product_name;
-    } else {
-        form.product_name = '';
-    }
-}
+    form.product_name = selectedOption?.product_name || '';
+};
 const submit = () => {
     const url = isEdit.value
-        ? route('leads.update', props.data?.id_lead)
+        ? route('leads.update', props.idLead)
         : route('leads.store');
 
     // Jika Edit, Laravel butuh trik method spoofing (_method: put) untuk upload file
@@ -90,36 +168,29 @@ const submit = () => {
             close();
             form.reset();
         },
-        onError: () => {
-            form.password = '';
+        onError: (errors) => {
+            const prospectFields = ['name', 'phone', 'email', 'id_channel', 'id_product', 'temperature', 'status', 'follow_up_date', 'notes'];
+            const isErrorInProspect = Object.keys(errors).some(field => prospectFields.includes(field));
+
+            if (isErrorInProspect && activeTab.value !== 'prospect') {
+                activeTab.value = 'prospect';
+            } else if (errors.new_activity && activeTab.value !== 'activity') {
+                activeTab.value = 'activity';
+            }
         }
     });
 };
-console.log(props);
 watch(
     () => props.show,
-    (isOpen) => {
-        if (isOpen) {
-            // Modal sedang DIBUKA
-            if (isEdit.value) {
-                form.name = props.leads.name;
-                form.phone = props.leads.phone;
-                form.email = props.leads.email || '';
-                form.id_channel = props.leads.id_channel;
-                form.id_product = props.leads.id_product || '';
-                form.temperature = props.leads.temperature;
-                form.status = props.leads.status;
-                form.follow_up_date = props.leads.follow_up_date ? props.leads.follow_up_date.substring(0, 10) : '';
-                form.notes = props.leads.notes || '';
-                form.product_name = props.leads?.product?.product_name || '';
-                form.new_activity = props.leads?.activity?.description || '';
-            } else {
-                form.reset();
-                form.clearErrors();
-                form.temperature = 'WARM';
-                form.status = 'NEW';
-            }
+    async (isOpen) => {
+        if (!isOpen) return;
+        if (props.idLead) {
+            await loadLead();
+        } else {
+            resetForm();
+            activeTab.value = 'prospect'
         }
+
     }, {
     immediate: true
 }
@@ -127,14 +198,80 @@ watch(
 const emit = defineEmits(["update:show"]);
 const close = () => {
     emit("update:show", false);
-    form.clearErrors();
-    form.reset();
+    resetForm();
+    isChangingProduct.value = false;
 }
 const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
     return isEdit.value ? 'Menyimpan...' : 'Simpan Prospek';
 });
+const getRoleName = (roleName) => {
+    const roles = {
+        'super_admin': {
+            label: 'Head Office',
+            color: 'bg-dark text-white'
+        },
+        'supervisor': {
+            label: 'Supervisor',
+            color: 'bg-primary text-white'
+        },
+        'admin': {
+            label: 'Admin',
+            color: 'bg-info text-dark'
+        },
+        'sales': {
+            label: 'Sales',
+            color: 'bg-success text-white'
+        },
+        'teknisi': {
+            label: 'Teknisi',
+            color: 'bg-secondary text-white'
+        }
+    };
+    return roles[roleName] || 'bg-light text-dark border';
+};
 
+const activityEdit = reactive({
+    id: null,
+    new_value: '',
+});
+
+const editActivity = (activities) => {
+    activityEdit.id = activities.id_lead_activity;
+    activityEdit.new_value = activities.description || '';
+}
+const cancelEditActivity = () => {
+    activityEdit.id = null;
+    activityEdit.new_value = '';
+}
+
+const updateActivity = () => {
+    router.put(route('leads.activity.update', activityEdit.id),
+        {
+            description: activityEdit.new_value
+        }, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            const activity = dataLead.value.activity.find(
+                actv => actv.id_lead_activity === activityEdit.id
+            );
+            if (activity) {
+                activity.description = activityEdit.new_value;
+            }
+        console.log(usePage().props);
+
+            show({
+                id: activityEdit.id,
+                message: 'Aktivitas berhasil diperbarui',
+                type: 'success',
+                duration: 5000
+            });
+            cancelEditActivity();
+
+        }
+    });
+}
 </script>
 <template>
     <div class="row" v-if="props.show">
@@ -145,8 +282,8 @@ const submitTextButton = computed(() => {
                     'bi bi-pencil-square text-primary': isEdit,
                     'bi bi-plus-circle-fill text-primary': !isEdit
                 }
-            ]" :show="props.show" :title="isEdit ? 'Edit Data Prospek' : ' Input Prospek Baru'"
-                :mobileFullscreen="false" @closed="close">
+            ]" :show="props.show" :title="isEdit ? 'Manajemen Prospek & Follow-Up' : ' Input Prospek Baru'"
+                :mobileFullscreen="false" @closed="close" :isLoading="isLoading">
 
                 <template #body>
 
@@ -162,8 +299,17 @@ const submitTextButton = computed(() => {
                         </button>
                     </div>
 
+                    <div class="celestial-tab-container mb-4">
+                        <button v-for="tab in tabList" :key="tab.id" type="button" @click="activeTab = tab.id"
+                            class="celestial-tab-btn" :class="{ 'active': activeTab === tab.id }">
+                            <span>{{ tab.name }}</span>
+                            <span v-if="tab.badge" class="badge rounded-pill bg-primary ms-2"
+                                style="font-size: 10px;">{{ tab.badge }}</span>
+                        </button>
+                    </div>
+
                     <form-wrapper @submit.prevent="submit">
-                        <div class="row g-3">
+                        <div v-show="activeTab === 'prospect'" class="row g-3 animate-fade-in">
                             <div class="col-md-6">
                                 <label for="name_input" class="form-label small fw-bold text-muted">NAMA PROSPEK
                                     *</label>
@@ -181,18 +327,48 @@ const submitTextButton = computed(() => {
                             </div>
 
                             <div class="col-md-6">
-                                <label for="channels_select" class="form-label small fw-bold text-muted">SUMBER TRAFIK
+                                <label for="email_input" class="form-label small fw-bold text-muted">EMAIL
+                                    PELANGGAN (Opsional)</label>
+                                <input-text :error="form.errors.email" v-model="form.email" name="email"
+                                    placeholder="Cth: dimas@perusahaan.com" />
+                                <input-error :message="form.errors.email" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="channels_select" class="form-label small fw-bold text-muted">SUMBER
+                                    TRAFIK
                                     (CHANNEL) *</label>
                                 <select-input text="-- Pilih Channel --" name="channels" v-model="form.id_channel"
                                     :error="form.errors.id_channel" :options="channelOptions" />
                                 <input-error :message="form.errors.id_channel" />
                             </div>
 
-                            <div class="col-md-6">
-                                <label for="product_select" class="form-label small fw-bold text-muted">PRODUK YANG
-                                    DIMINATI</label>
-                                <select-2 @select="onProductSelected" :settings="selectedProduct" name="product"
+                            <div class="col-md-12">
+                                <div class="d-flex justify-content-between">
+                                    <label for="product_select" class="form-label small fw-bold text-muted">PRODUK
+                                        YANG
+                                        DIMINATI</label>
+
+                                    <span v-if="form.id_product && !isChangingProduct" @click="isChangingProduct = true"
+                                        class="small fw-bold text-primary"
+                                        style="cursor: pointer; text-decoration: none;">
+                                        Ganti produk
+                                    </span>
+
+                                    <span v-if="isChangingProduct && dataLead?.id_product"
+                                        @click="isChangingProduct = false" class="small fw-bold text-danger"
+                                        style="cursor: pointer;">
+                                        Batal
+                                    </span>
+                                </div>
+
+                                <select-2 v-if="!form.id_product || isChangingProduct" :error="form.errors.id_product"
+                                    @select="onProductSelected" :settings="selectedProduct" name="product"
                                     v-model="form.id_product" />
+
+                                <input-text v-else inputClass="text-danger fw-bold" name="products"
+                                    v-model="form.product_name" :disabled="true" />
+
                                 <input-error :message="form.errors.id_product" />
                             </div>
 
@@ -230,37 +406,74 @@ const submitTextButton = computed(() => {
                             </div>
 
                             <div class="col-12">
-                                <label for="notes_input" class="form-label small fw-bold text-muted">CATATAN / RIWAYAT
-                                    CHAT</label>
-                                <text-area :error="form.errors.new_activity" name="notes" v-model="form.new_activity"
-                                    :rows="5" placeholder="Tuliskan kendala atau permintaan khusus dari klien..." />
+                                <label for="notes_input" class="form-label small fw-bold text-muted">INFORMASI /
+                                    STICKY NOTE (Opsional)</label>
+                                <text-area :error="form.errors.notes" name="notes" v-model="form.notes" :rows="3"
+                                    placeholder="Tuliskan catatan opsional disini..." />
+                                <input-error :message="form.errors.notes" />
+                            </div>
+                        </div>
+
+                        <div v-show="activeTab === 'activity'" class="row g-3 animate-fade-in">
+                            <div class="col-12">
+                                <label for="activity_input" class="form-label small fw-bold text-muted">LAPORKAN
+                                    HASIL
+                                    FOLLOW-UP HARI INI</label>
+                                <text-area :maxChar="2500" :error="form.errors.new_activity" name="activity"
+                                    v-model="form.new_activity" :rows="3"
+                                    placeholder="Tuliskan apa yang baru saja dibicarakan dengan pelanggan di sini..." />
                                 <input-error :message="form.errors.new_activity" />
+                                <small class="text-muted d-block mt-1" style="font-size: 11px;">
+                                    *Menyimpan aktivitas baru akan memperbarui tanggal kontak terakhir pelanggan
+                                    ini.
+                                </small>
+                            </div>
 
+                            <div v-if="dataLead?.activity && dataLead?.activity.length > 0"
+                                class="col-12 mt-4 pt-3 border-top">
+                                <label class="form-label small fw-bold text-muted mb-3 d-block"
+                                    style="letter-spacing: 0.5px;">
+                                    🕒 JEJAK REKAM KONSUMEN (ACTIVITY TIMELINE):
+                                </label>
 
-                                <div v-if="props.leads?.activity && props.leads?.activity.length > 0" class="mt-4 pt-2">
-                                    <label class="form-label small fw-bold text-muted mb-3 d-block"
-                                        style="letter-spacing: 0.5px;">
-                                        🕒 JEJAK REKAM KONSUMEN (ACTIVITY TIMELINE):
-                                    </label>
+                                <div class="ps-1 pe-2 position-relative" style="max-height: 440px; overflow-y: auto;">
 
-                                    <div class="ps-1 pe-2" style="max-height: 240px; overflow-y: auto;">
-                                        <div class="d-flex gap-3 mb-3 position-relative" v-for="act in leads.activity"
-                                            :key="act.id_lead_activity">
+                                    <div class="d-flex gap-2 mb-3 position-relative" v-for="act in dataLead.activity"
+                                        :key="act.id_lead_activity">
 
-                                            <div class="timeline-line"></div>
+                                        <div class="timeline-line"></div>
 
-                                            <div class="badge bg-primary-subtle text-primary rounded-circle p-0 d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
-                                                style="width: 34px; height: 34px; z-index: 2;">
-                                                <i class="bi bi-person-fill fs-6"></i>
+                                        <div class="badge bg-primary-subtle text-primary rounded-circle p-0 d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
+                                            style="width: 34px; height: 34px; z-index: 2;">
+                                            <i class="bi bi-person-fill fs-6"></i>
+                                        </div>
+
+                                        <div class="d-flex flex-column flex-grow-1">
+
+                                            <div v-if="__alert.visible && __alert.id === act.id_lead_activity"
+                                                class="alert py-2 px-3 mb-2" :class="`alert-${__alert.type}`">
+                                                <i :class="{
+                                                    'bi bi-check-circle-fill': __alert.type === 'success',
+                                                    'bi bi-exclamation-triangle-fill': __alert.type === 'warning',
+                                                    'bi bi-info-circle-fill': __alert.type === 'info',
+                                                    'bi bi-x-circle-fill': __alert.type === 'danger'
+                                                }" class="me-2"></i>
+
+                                                {{ __alert.message }}
                                             </div>
 
+
                                             <div class="bg-light p-2 px-3 rounded-3 border flex-grow-1 shadow-sm">
+
                                                 <div
                                                     class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1">
-                                                    <span class="fw-bold text-dark" style="font-size: 12px;">
-                                                        {{ act.user?.activity_creator_name || 'Sistem' }}
+                                                    <span class="fw-bold text-dark text-capitalize"
+                                                        style="font-size: 14px;">
+                                                        Dibuat Oleh: {{ act.user?.activity_creator_name || 'Sistem' }} -
+                                                        {{
+                                                            getRoleName(form.role_name).label }}
                                                     </span>
-                                                    <span class="text-muted" style="font-size: 10px;">
+                                                    <span class="text-muted" style="font-size: 12px;">
                                                         {{ new Date(act.created_at).toLocaleString('id-ID',
                                                             {
                                                                 day: 'numeric', month: 'short', hour: '2-digit',
@@ -268,18 +481,47 @@ const submitTextButton = computed(() => {
                                                             }) }}
                                                     </span>
                                                 </div>
-                                                <p class="mb-0 text-slate-700 mt-1"
-                                                    style="font-size: 12.5px; white-space: pre-line;">{{ act.description
-                                                    }}</p>
-                                            </div>
+                                                <div class="d-flex justify-content-between flex-column">
 
+                                                    <p v-if="!activityEdit.id" class="mb-3 mt-1"
+                                                        style="font-size: 12.5px; white-space: pre-line;">
+                                                        {{ act.description
+                                                        }}</p>
+                                                    <div class="mb-2">
+                                                        <text-area v-if="activityEdit.id === act.id_lead_activity"
+                                                            :maxChar="2500" name="activity"
+                                                            v-model="activityEdit.new_value" :rows="3"
+                                                            placeholder="Tuliskan apa yang baru saja dibicarakan dengan pelanggan di sini..." />
+                                                    </div>
+                                                    <div class="d-flex gap-2 align-items-center">
+                                                        <span
+                                                            @click.prevent="activityEdit.id === act.id_lead_activity ? updateActivity() : editActivity(act)"
+                                                            class="text-primary cursor-pointer badge badge-soft-success">
+                                                            {{ activityEdit.id === act.id_lead_activity ? 'Simpan' :
+                                                                'Ubah'
+                                                            }}
+                                                        </span>
+                                                        <span v-if="activityEdit.id === act.id_lead_activity"
+                                                            @click.prevent="cancelEditActivity"
+                                                            class="badge badge-soft-danger cursor-pointer">Batal</span>
+
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
+
                                     </div>
                                 </div>
+                            </div>
+                            <div v-else class="col-12 text-center py-4 text-muted">
+                                <i class="bi bi-chat-square-dots fs-1 opacity-25 d-block mb-1"></i>
+                                <small>Belum ada riwayat percakapan pada prospek ini.</small>
                             </div>
                         </div>
 
                     </form-wrapper>
+
+
 
                 </template>
 
@@ -287,7 +529,7 @@ const submitTextButton = computed(() => {
                     <div class="d-flex justify-content-end gap-2 p-2 bg-transparent">
                         <button type="button" class="btn btn-c-slate border-0 fw-medium px-4"
                             @click.prevent="close">Batal</button>
-                        <button @click.prevent="submit" type="button" :disabled="form.processing"
+                        <button @click.prevent="submit" type="button" :disabled="form.processing || isLoading"
                             class="btn btn-height-1 fw-semibold" :class="isEdit ? 'btn-c-success' : 'btn-c-primary'">
                             <span v-if="form.processing" class="spinner-border spinner-border-sm me-2"></span>
                             <i v-else :class="isEdit ? 'bi bi-check-circle me-1' : 'bi bi-save me-1'"></i>
@@ -305,9 +547,45 @@ const submitTextButton = computed(() => {
     position: absolute;
     left: 16px;
     top: 34px;
-    bottom: -18px;
+    bottom: -20px;
     width: 2px;
     background-color: #cbd5e1;
     z-index: 1;
+}
+
+/* DESAIN SWITCHER TABS MEWAH ALA APPLE / LINEAR */
+.celestial-tab-container {
+    display: flex;
+    background-color: #f1f5f9;
+    /* Slate-100 */
+    padding: 5px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.celestial-tab-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 10px 15px;
+    border-radius: 9px;
+    font-size: 0.885rem;
+    font-weight: 600;
+    color: #64748b;
+    /* Slate-500 */
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.celestial-tab-btn:hover {
+    color: #1e293b;
+}
+
+.celestial-tab-btn.active {
+    background-color: #ffffff;
+    color: var(--c-primary);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
 }
 </style>

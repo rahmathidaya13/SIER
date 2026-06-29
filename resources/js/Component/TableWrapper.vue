@@ -87,7 +87,7 @@ const visibleHeaders = computed(() => props.headers.filter(col => col.visible !=
     <div class="table-wrapper">
         <slot name="filter-action" />
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
+            <table class="table table-hover align-middle table-nowrap">
                 <thead>
                     <tr>
                         <th v-if="markAll" class="text-center" style="width: 50px;">
@@ -97,7 +97,8 @@ const visibleHeaders = computed(() => props.headers.filter(col => col.visible !=
                                     @change="toggleAll($event)" />
                             </div>
                         </th>
-                        <th v-for="col in visibleHeaders" :key="col.key" v-bind="col.attrs" style="font-size: 0.95rem;">
+                        <th class="align-middle" v-for="col in visibleHeaders" :key="col.key" v-bind="col.attrs"
+                            style="font-size: 0.95rem;">
                             <slot name="header" :col="col">
                                 {{ col.label }}
                             </slot>
@@ -107,7 +108,7 @@ const visibleHeaders = computed(() => props.headers.filter(col => col.visible !=
                 <tbody>
                     <tr v-if="loader">
                         <td :colspan="visibleHeaders.length + (markAll ? 1 : 0)" class="text-center py-5">
-                            <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;">
+                            <div class="spinner-border text-primary" style="width: 2rem; height: 2rem;">
                                 <span class="visually-hidden">Loading...</span>
                             </div>
                             <div class="mt-2 text-muted small fw-semibold">{{ loaderText || 'Memuat Data...' }}</div>
@@ -121,8 +122,6 @@ const visibleHeaders = computed(() => props.headers.filter(col => col.visible !=
                             </slot>
                         </td>
                     </tr>
-
-
                     <template v-else>
                         <tr v-for="(item, index) in rows" :key="getRowId(item)" :class="computeRowClass(item)">
 

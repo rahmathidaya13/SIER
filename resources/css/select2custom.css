@@ -112,8 +112,6 @@
 .is-invalid+.select2-container--bootstrap-5 .select2-selection--single,
 .select2-container--bootstrap-5.is-invalid .select2-selection--single {
     border-color: var(--c-danger) !important;
-    background-color: var(--c-danger-subtle) !important;
-    /* Latar belakang ikut memerah pudar */
 }
 
 /* Warna teks di dalam kotak error dipaksa jadi merah gelap */

@@ -1,17 +1,19 @@
 <script setup>
-import { Form, Head, usePage, router } from '@inertiajs/vue3';
+import { Form, Head, usePage, router, Link } from '@inertiajs/vue3';
 import { onMounted, reactive, ref } from 'vue';
 import { useFilter } from '@/Composables/useFilter';
 import { useConfirm } from "@/Composables/useConfirm"
 import { highlight } from "@/Helpers/Highlight";
 import FormModal from './FormModal.vue';
+import axios from 'axios';
 const props = defineProps({
     leads: Object,
     filters: Object,
     channels: Array,
-    products: Array
+    products: Array,
+    role_name: String
 });
-
+console.log(props.leads.data);
 const {
     filters,
     isLoading,
@@ -62,7 +64,7 @@ const header = [
         label: "STATUS",
         key: "status",
         attrs: {
-            class: 'textt-center',
+            class: 'text-center',
         },
     },
     {
@@ -83,15 +85,15 @@ const header = [
 ];
 
 const showModal = ref(false);
-const selectedData = ref(null);
-const loadDataById = ref(null);
+const selectedId = ref(null);
+
 const openCreateModal = () => {
     showModal.value = true;
-    selectedData.value = {};
+    selectedId.value = null;
 }
-const openEditModal = (data) => {
+const openEditModal = async (data) => {
     showModal.value = true;
-    selectedData.value = data;
+    selectedId.value = data.id_lead
 }
 const keywordRef = ref(null);
 onMounted(() => {
@@ -118,6 +120,37 @@ const leadActions = [
         title: 'Hapus Data Lead',
     },
 ];
+const isOverdue = (dateString, status) => {
+    if (!dateString || status === 'CLOSED_WON' || status === 'CLOSED_LOST') return false;
+    const today = new Date().setHours(0, 0, 0, 0);
+    const follDate = new Date(dateString).setHours(0, 0, 0, 0);
+    return follDate <= today;
+};
+const getWaLink = (phone) => {
+    let p = phone.replace(/\D/g, ''); // Hapus spasi, strip, tanda plus
+    if (p.startsWith('0')) p = '62' + p.slice(1);
+    return `https://wa.me/${p}`;
+};
+const getEmail = (email) => {
+    return `mailto:${email}`;
+}
+const getTempBadge = (temp) => {
+    const map = {
+        'HOT': { class: 'badge-soft-success', label: '🔥 HOT' },
+        'WARM': { class: 'badge-soft-warning', label: '⏳ WARM' },
+        'COLD': { class: 'badge-soft-danger', label: '❄️ COLD' }
+    };
+    return map[temp] || { class: 'badge-soft-dark', label: temp };
+};
+const getStatusBadge = (status) => {
+    const map = {
+        'NEW': { class: 'badge-soft-primary', label: '⭐ Baru Masuk' },
+        'FOLLOW_UP': { class: 'badge-soft-info', label: '💬 Follow Up' },
+        'CLOSED_WON': { class: 'badge-soft-success fw-bold', label: '✔ CLOSING (Terjual / Deal)' },
+        'CLOSED_LOST': { class: 'badge-soft-dark', label: '✖ Batal / Lost' }
+    };
+    return map[status] || { class: 'badge-soft-dark', label: status };
+};
 
 </script>
 <template>
@@ -155,36 +188,36 @@ const leadActions = [
                             <div class="col-xl-2 col-3 col-md-3 col-lg-3">
                                 <select-input :isValid="false" name="temperature" v-model="filters.temperature"
                                     text="Suhu Prospek" :options="[
-                                        { label: 'Semua Suhu Prospek', value: 'all' },
-                                        { label: 'Suhu: HOT (Siap Bayar)', value: 'hot' },
-                                        { label: 'Suhu: WARM (Tanya Detail)', value: 'warm' },
-                                        { label: 'Suhu: COLD (Hanya Kepo)', value: 'cold' }
+                                        { label: '🌍 Semua Suhu', value: 'all' },
+                                        { label: '🔥 HOT (Siap Bayar)', value: 'hot' },
+                                        { label: '🌤️ WARM (Tanya Detail)', value: 'warm' },
+                                        { label: '❄️ COLD (Hanya Kepo)', value: 'cold' }
                                     ]" />
                             </div>
                             <div class="col-xl-2 col-3 col-md-3 col-lg-3">
                                 <select-input :isValid="false" name="status" v-model="filters.status"
                                     text="Status Prospek" :options="[
-                                        { label: 'Semua Status Prospek', value: 'all' },
-                                        { label: 'New', value: 'new' },
-                                        { label: 'Follow Up', value: 'follow_up' },
-                                        { label: 'closed won', value: 'closed_won' },
-                                        { label: 'closed lost', value: 'closed_lost' }
+                                        { label: '📋 Semua Status', value: 'all' },
+                                        { label: '🆕 Baru Masuk', value: 'new' },
+                                        { label: '📞 Follow Up', value: 'follow_up' },
+                                        { label: '🎉 Closing / Terjual', value: 'closed_won' },
+                                        { label: '❌ Tidak Jadi', value: 'closed_lost' }
                                     ]" />
                             </div>
                             <div class="col-xl-1 col-3 col-md-3 col-lg-3">
                                 <select-input :isValid="false" name="limit" v-model="filters.limit"
                                     text="Pilih Batas Data" :options="[
-                                        { label: '10 Data', value: 10 },
-                                        { label: '25 Data', value: 25 },
-                                        { label: '50 Data', value: 50 },
-                                        { label: '100 Data', value: 100 },
+                                        { label: '☰ 10 Data', value: 10 },
+                                        { label: '☰ 25 Data', value: 25 },
+                                        { label: '☰ 50 Data', value: 50 },
+                                        { label: '☰ 100 Data', value: 100 },
                                     ]" />
                             </div>
                             <div class="col-xl-1 col-3 col-md-3 col-lg-3">
-                                <select-input :isValid="false" name="sort_order" v-model="filters.sort_order"
+                                <select-input :isValid="false" name="order_by" v-model="filters.order_by"
                                     text="Pilih Urutan" :options="[
-                                        { label: 'Terbaru', value: 'latest' },
-                                        { label: 'Terlama', value: 'oldest' }
+                                        { label: '🔼 Terbaru', value: 'latest' },
+                                        { label: '🔽 Terlama', value: 'oldest' }
                                     ]" />
                             </div>
 
@@ -210,9 +243,66 @@ const leadActions = [
                                     </td>
 
                                     <td>
+                                        <div class="fw-bold text-dark mb-1"
+                                            v-html="highlight(item.name, filters.keyword)"></div>
+                                        <div v-if="item.email" class="text-muted small mb-2">
+                                            <a :href="getEmail(item.email)" class="text-decoration-none"
+                                                target="_blank">{{ item.email
+                                                }}</a>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <a :href="getWaLink(item.phone)" target="_blank"
+                                                class="badge bg-success text-white text-decoration-none px-2 py-1 d-inline-flex align-items-center gap-1"
+                                                title="Chat langsung via WhatsApp">
+                                                <i class="bi bi-whatsapp"></i> {{ item.phone }}
+                                            </a>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2 fw-medium text-dark small">
+                                            <i class="bi fs-5" :class="item.icon || 'bi-broadcast'"></i>
+                                            {{ item.channel_name }}
+                                        </div>
+                                        <div class="text-muted" style="font-size: 14px;">
+                                            📦 {{ item.product_name || 'Belum pilih paket' }}
+                                        </div>
+                                    </td>
+
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill px-3 py-1 fw-bold"
+                                            :class="getTempBadge(item.temperature).class">
+                                            {{ getTempBadge(item.temperature).label }}
+                                        </span>
+                                    </td>
+
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill px-3 py-1"
+                                            :class="getStatusBadge(item.status).class">
+                                            {{ getStatusBadge(item.status).label }}
+                                        </span>
+                                    </td>
+
+                                    <td class="text-center">
+                                        <div v-if="item.follow_up_date" class="small fw-medium align-items-center"
+                                            :class="isOverdue(item.follow_up_date, item.status) ? 'text-danger fw-bold animate-pulse' : 'text-muted fw-medium'">
+                                            <i class="bi bi-calendar-event me-2"></i>
+                                            <i v-if="isOverdue(item.follow_up_date, item.status)"
+                                                class="bi bi-exclamation-circle-fill me-1" title="Telat dihubungi!"></i>
+                                            {{ new Date(item.follow_up_date).toLocaleDateString('id-ID', {
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric'
+                                            }) }}
+                                        </div>
+                                        <span v-else class="text-muted small">-</span>
+                                    </td>
+
+                                    <td class="text-center">
                                         <action-button :item="item" :actions="leadActions" @edit="openEditModal(item)"
                                             @delete="deleted('leads.delete', item)" />
                                     </td>
+
                                 </template>
 
 
@@ -241,7 +331,7 @@ const leadActions = [
                         </div>
                     </div>
                 </div>
-                <FormModal :channels="props.channels" :products="props.products" :leads="selectedData" :show="showModal"
+                <FormModal :channels="props.channels" :products="props.products" :idLead="selectedId" :show="showModal"
                     @update:show="showModal = $event" />
             </div>
         </template>
