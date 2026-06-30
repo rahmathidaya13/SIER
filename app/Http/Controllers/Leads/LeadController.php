@@ -66,7 +66,7 @@ class LeadController extends Controller
         $this->validateLeads($request->all(), $id);
         $lead = $this->leadServices->update($id, $request->all(), $user);
         $this->invalidateCaches(LeadsRepository::class, ['global', $user->id_branch]);
-        return redirect()->back()->with('message', 'Perubahan data dari lead pelanggan '.$lead->name.' berhasil diperbarui');
+        return redirect()->back()->with('message', 'Perubahan data dari lead pelanggan ' . $lead->name . ' berhasil diperbarui');
     }
 
     public function show(string $id)
@@ -78,6 +78,7 @@ class LeadController extends Controller
                 'product:id_product,name as product_name',
                 'activity.user:id,name as activity_creator_name',
                 'user.roles:id,name',
+                'activity.user.roles:id,name',
             ])
             ->findOrFail($id);
         return response()->json($leads);

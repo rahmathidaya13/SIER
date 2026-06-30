@@ -13,7 +13,12 @@ const closeSideBar = () => {
     sideBarOpen.value = false
 }
 watch(sideBarOpen, (value) => {
-    document.body.style.overflow = value ? 'hidden' : ''
+    if (window.innerWidth < 992) {
+        document.body.style.overflow = value ? 'hidden' : '';
+    } else {
+        // Jika di PC/Desktop, pastikan halaman selalu bisa di-scroll
+        document.body.style.overflow = '';
+    }
 })
 onUnmounted(() => {
     document.body.style.overflow = ''
@@ -73,14 +78,13 @@ onUnmounted(() => {
 </template>
 <style scoped>
 .wrapper {
-    display: flex;
-    width: 100%;
     min-height: 100vh;
+    width: 100%;
 }
 
 .page-content-wrapper {
+    transition: margin-left 0.35s cubic-bezier(0.2, 0, 0, 1), width 0.35s cubic-bezier(0.2, 0, 0, 1);
     width: 100%;
-    transition: margin-left 0.35s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .sidebar-backdrop {
@@ -104,13 +108,14 @@ onUnmounted(() => {
 @media (min-width: 992px) {
     .page-content-wrapper {
         margin-left: var(--sidebar-width);
+        /* KUNCI PERBAIKAN: Kurangi lebar 100% dengan lebar sidebar */
+        width: calc(100% - var(--sidebar-width));
     }
 
-    /* [PERHATIKAN INI]: Jika di PC sidebarnya ditutup (class 'expanded' aktif),
-       margin kiri konten otomatis ditarik habis ke 0
-    */
     .page-content-wrapper.expanded {
         margin-left: 0 !important;
+        /* Saat sidebar ditutup, kembalikan lebarnya penuh ke 100% */
+        width: 100% !important;
     }
 
     .sidebar-backdrop,

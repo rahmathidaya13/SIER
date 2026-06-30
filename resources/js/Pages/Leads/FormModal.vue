@@ -69,7 +69,7 @@ const fillForm = (data) => {
         notes: data.notes,
         product_name: data.product?.product_name || '',
         new_activity: '',
-        role_name: data.user?.roles[0].name ?? 'Sistem'
+        // role_name: data.user?.roles[0].name ?? 'Sistem'
     })
     dataLead.value = data
     form.reset();
@@ -206,7 +206,9 @@ const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
     return isEdit.value ? 'Menyimpan...' : 'Simpan Prospek';
 });
-const getRoleName = (roleName) => {
+const getRoleName = (data) => {
+    const role = data.user.roles.map(role => role.name)
+    console.log(role);
     const roles = {
         'super_admin': {
             label: 'Head Office',
@@ -229,7 +231,7 @@ const getRoleName = (roleName) => {
             color: 'bg-secondary text-white'
         }
     };
-    return roles[roleName] || 'bg-light text-dark border';
+    return roles[role] || 'bg-light text-dark border';
 };
 
 const activityEdit = reactive({
@@ -484,15 +486,15 @@ const updateActivity = () => {
                                                             <i class="bi bi-plus-circle"></i>
                                                             Dibuat: {{ act.user?.activity_creator_name || 'Sistem'
                                                             }} -
-                                                            {{ getRoleName(form.role_name).label }}
+                                                            {{ getRoleName(act).label }}
                                                         </div>
-                                                        <div class="fw-bold text-dark text-capitalize"
+                                                        <!-- <div class="fw-bold text-dark text-capitalize"
                                                             style="font-size: 14px;">
                                                             <i class="bi bi-pencil-square"></i>
                                                             Diubah: {{ act.user?.activity_creator_name || 'Sistem'
                                                             }} -
-                                                            {{ getRoleName(form.role_name).label }}
-                                                        </div>
+                                                            {{ getRoleName(act).label }}
+                                                        </div> -->
                                                     </div>
                                                     <div class="d-flex flex-column">
                                                         <span class="text-muted" style="font-size: 12px;">
