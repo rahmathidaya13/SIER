@@ -26,7 +26,7 @@ const props = defineProps({
         default: 250
     },
     error: {
-        type: String,
+        type: [String, Array, Boolean],
         default: ""
     },
     isValid: {

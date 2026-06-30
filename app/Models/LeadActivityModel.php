@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Permission\Models\Role;
 
 class LeadActivityModel extends Model
 {
@@ -26,4 +27,5 @@ class LeadActivityModel extends Model
     {
         return $this->belongsTo(LeadModel::class, 'id_lead', 'id_lead');
     }
+
 }

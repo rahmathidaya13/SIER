@@ -74,6 +74,13 @@ const header = [
             class: 'text-center',
         },
     },
+    {
+        label: "Dibuat Oleh",
+        key: "creator",
+        attrs: {
+            class: 'text-center',
+        },
+    },
 
     {
         label: "Aksi",
@@ -136,18 +143,43 @@ const getEmail = (email) => {
 }
 const getTempBadge = (temp) => {
     const map = {
-        'HOT': { class: 'badge-soft-success', label: '🔥 HOT' },
-        'WARM': { class: 'badge-soft-warning', label: '⏳ WARM' },
-        'COLD': { class: 'badge-soft-danger', label: '❄️ COLD' }
+        'HOT': {
+            class: 'badge-soft-success',
+            label: '🔥 HOT',
+            title: 'Suhu Hot menandakan bahwa prospek sudah siap bayar'
+        },
+        'WARM': {
+            class: 'badge-soft-warning',
+            label: '⏳ WARM',
+            title: 'Suhu Warm menandakan bahwa pelanggan bertanya-tanya tentang detail produk'
+        },
+        'COLD': {
+            class: 'badge-soft-info',
+            label: '❄️ COLD',
+            title: 'Suhu Cold menandakan bahwa pelanggan hanya sekedar ingin kepoin produk'
+        }
     };
-    return map[temp] || { class: 'badge-soft-dark', label: temp };
+    return map[temp] || { class: 'badge-soft-dark', label: temp, title: temp };
 };
 const getStatusBadge = (status) => {
     const map = {
-        'NEW': { class: 'badge-soft-primary', label: '⭐ Baru Masuk' },
-        'FOLLOW_UP': { class: 'badge-soft-info', label: '💬 Follow Up' },
-        'CLOSED_WON': { class: 'badge-soft-success fw-bold', label: '✔ CLOSING (Terjual / Deal)' },
-        'CLOSED_LOST': { class: 'badge-soft-dark', label: '✖ Batal / Lost' }
+        'NEW': {
+            class: 'badge-soft-primary',
+            label: '⭐ Baru Masuk'
+        },
+        'FOLLOW_UP': {
+            class: 'badge-soft-info',
+            label: '💬 Follow Up'
+        },
+        'CLOSED_WON': {
+            class: 'badge-soft-success fw-bold',
+            label: '✔ CLOSING (Terjual / Deal)'
+
+        },
+        'CLOSED_LOST': {
+            class: 'badge-soft-dark',
+            label: '✖ Batal / Lost'
+        }
     };
     return map[status] || { class: 'badge-soft-dark', label: status };
 };
@@ -167,7 +199,7 @@ const getStatusBadge = (status) => {
                             <div
                                 class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                                 <div>
-                                    <h5 class="fw-bold mb-1">Database Prospek (Leads)</h5>
+                                    <h5 class="fw-bold mb-1">Data Prospek (Leads)</h5>
                                     <small class="text-muted">Prospek yang belum melakukan pembayaran deal</small>
                                 </div>
                                 <button @click.prevent="openCreateModal" class="btn btn-c-primary px-4 py-2">
@@ -225,8 +257,7 @@ const getStatusBadge = (status) => {
 
                         <div class="card-body p-0">
                             <table-wrapper :loader="isLoading" loaderText="Sedang memuat data..." :headers="header"
-                                :items="leads?.data" row-key="product_id"
-                                @update:selected="(val) => selectedData = val">
+                                :items="leads?.data" row-key="id_lead" @update:selected="(val) => selectedId = val">
 
                                 <template #empty>
                                     <div class="text-center py-5">
@@ -271,6 +302,7 @@ const getStatusBadge = (status) => {
 
                                     <td class="text-center">
                                         <span class="badge rounded-pill px-3 py-1 fw-bold"
+                                            :title="getTempBadge(item.temperature).title"
                                             :class="getTempBadge(item.temperature).class">
                                             {{ getTempBadge(item.temperature).label }}
                                         </span>
@@ -278,6 +310,7 @@ const getStatusBadge = (status) => {
 
                                     <td class="text-center">
                                         <span class="badge rounded-pill px-3 py-1"
+                                            :title="getStatusBadge(item.status).label"
                                             :class="getStatusBadge(item.status).class">
                                             {{ getStatusBadge(item.status).label }}
                                         </span>
@@ -296,6 +329,46 @@ const getStatusBadge = (status) => {
                                             }) }}
                                         </div>
                                         <span v-else class="text-muted small">-</span>
+                                    </td>
+
+                                    <td class="align-middle text-start">
+                                        <div class="d-flex align-items-center">
+                                            <div
+                                                class="client-avatar me-3 bg-gradient-light border text-primary fw-bold small d-flex align-items-center justify-content-center shadow-sm">
+                                                {{ item.creator_name ? item.creator_name.substring(0, 2).toUpperCase()
+                                                    : '??' }}
+                                            </div>
+                                            <div class="d-flex flex-column small" style="line-height: 1.3;">
+                                                <span class="fw-bold text-dark mb-1 text-capitalize">{{
+                                                    item.creator_name || 'Sistem'
+                                                    }}</span>
+                                                <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
+                                                    <span><i class="fas fa-plus-circle me-1 opacity-50"></i>
+                                                        {{ new Date(item.created_at).toLocaleDateString('id-ID', {
+                                                            day: 'numeric',
+                                                            month: 'short',
+                                                            year: 'numeric',
+                                                            hour: 'numeric',
+                                                            minute: 'numeric',
+                                                            timeZone: 'Asia/Jakarta',
+                                                            timeZoneName: 'short',
+                                                        }) }}
+                                                    </span>
+                                                    <span v-if="item.updated_at !== item.created_at">
+                                                        <i class="fas fa-pencil-alt me-1 opacity-50"></i> {{ new
+                                                            Date(item.updated_at).toLocaleDateString('id-ID', {
+                                                                day: 'numeric',
+                                                                month: 'short',
+                                                                year: 'numeric',
+                                                                hour: 'numeric',
+                                                                minute: 'numeric',
+                                                                timeZone: 'Asia/Jakarta',
+                                                                timeZoneName: 'short',
+                                                            }) }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
 
                                     <td class="text-center">

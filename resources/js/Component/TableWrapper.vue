@@ -86,8 +86,8 @@ const visibleHeaders = computed(() => props.headers.filter(col => col.visible !=
 <template>
     <div class="table-wrapper">
         <slot name="filter-action" />
-        <div class="table-responsive">
-            <table class="table table-hover align-middle table-nowrap">
+        <div class="table-responsive custom-scroll">
+            <table class="table table-hover align-middle">
                 <thead>
                     <tr>
                         <th v-if="markAll" class="text-center" style="width: 50px;">
@@ -150,6 +150,32 @@ const visibleHeaders = computed(() => props.headers.filter(col => col.visible !=
     width: 1.1em;
     height: 1.1em;
     cursor: pointer;
+}
+
+.custom-scroll {
+    overflow: auto;
+    max-height: 650px;
+    scrollbar-gutter: stable;
+    scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar */
+.custom-scroll::-webkit-scrollbar {
+    height: 8px;
+    width: 7px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+    background: #d1d7e4;
 }
 
 table td {

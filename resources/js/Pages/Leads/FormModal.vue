@@ -53,9 +53,10 @@ const form = useForm({
     notes: '',
     product_name: '',
     new_activity: '',
-    role_name: ''
+    role_name: '',
 });
 const fillForm = (data) => {
+    console.log(data);
     form.defaults({
         name: data.name,
         phone: data.phone,
@@ -259,8 +260,6 @@ const updateActivity = () => {
             if (activity) {
                 activity.description = activityEdit.new_value;
             }
-        console.log(usePage().props);
-
             show({
                 id: activityEdit.id,
                 message: 'Aktivitas berhasil diperbarui',
@@ -268,10 +267,21 @@ const updateActivity = () => {
                 duration: 5000
             });
             cancelEditActivity();
-
+        },
+        onError: (errors) => {
+            show({
+                id: activityEdit.id,
+                message: errors.description,
+                type: 'danger',
+                duration: 5000
+            });
         }
     });
 }
+
+
+
+
 </script>
 <template>
     <div class="row" v-if="props.show">
@@ -458,8 +468,9 @@ const updateActivity = () => {
                                                     'bi bi-info-circle-fill': __alert.type === 'info',
                                                     'bi bi-x-circle-fill': __alert.type === 'danger'
                                                 }" class="me-2"></i>
-
-                                                {{ __alert.message }}
+                                                <span class="small">
+                                                    {{ __alert.message }}
+                                                </span>
                                             </div>
 
 
@@ -467,29 +478,53 @@ const updateActivity = () => {
 
                                                 <div
                                                     class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1">
-                                                    <span class="fw-bold text-dark text-capitalize"
-                                                        style="font-size: 14px;">
-                                                        Dibuat Oleh: {{ act.user?.activity_creator_name || 'Sistem' }} -
-                                                        {{
-                                                            getRoleName(form.role_name).label }}
-                                                    </span>
-                                                    <span class="text-muted" style="font-size: 12px;">
-                                                        {{ new Date(act.created_at).toLocaleString('id-ID',
-                                                            {
-                                                                day: 'numeric', month: 'short', hour: '2-digit',
-                                                                minute: '2-digit'
-                                                            }) }}
-                                                    </span>
+                                                    <div class="d-flex flex-column small">
+                                                        <div class="fw-bold text-dark text-capitalize"
+                                                            style="font-size: 14px;">
+                                                            <i class="bi bi-plus-circle"></i>
+                                                            Dibuat: {{ act.user?.activity_creator_name || 'Sistem'
+                                                            }} -
+                                                            {{ getRoleName(form.role_name).label }}
+                                                        </div>
+                                                        <div class="fw-bold text-dark text-capitalize"
+                                                            style="font-size: 14px;">
+                                                            <i class="bi bi-pencil-square"></i>
+                                                            Diubah: {{ act.user?.activity_creator_name || 'Sistem'
+                                                            }} -
+                                                            {{ getRoleName(form.role_name).label }}
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex flex-column">
+                                                        <span class="text-muted" style="font-size: 12px;">
+                                                            <i class="bi bi-plus-circle"></i>
+                                                            {{ new Date(act.created_at).toLocaleString('id-ID',
+                                                                {
+                                                                    day: 'numeric', month: 'short', hour: '2-digit',
+                                                                    minute: '2-digit'
+                                                                }) }}
+                                                        </span>
+                                                        <span class="text-muted" style="font-size: 12px;">
+                                                            <i class="bi bi-pencil-square"></i>
+                                                            {{ new Date(act.updated_at).toLocaleString('id-ID',
+                                                                {
+                                                                    day: 'numeric', month: 'short', hour: '2-digit',
+                                                                    minute: '2-digit'
+                                                                }) }}
+                                                        </span>
+
+                                                    </div>
                                                 </div>
                                                 <div class="d-flex justify-content-between flex-column">
 
                                                     <p v-if="!activityEdit.id" class="mb-3 mt-1"
-                                                        style="font-size: 12.5px; white-space: pre-line;">
+                                                        style="font-size: 14px; white-space: pre-line;">
                                                         {{ act.description
                                                         }}</p>
                                                     <div class="mb-2">
-                                                        <text-area v-if="activityEdit.id === act.id_lead_activity"
-                                                            :maxChar="2500" name="activity"
+                                                        <text-area
+                                                            :error="__alert.visible && __alert.id === act.id_lead_activity"
+                                                            v-if="activityEdit.id === act.id_lead_activity"
+                                                            :maxChar="2500" name="activity" inputClass="bg-transparent"
                                                             v-model="activityEdit.new_value" :rows="3"
                                                             placeholder="Tuliskan apa yang baru saja dibicarakan dengan pelanggan di sini..." />
                                                     </div>
