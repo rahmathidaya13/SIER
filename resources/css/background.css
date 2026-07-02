@@ -1,0 +1,16 @@
+.bg-c-success{
+    background-color: var(--c-success);
+    color: white;
+}
+.bg-c-warning{
+    background-color: var(--c-warning);
+    color: white;
+}
+.bg-c-danger{
+    background-color: var(--c-danger);
+    color: white;
+}
+.bg-c-info{
+    background-color: var(--c-info);
+    color: white;
+}

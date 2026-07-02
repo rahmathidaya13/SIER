@@ -18,6 +18,8 @@ import ActionButtonToolbar from "./Component/ActionButtonToolbar.vue";
 import Pagination from "./Component/Pagination.vue";
 import Alert from "./Component/Alert.vue";
 import Selects2 from "./Component/Selects2.vue";
+import CurrencyInput from "./Component/CurrencyInput.vue";
+import AlertErrorAll from "./Component/AlertErrorAll.vue";
 export default {
     install(app) {
         app.component("app-layout", AppLayout);
@@ -29,6 +31,7 @@ export default {
         app.component("input-label", InputLabel);
         app.component("input-number", InputNumber);
         app.component("input-text", InputText);
+        app.component("input-currency", CurrencyInput);
         app.component("text-area", TextArea);
         app.component("toasts", Toasts);
         app.component("check-box", CheckBox);
@@ -39,6 +42,7 @@ export default {
         app.component("action-button", ActionButtonToolbar);
         app.component("pagination", Pagination);
         app.component("alert", Alert);
+        app.component("alert-error-all", AlertErrorAll);
         app.component("select-2", Selects2);
     },
 };

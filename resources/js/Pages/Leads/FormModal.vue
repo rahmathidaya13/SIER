@@ -14,6 +14,7 @@ const props = defineProps({
     channels: Array,
     products: Array
 });
+
 const isEdit = computed(() => !!props.idLead);
 const isChangingProduct = ref(false);
 const isLoading = ref(false);
@@ -56,7 +57,6 @@ const form = useForm({
     role_name: '',
 });
 const fillForm = (data) => {
-    console.log(data);
     form.defaults({
         name: data.name,
         phone: data.phone,
@@ -69,7 +69,6 @@ const fillForm = (data) => {
         notes: data.notes,
         product_name: data.product?.product_name || '',
         new_activity: '',
-        // role_name: data.user?.roles[0].name ?? 'Sistem'
     })
     dataLead.value = data
     form.reset();
@@ -165,7 +164,16 @@ const submit = () => {
         preserveScroll: true,
         preserveState: true,
         replace: true,
-        onSuccess: () => {
+
+        onSuccess: (page) => {
+            // console.log(page.props.flash?.new_id_lead);
+            const newIdLead = page.props.flash?.new_id_lead;
+            emit('saved', {
+                action_type: isEdit.value ? 'edit' : 'create',
+                status: form.status,
+                temperature: form.temperature,
+                id_lead: newIdLead
+            });
             close();
             form.reset();
         },
@@ -196,7 +204,7 @@ watch(
     immediate: true
 }
 );
-const emit = defineEmits(["update:show"]);
+const emit = defineEmits(["update:show", "saved"]);
 const close = () => {
     emit("update:show", false);
     resetForm();
@@ -206,9 +214,15 @@ const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
     return isEdit.value ? 'Menyimpan...' : 'Simpan Prospek';
 });
-const getRoleName = (data) => {
-    const role = data.user.roles.map(role => role.name)
-    console.log(role);
+const getRoleName = (data, mode = 'create') => {
+    let role;
+    if (mode === 'create') {
+        role = data.user.roles[0].name
+    }
+    if (mode === 'edit') {
+        role = data.user_update.roles[0].updated_by_name
+    }
+    // const role = data.user.roles.map(role => role.name)
     const roles = {
         'super_admin': {
             label: 'Head Office',
@@ -299,17 +313,7 @@ const updateActivity = () => {
 
                 <template #body>
 
-                    <div v-if="form.errors.unauthorized_action"
-                        class="alert alert-c-danger d-flex justify-content-between align-items-center" role="alert">
-                        <div class="d-flex align-items-center gap-2 fw-semibold">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            {{ form.errors.unauthorized_action }}
-                        </div>
-                        <button @click="form.clearErrors('unauthorized_action')" type="button"
-                            class="bg-transparent rounded-circle border-0 fs-4">
-                            <i class="bi bi-x"></i>
-                        </button>
-                    </div>
+                    <alert-error-all :errors="form.errors" @close="form.clearErrors()" />
 
                     <div class="celestial-tab-container mb-4">
                         <button v-for="tab in tabList" :key="tab.id" type="button" @click="activeTab = tab.id"
@@ -331,7 +335,7 @@ const updateActivity = () => {
                             </div>
 
                             <div class="col-md-6">
-                                <label for="phone_input" class="form-label small fw-bold text-muted">NO. WHATSAPP
+                                <label for="phone_input" class="form-label small fw-bold text-muted">NO. HANDPHONE / WA
                                     *</label>
                                 <input-number :maxChar="15" :error="form.errors.phone" v-model="form.phone" name="phone"
                                     placeholder="081233445566" />
@@ -479,37 +483,45 @@ const updateActivity = () => {
                                             <div class="bg-light p-2 px-3 rounded-3 border flex-grow-1 shadow-sm">
 
                                                 <div
-                                                    class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1">
+                                                    class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-1">
                                                     <div class="d-flex flex-column small">
-                                                        <div class="fw-bold text-dark text-capitalize"
+                                                        <div class="fw-bold  text-success text-capitalize"
                                                             style="font-size: 14px;">
                                                             <i class="bi bi-plus-circle"></i>
                                                             Dibuat: {{ act.user?.activity_creator_name || 'Sistem'
                                                             }} -
-                                                            {{ getRoleName(act).label }}
+                                                            {{ getRoleName(act, 'create').label }}
                                                         </div>
-                                                        <!-- <div class="fw-bold text-dark text-capitalize"
-                                                            style="font-size: 14px;">
-                                                            <i class="bi bi-pencil-square"></i>
-                                                            Diubah: {{ act.user?.activity_creator_name || 'Sistem'
-                                                            }} -
-                                                            {{ getRoleName(act).label }}
-                                                        </div> -->
+                                                        <div v-if="act.created_at !== act.updated_at"
+                                                            class="fw-bold mt-1 text-capitalize">
+                                                            <i class="bi bi-pencil-square text-warning"></i>
+                                                            Diubah:
+                                                            {{ act.user_update?.name }}
+                                                            -
+                                                            {{ getRoleName(act, 'edit').label }}
+                                                        </div>
                                                     </div>
                                                     <div class="d-flex flex-column">
                                                         <span class="text-muted" style="font-size: 12px;">
                                                             <i class="bi bi-plus-circle"></i>
                                                             {{ new Date(act.created_at).toLocaleString('id-ID',
                                                                 {
-                                                                    day: 'numeric', month: 'short', hour: '2-digit',
+                                                                    day: 'numeric',
+                                                                    month: 'short',
+                                                                    year: 'numeric',
+                                                                    hour: '2-digit',
                                                                     minute: '2-digit'
                                                                 }) }}
                                                         </span>
-                                                        <span class="text-muted" style="font-size: 12px;">
+                                                        <span v-if="act.created_at !== act.updated_at"
+                                                            class="text-muted" style="font-size: 12px;">
                                                             <i class="bi bi-pencil-square"></i>
                                                             {{ new Date(act.updated_at).toLocaleString('id-ID',
                                                                 {
-                                                                    day: 'numeric', month: 'short', hour: '2-digit',
+                                                                    day: 'numeric',
+                                                                    month: 'short',
+                                                                    year: 'numeric',
+                                                                    hour: '2-digit',
                                                                     minute: '2-digit'
                                                                 }) }}
                                                         </span>
@@ -517,7 +529,6 @@ const updateActivity = () => {
                                                     </div>
                                                 </div>
                                                 <div class="d-flex justify-content-between flex-column">
-
                                                     <p v-if="!activityEdit.id" class="mb-3 mt-1"
                                                         style="font-size: 14px; white-space: pre-line;">
                                                         {{ act.description
@@ -533,14 +544,14 @@ const updateActivity = () => {
                                                     <div class="d-flex gap-2 align-items-center">
                                                         <span
                                                             @click.prevent="activityEdit.id === act.id_lead_activity ? updateActivity() : editActivity(act)"
-                                                            class="text-primary cursor-pointer badge badge-soft-success">
+                                                            class="text-primary rounded-pill cursor-pointer badge badge-soft-success bg-gradient">
                                                             {{ activityEdit.id === act.id_lead_activity ? 'Simpan' :
                                                                 'Ubah'
                                                             }}
                                                         </span>
                                                         <span v-if="activityEdit.id === act.id_lead_activity"
                                                             @click.prevent="cancelEditActivity"
-                                                            class="badge badge-soft-danger cursor-pointer">Batal</span>
+                                                            class="badge rounded-pill badge-soft-danger cursor-pointer">Batal</span>
 
                                                     </div>
                                                 </div>

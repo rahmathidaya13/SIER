@@ -60,7 +60,7 @@ class LeadModel extends Model
     }
     public function sales()
     {
-        return $this->hasOne(SalesModel::class);
+        return $this->hasOne(SalesModel::class, 'id_lead', 'id_lead');
     }
 
     public function activity()

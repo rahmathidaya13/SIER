@@ -91,7 +91,7 @@ const getNameRoles = () => {
 <template>
     <aside class="sidebar custom-slim-scroll" :class="{ 'show': isOpen, 'hide-desktop': !isOpen }">
         <div class="sidebar-brand">
-            <i class="bi bi-funnel-fill me-2"></i> CELESTIAL
+            <i class="bi bi-funnel-fill me-2"></i> {{ $page.props.app.name ?? 'Aplikasi' }}
         </div>
 
         <section class="p-3 text-center border-bottom mx-3 mb-3" aria-label="User Info">

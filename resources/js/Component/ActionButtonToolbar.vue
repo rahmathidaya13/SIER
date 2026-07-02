@@ -73,10 +73,14 @@ const visibleActions = computed(() => {
                 return null;
             }
 
-            if (action.show === false) {
+            const canShow =
+                typeof action.show === 'function'
+                    ? action.show(props.item)
+                    : action.show !== false;
+
+            if (!canShow) {
                 return null;
             }
-
             if (action.permission && !hasPermission(action.permission)) {
                 return null;
             }
@@ -130,7 +134,7 @@ const handleClick = (action) => {
             <i v-if="action.icon" :class="[
                 action.icon,
                 action.iconClass || '',
-                action.label ? 'me-1' : '',
+                action.label ? 'me-0' : '',
             ]"></i>
 
             <span v-if="action.showLabel">

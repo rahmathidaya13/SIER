@@ -54,6 +54,8 @@ class HandleInertiaRequests extends Middleware
                 'action_url' => fn() => $request->session()->get('action_url'),
                 'unauthorized_action' => fn() => $request->session()->get('unauthorized_action'),
 
+                'new_id_lead' => fn() => $request->session()->get('new_id_lead'), // Menyimpan ID lead baru yang ditambahkan
+
                 'activity_message' => fn() => $request->session()->get('activity_message'),
             ],
             'old' => fn() => session()->getOldInput(),

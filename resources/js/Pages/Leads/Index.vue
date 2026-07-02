@@ -6,6 +6,7 @@ import { useConfirm } from "@/Composables/useConfirm"
 import { highlight } from "@/Helpers/Highlight";
 import FormModal from './FormModal.vue';
 import axios from 'axios';
+import ConvertLeadModal from './ConvertLeadModal.vue';
 const props = defineProps({
     leads: Object,
     filters: Object,
@@ -13,7 +14,7 @@ const props = defineProps({
     products: Array,
     role_name: String
 });
-console.log(props.leads.data);
+
 const {
     filters,
     isLoading,
@@ -93,21 +94,46 @@ const header = [
 
 const showModal = ref(false);
 const selectedId = ref(null);
-
+const showConvertModal = ref(false);
 const openCreateModal = () => {
     showModal.value = true;
     selectedId.value = null;
+}
+const openConvertModal = (data) => {
+    showConvertModal.value = true;
+    selectedId.value = data.id_lead
 }
 const openEditModal = async (data) => {
     showModal.value = true;
     selectedId.value = data.id_lead
 }
+const handleLeadSaved = (payload) => {
+    // Jika data yang baru disimpan (baik baru/edit) memiliki status 'CLOSED_WON' (Closing)
+    if (payload.status === 'CLOSED_WON' && payload.temperature === 'HOT' && payload.id_lead) {
+
+        // Beri jeda 300ms agar animasi Modal lama menutup dulu dengan mulus, baru buka modal baru
+        setTimeout(() => {
+            selectedId.value = payload.id_lead; // Suntikkan ID baru ke state
+            showConvertModal.value = true;          // BUM! Modal Closing otomatis mekar!
+        }, 300);
+
+    }
+};
 const keywordRef = ref(null);
 onMounted(() => {
     keywordRef.value.focus();
 })
 
 const leadActions = [
+    {
+        label: 'Jadikan Deal (Closing)',
+        action: 'deals',
+        protectedSelf: true,
+        icon: 'bi bi-bag-check-fill',
+        title: 'Jadikan Deal (Closing)',
+        class: 'btn btn-c-success opacity-75',
+        show: (item) => item.status !== 'CLOSED_WON',
+    },
     {
         label: 'Ubah Data Lead',
         action: 'edit',
@@ -127,6 +153,7 @@ const leadActions = [
         title: 'Hapus Data Lead',
     },
 ];
+
 const isOverdue = (dateString, status) => {
     if (!dateString || status === 'CLOSED_WON' || status === 'CLOSED_LOST') return false;
     const today = new Date().setHours(0, 0, 0, 0);
@@ -183,6 +210,12 @@ const getStatusBadge = (status) => {
     };
     return map[status] || { class: 'badge-soft-dark', label: status };
 };
+const rowClasses = (item) => ({
+    'tr-highlight-primary': item.status === 'NEW',
+    'tr-dimmed': item.status === 'CLOSED_LOST',
+    'tr-highlight-success': item.status === 'CLOSED_WON',
+    'tr-highlight-warning': isOverdue(item.follow_up_date, item.status),
+})
 
 </script>
 <template>
@@ -203,7 +236,7 @@ const getStatusBadge = (status) => {
                                     <small class="text-muted">Prospek yang belum melakukan pembayaran deal</small>
                                 </div>
                                 <button @click.prevent="openCreateModal" class="btn btn-c-primary px-4 py-2">
-                                    <i class="bi bi-plus-lg me-1"></i> Tambah Lead Baru
+                                    <i class="bi bi-plus-circle me-1"></i> Lead Baru
                                 </button>
                             </div>
                         </div>
@@ -257,7 +290,8 @@ const getStatusBadge = (status) => {
 
                         <div class="card-body p-0">
                             <table-wrapper :loader="isLoading" loaderText="Sedang memuat data..." :headers="header"
-                                :items="leads?.data" row-key="id_lead" @update:selected="(val) => selectedId = val">
+                                :rowClass="rowClasses" :items="leads?.data" rowKey="id_lead"
+                                @update:selected="(val) => selectedId = val">
 
                                 <template #empty>
                                     <div class="text-center py-5">
@@ -277,8 +311,7 @@ const getStatusBadge = (status) => {
                                         <div class="fw-bold text-dark mb-1"
                                             v-html="highlight(item.name, filters.keyword)"></div>
                                         <div v-if="item.email" class="text-muted small mb-2">
-                                            <a :href="getEmail(item.email)" class="text-decoration-none"
-                                                target="_blank">{{ item.email
+                                            <a :href="getEmail(item.email)" class="text-decoration-none">{{ item.email
                                                 }}</a>
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
@@ -341,7 +374,7 @@ const getStatusBadge = (status) => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.creator_name || 'Sistem'
-                                                    }}</span>
+                                                }}</span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>
                                                         {{ new Date(item.created_at).toLocaleDateString('id-ID', {
@@ -371,9 +404,14 @@ const getStatusBadge = (status) => {
                                         </div>
                                     </td>
 
+                                    <!-- <button v-if="item.status !== 'CLOSED_WON'"
+                                            @click="alert('Sabtu depan kita rakit modal Closingnya!')"
+                                            class="btn btn-c-success btn-sm px-2 py-1" title="Deal! Jadikan Closing">
+                                            <i class="bi bi-bag-check-fill"></i>
+                                        </button> -->
                                     <td class="text-center">
                                         <action-button :item="item" :actions="leadActions" @edit="openEditModal(item)"
-                                            @delete="deleted('leads.delete', item)" />
+                                            @delete="deleted('leads.delete', item)" @deals="openConvertModal(item)" />
                                     </td>
 
                                 </template>
@@ -404,8 +442,10 @@ const getStatusBadge = (status) => {
                         </div>
                     </div>
                 </div>
-                <FormModal :channels="props.channels" :products="props.products" :idLead="selectedId" :show="showModal"
-                    @update:show="showModal = $event" />
+                <FormModal @saved="handleLeadSaved" :channels="props.channels" :products="props.products"
+                    :idLead="selectedId" :show="showModal" @update:show="showModal = $event" />
+                <ConvertLeadModal :idLead="selectedId" :show="showConvertModal"
+                    @update:show="showConvertModal = $event" />
             </div>
         </template>
     </app-layout>

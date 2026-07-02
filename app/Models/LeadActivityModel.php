@@ -17,15 +17,19 @@ class LeadActivityModel extends Model
     protected $fillable = [
         'id_lead',
         'id_user',
+        'updated_by',
         'description',
     ];
     public function user()
     {
         return $this->belongsTo(User::class, 'id_user', 'id');
     }
+    public function userUpdate()
+    {
+        return $this->belongsTo(User::class, 'updated_by', 'id');
+    }
     public function lead()
     {
         return $this->belongsTo(LeadModel::class, 'id_lead', 'id_lead');
     }
-
 }

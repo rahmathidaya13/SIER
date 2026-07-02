@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Leads\LeadActivityController;
+use App\Http\Controllers\Leads\LeadConversionController;
 use App\Http\Controllers\Product\ProductController;
 
 /*
@@ -45,6 +46,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::controller(LeadActivityController::class)->group(function () {
         Route::put('/leads/activity/update/{id}', 'update')->name('leads.activity.update');
+    });
+    Route::controller(LeadConversionController::class)->group(function () {
+        Route::post('/leads/convert/{leads}', 'store')->name('leads.convert');
     });
     Route::controller(UserController::class)->group(function () {
         Route::get('/employee/list', 'index')->name('employee.index');

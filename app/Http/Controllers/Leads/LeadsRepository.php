@@ -80,7 +80,7 @@ class LeadsRepository extends BaseCacheRepository
             default => null,
         };
     }
-    protected function resolveSorting(array $filters): array
+    protected function resolveSorting(array $filters): ?array
     {
         return match ($filters['order_by'] ?? 'latest') {
 

@@ -13,20 +13,21 @@ return new class extends Migration
     {
         Schema::create('sales', function (Blueprint $table) {
             $table->uuid('id_sales')->primary();
-            $table->string('invoice_code', 30)->unique(); // Cth: INV-202606-0001
+            $table->string('invoice', 30)->unique(); // Cth: INV-202606-0001
 
-            $table->foreignUuid('id_lead')->constrained('leads','id_lead')->cascadeOnDelete(); // Menautkan data closing ke riwayat prospeknya
-            $table->foreignUuid('id_user')->constrained('users','id')->cascadeOnDelete(); // CS yang berhasil closing
-            $table->foreignUuid('id_product')->constrained('products','id_product')->cascadeOnDelete();
+            $table->foreignUuid('id_lead')->constrained('leads', 'id_lead')->cascadeOnDelete(); // Menautkan data closing ke riwayat prospeknya
+            $table->foreignUuid('id_user')->constrained('users', 'id')->cascadeOnDelete(); // CS yang berhasil closing
+            $table->foreignUuid('id_product')->constrained('products', 'id_product')->cascadeOnDelete();
 
-            $table->unsignedBigInteger('deal_price'); // Harga deal (bisa beda dengan base_price kalau dikasih diskon)
+            $table->unsignedBigInteger('deal_price')->default(0); // Harga deal (bisa beda dengan base_price kalau dikasih diskon)
+            $table->unsignedBigInteger('paid_amount')->default(0); // Berapa duit yang udah masuk ke rekening?
+            $table->unsignedBigInteger('remaining_bill')->default(0); // Berapa duit yang udah masuk ke rekening?
 
-            $table->enum('payment_status', ['LUNAS', 'DP', 'TERMIN'])->default('LUNAS');
-            $table->unsignedBigInteger('paid_amount'); // Berapa duit yang udah masuk ke rekening?
-            $table->string('payment_method', 50); // Cth: 'BCA - 123456', 'QRIS'
+            $table->enum('payment_status', ['LUNAS', 'DP'])->default('LUNAS');
+            $table->enum('payment_method', ['cash', 'transfer', 'debit', 'qris'])->default('cash'); // Kalau Lunas, diisi tunai]; // Cth: 'BCA - 123456', 'QRIS'
 
             $table->dateTime('deal_at'); // Waktu pasti closing terekam
-            $table->text('closing_note')->nullable();
+            $table->text('notes')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });

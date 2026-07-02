@@ -3,10 +3,13 @@
 namespace App\Services;
 
 use App\Models\LeadModel;
+use App\Traits\ImmutableFieldValidator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class LeadServices
 {
+    use ImmutableFieldValidator;
     public function store(array $data, $user): LeadModel
     {
         return DB::transaction(function () use ($data, $user) {
@@ -38,6 +41,21 @@ class LeadServices
     {
         return DB::transaction(function () use ($id, $data, $user) {
             $leads = LeadModel::findOrFail($id);
+
+            // Validasi untuk memastikan bahwa status dan temperature tidak diubah jika sudah memiliki nilai tertentu
+            $this->validate($leads, $data, [
+                'status' => [
+                    'locked_value' => 'CLOSED_WON',
+                    'message' => 'Tidak dapat mengubah status prospek yang sudah disahkan menjadi status lain.',
+                    'error_key' => 'status'
+                ],
+                'temperature' => [
+                    'locked_value' => 'HOT',
+                    'message' => 'Tidak dapat mengubah suhu prospek yang sudah HOT menjadi suhu lain.',
+                    'error_key' => 'temperature'
+                ]
+            ]);
+
             $leads->update([
                 'id_channel' => $data['id_channel'],
                 'id_product' => $data['id_product'],

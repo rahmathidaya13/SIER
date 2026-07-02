@@ -20,7 +20,7 @@ class LeadActivityController extends Controller
         );
         $leadActivity = LeadActivityModel::findOrFail($id);
         $leadActivity->update([
-            'id_user' => auth()->user()->id,
+            'updated_by' => auth()->user()->id,
             'description' => $request['description']
         ]);
 
