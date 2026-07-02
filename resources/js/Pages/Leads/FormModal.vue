@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from "vue";
 import { useForm, router, usePage } from "@inertiajs/vue3";
 import { hasRole } from '@/Composables/useAuth';
 import { useRowAlert } from '@/Composables/useAlert';
+import { currencyFormat } from "@/Helpers/currencyFormat";
 const { show, __alert, hide } = useRowAlert();
 import axios from "axios";
 const props = defineProps({
@@ -22,25 +23,6 @@ const dataLead = ref(null);
 
 // 1. STATE SAKELAR TAB
 const activeTab = ref('prospect');
-const tabList = computed(() => {
-    if (isEdit.value) {
-        return [
-            {
-                id: 'activity',
-                name: '💬 Aktivitas Follow-up',
-                badge: dataLead.value?.activity?.length || 0
-            },
-            {
-                id: 'prospect',
-                name: '📋 Data Prospek'
-            }
-        ];
-    }
-    return [
-        { id: 'prospect', name: '📋 Data Prospek' },
-        { id: 'activity', name: '💬 Aktivitas Follow-up' }
-    ];
-})
 
 const form = useForm({
     name: '',
@@ -55,7 +37,41 @@ const form = useForm({
     product_name: '',
     new_activity: '',
     role_name: '',
+
+    // Field Konversi Closing
+    deal_price: 0,
+    paid_amount: 0,
+    payment_status: 'LUNAS',
+    payment_method: 'cash',
+    deal_at: new Date().toISOString().substring(0, 10),
+    notes_sales: ''
 });
+
+// Auto-Kalkulasi Uang
+watch(
+    () => [form.payment_status, form.deal_price],
+    ([newStatus, newDealPrice]) => {
+        if (newStatus === 'LUNAS') {
+            form.paid_amount = newDealPrice;
+        } else if (newStatus === 'DP' && form.paid_amount === newDealPrice) {
+            form.paid_amount = 0;
+        }
+    }
+);
+// Auto-Pindah Tab jika Sales ubah Status & Suhu
+watch(
+    () => [form.status, form.temperature],
+    ([newStatus, newTemp]) => {
+        // Jika Sales ubah status jadi Closing & Suhu HOT, paksa pindah ke Tab Uang!
+        if (newStatus === 'CLOSED_WON' && newTemp === 'HOT') {
+            activeTab.value = 'convert_lead';
+        }
+        // Jika Sales batalin closing (kembali ke Follow Up), sembunyikan tab uang
+        else if (activeTab.value === 'convert_lead') {
+            activeTab.value = 'prospect';
+        }
+    }
+);
 const fillForm = (data) => {
     form.defaults({
         name: data.name,
@@ -69,7 +85,16 @@ const fillForm = (data) => {
         notes: data.notes,
         product_name: data.product?.product_name || '',
         new_activity: '',
+
+        // Reset field konversi
+        deal_price: 0,
+        paid_amount: 0,
+        payment_status: 'LUNAS',
+        payment_method: 'cash',
+        deal_at: new Date().toISOString().substring(0, 10),
+        notes_sales: ''
     })
+
     dataLead.value = data
     form.reset();
 }
@@ -86,12 +111,43 @@ const resetForm = () => {
         notes: '',
         product_name: '',
         new_activity: '',
-        role_name: ''
+        role_name: '',
+
+        deal_price: 0,
+        paid_amount: 0,
+        payment_status: 'LUNAS',
+        payment_method: 'cash',
+        deal_at: new Date().toISOString().substring(0, 10),
+        notes_sales: ''
     })
     form.reset();
     form.clearErrors();
     dataLead.value = null
 }
+const tabList = computed(() => {
+    let tabs = [];
+
+    // Mode Edit: Activity ditaruh paling depan biar Sales fokus ngetik laporan
+    if (isEdit.value) {
+        tabs.push({ id: 'activity', name: '💬 Aktivitas Follow-up', badge: dataLead.value?.activity?.length || 0 });
+        tabs.push({ id: 'prospect', name: '📋 Data Prospek' });
+    } else {
+        tabs.push({ id: 'prospect', name: '📋 Data Prospek' });
+    }
+
+    //Tab Konversi Uang HANYA diselipkan jika statusnya Deal/Closing
+    if (form.status === 'CLOSED_WON' && form.temperature === 'HOT') {
+        tabs.push({ id: 'convert_lead', name: '💰 Data Konversi' });
+
+    }
+
+    // Mode Create: Activity ditaruh paling belakang
+    if (!isEdit.value) {
+        tabs.push({ id: 'activity', name: '💬 Aktivitas Follow-up' });
+    }
+    return tabs;
+})
+
 const loadLead = async () => {
     isLoading.value = true
 
@@ -165,30 +221,41 @@ const submit = () => {
         preserveState: true,
         replace: true,
 
-        onSuccess: (page) => {
-            // console.log(page.props.flash?.new_id_lead);
-            const newIdLead = page.props.flash?.new_id_lead;
-            emit('saved', {
-                action_type: isEdit.value ? 'edit' : 'create',
-                status: form.status,
-                temperature: form.temperature,
-                id_lead: newIdLead
-            });
+        onSuccess: () => {
             close();
             form.reset();
         },
         onError: (errors) => {
-            const prospectFields = ['name', 'phone', 'email', 'id_channel', 'id_product', 'temperature', 'status', 'follow_up_date', 'notes'];
-            const isErrorInProspect = Object.keys(errors).some(field => prospectFields.includes(field));
+            const prospectFields = [
+                'name',
+                'phone',
+                'email',
+                'id_channel',
+                'id_product',
+                'temperature',
+                'status',
+                'follow_up_date',
+                'notes',
+            ];
+            const convertFields = ['deal_price', 'paid_amount', 'payment_status', 'payment_method', 'deal_at', 'notes_sales'];
 
-            if (isErrorInProspect && activeTab.value !== 'prospect') {
+            const isErrorInProspect = Object.keys(errors).some(field => prospectFields.includes(field));
+            const isErrorInConvert = Object.keys(errors).some(field => convertFields.includes(field));
+
+            // Auto-redirect ke tab yang error
+            if (isErrorInConvert && form.status === 'CLOSED_WON' && form.temperature === 'HOT' && activeTab.value !== 'convert_lead') {
+                activeTab.value = 'convert_lead';
+            }
+            else if (isErrorInProspect && activeTab.value !== 'prospect') {
                 activeTab.value = 'prospect';
-            } else if (errors.new_activity && activeTab.value !== 'activity') {
+            }
+            else if (errors.new_activity && activeTab.value !== 'activity') {
                 activeTab.value = 'activity';
             }
         }
     });
 };
+// watch untuk kondisi buka modal, jika props.show berubah menjadi true, maka loadLead akan dijalankan
 watch(
     () => props.show,
     async (isOpen) => {
@@ -198,6 +265,9 @@ watch(
         } else {
             resetForm();
             activeTab.value = 'prospect'
+        }
+        if (dataLead.value.status === 'CLOSED_WON' && dataLead.value.temperature === 'HOT') {
+            activeTab.value = 'activity';
         }
 
     }, {
@@ -212,6 +282,7 @@ const close = () => {
 }
 const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
+    if (form.status === 'CLOSED_WON' && form.temperature === 'HOT') return 'PROSES CLOSING';
     return isEdit.value ? 'Menyimpan...' : 'Simpan Prospek';
 });
 const getRoleName = (data, mode = 'create') => {
@@ -295,7 +366,10 @@ const updateActivity = () => {
     });
 }
 
-
+// kunci field status dan temperature jika sudah pernah disahkan menjadi prospek HOT & CLOSING
+const isLocked = computed(() => {
+    return isEdit.value && dataLead.value?.status === 'CLOSED_WON' && dataLead.value?.temperature === 'HOT';
+});
 
 
 </script>
@@ -391,8 +465,8 @@ const updateActivity = () => {
                             <div class="col-md-4">
                                 <label for="temp_select" class="form-label small fw-bold text-muted">SUHU
                                     KETERTARIKAN</label>
-                                <select-input text="-- Pilih Suhu --" name="temp" v-model="form.temperature"
-                                    :error="form.errors.temperature"
+                                <select-input :disabled="isLocked" text="-- Pilih Suhu --" name="temp"
+                                    v-model="form.temperature" :error="form.errors.temperature"
                                     :selectClass="{ 'text-danger': form.temperature === 'COLD', 'text-warning': form.temperature === 'WARM', 'text-success': form.temperature === 'HOT' }"
                                     :options="[
                                         { label: '🔥 HOT (Siap Bayar)', value: 'HOT' },
@@ -405,8 +479,8 @@ const updateActivity = () => {
                             <div class="col-md-4">
                                 <label for="status_select" class="form-label small fw-bold text-muted">STATUS
                                     PROSPEK</label>
-                                <select-input text="-- Pilih Status --" v-model="form.status" name="status"
-                                    :error="form.errors.status" :disabled="!form.status === 'CLOSED_WON'" :options="[
+                                <select-input :disabled="isLocked" text="-- Pilih Status --" v-model="form.status"
+                                    name="status" :error="form.errors.status" :options="[
                                         { label: '⭐ Baru Masuk', value: 'NEW' },
                                         { label: '💬 Sedang Follow Up', value: 'FOLLOW_UP' },
                                         { label: '✖ Lost / Batal', value: 'CLOSED_LOST' },
@@ -428,6 +502,87 @@ const updateActivity = () => {
                                     placeholder="Tuliskan catatan opsional disini..." />
                                 <input-error :message="form.errors.notes" />
                             </div>
+                        </div>
+
+                        <div v-show="activeTab === 'convert_lead'" class="row g-3 animate-fade-in">
+
+                            <div v-if="isLocked" class="col-12">
+                                <div class="alert alert-info border-0 shadow-sm p-3">
+                                    <i class="bi bi-lock-fill me-2"></i>
+                                    <strong>Data Transaksi Terkunci!</strong><br>
+                                    <small>Data ini sudah sah menjadi penjualan. Perubahan data keuangan harus melalui
+                                        menu Penjualan/Invoice.</small>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="deal_price_input" class="form-label small fw-bold text-muted">HARGA
+                                    DEAL*</label>
+                                <input-currency :disabled="isLocked" inputClass="text-success" :decimals="0"
+                                    name="deal_price" :error="form.errors.deal_price" v-model="form.deal_price"
+                                    placeholder="0" />
+                                <input-error :message="form.errors.deal_price" />
+                                <small class="text-muted d-block mt-1">Terbilang: <strong>{{
+                                    currencyFormat(form.deal_price)
+                                        }}</strong></small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="payment_status_select" class="form-label small fw-bold text-muted">STATUS
+                                    BAYAR
+                                    *</label>
+                                <select-input :disabled="isLocked" name="payment_status" v-model="form.payment_status"
+                                    :error="form.errors.payment_status" :options="[
+                                        { label: '✅ LUNAS Penuh', value: 'LUNAS' },
+                                        { label: '⏳ Uang Muka (DP)', value: 'DP' },
+                                    ]" />
+                                <input-error :message="form.errors.payment_status" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="paid_amount_input" class="form-label small fw-bold text-muted">UANG MASUK
+                                    SEKARANG *</label>
+                                <input-currency :disabled="isLocked" :readonly="form.payment_status === 'LUNAS'"
+                                    :error="form.errors.paid_amount" :decimals="0" name="paid_amount"
+                                    v-model="form.paid_amount" placeholder="0" />
+                                <input-error :message="form.errors.paid_amount" />
+                                <small v-if="form.deal_price - form.paid_amount > 0"
+                                    class="text-danger mt-1 d-block fw-medium" style="font-size: 11px;">
+                                    Sisa Tagihan: {{ currencyFormat(form.deal_price - form.paid_amount) }}
+                                </small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="payment_method_select" class="form-label small fw-bold text-muted">METODE
+                                    PEMBAYARAN *</label>
+                                <select-input :disabled="isLocked" name="payment_method" v-model="form.payment_method"
+                                    :error="form.errors.payment_method" :options="[
+                                        { label: '🏦 Tunai / Cash', value: 'cash' },
+                                        { label: '🏦 Transfer', value: 'transfer' },
+                                        { label: '📱 Debit', value: 'debit' },
+                                        { label: '💵 QRIS', value: 'qris' }
+                                    ]" />
+                                <input-error :message="form.errors.payment_method" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="deal_at_input" class="form-label small fw-bold text-muted">TANGGAL TRANSAKSI
+                                    *</label>
+                                <input-text :disabled="isLocked" :error="form.errors.deal_at" name="deal_at" type="date"
+                                    v-model="form.deal_at" />
+                                <input-error :message="form.errors.deal_at" />
+                            </div>
+
+                            <div class="col-12 mt-3 border-top pt-3">
+                                <label for="notes_sales_input" class="form-label small fw-bold text-muted">CATATAN
+                                    TRANSAKSI
+                                    (Opsional)</label>
+                                <text-area :disabled="isLocked" :maxChar="500" :error="form.errors.notes_sales"
+                                    name="notes_sales" v-model="form.notes_sales" :rows="2"
+                                    placeholder="Cth: Pelanggan minta jika pembelian barang banyak ada pengurangan harga..." />
+                                <input-error :message="form.errors.notes_sales" />
+                            </div>
+
                         </div>
 
                         <div v-show="activeTab === 'activity'" class="row g-3 animate-fade-in">
@@ -575,14 +730,21 @@ const updateActivity = () => {
 
                 <template #footer>
                     <div class="d-flex justify-content-end gap-2 p-2 bg-transparent">
+
                         <button type="button" class="btn btn-c-slate border-0 fw-medium px-4"
                             @click.prevent="close">Batal</button>
-                        <button @click.prevent="submit" type="button" :disabled="form.processing || isLoading"
-                            class="btn btn-height-1 fw-semibold" :class="isEdit ? 'btn-c-success' : 'btn-c-primary'">
-                            <span v-if="form.processing" class="spinner-border spinner-border-sm me-2"></span>
-                            <i v-else :class="isEdit ? 'bi bi-check-circle me-1' : 'bi bi-save me-1'"></i>
-                            {{ submitTextButton }}
+
+                        <button @click.prevent="submit" type="button"
+                            :disabled="form.processing || isLoading || isLocked" class="btn btn-height-1 fw-semibold"
+                            :class="form.status === 'CLOSED_WON' ? 'btn-c-success text-dark' : 'btn-c-primary'">
+                            <span v-if="isLocked"><i class="bi bi-lock-fill me-1"></i> Data Terkunci</span>
+                            <span v-else>
+                                <span v-if="form.processing" class="spinner-border spinner-border-sm me-2"></span>
+                                <i v-else :class="isEdit ? 'bi bi-check-circle me-1' : 'bi bi-save me-1'"></i>
+                                {{ submitTextButton }}
+                            </span>
                         </button>
+
                     </div>
                 </template>
 

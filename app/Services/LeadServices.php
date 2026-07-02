@@ -5,11 +5,17 @@ namespace App\Services;
 use App\Models\LeadModel;
 use App\Traits\ImmutableFieldValidator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use App\Services\LeadConversionServices;
 
 class LeadServices
 {
     use ImmutableFieldValidator;
+
+    protected $leadConversionServices;
+    public function __construct(LeadConversionServices $leadConversionServices)
+    {
+        $this->leadConversionServices = $leadConversionServices;
+    }
     public function store(array $data, $user): LeadModel
     {
         return DB::transaction(function () use ($data, $user) {
@@ -26,12 +32,17 @@ class LeadServices
                 'follow_up_date' => $data['follow_up_date'],
                 'notes' => $data['notes'],
             ]);
+            $activityDesc = $data['new_activity'] ?? '✨ Prospek baru berhasil ditambahkan ke dalam sistem.';
             if (!empty($data['new_activity'])) {
                 $leads->activity()->create([
                     'id_user'     => $user->id,
                     'id_lead'     => $leads->id_lead,
-                    'description' => $data['new_activity']
+                    'description' => $activityDesc
                 ]);
+            }
+
+            if ($data['status'] === 'CLOSED_WON' && $data['temperature'] === 'HOT') {
+                $this->leadConversionServices->convertLeadToSales($leads, $data);
             }
             return $leads;
         });
@@ -43,7 +54,7 @@ class LeadServices
             $leads = LeadModel::findOrFail($id);
 
             // Validasi untuk memastikan bahwa status dan temperature tidak diubah jika sudah memiliki nilai tertentu
-            $this->validate($leads, $data, [
+            $this->__validate($leads, $data, [
                 'status' => [
                     'locked_value' => 'CLOSED_WON',
                     'message' => 'Tidak dapat mengubah status prospek yang sudah disahkan menjadi status lain.',

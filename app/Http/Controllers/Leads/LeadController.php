@@ -7,10 +7,11 @@ use App\Traits\UserScope;
 use App\Models\ChannelModel;
 use App\Models\ProductModel;
 use Illuminate\Http\Request;
+use App\Services\LeadServices;
 use App\Traits\LeadsValidation;
 use App\Http\Controllers\Controller;
-use App\Services\LeadServices;
 use App\Traits\BranchMutationHelper;
+use App\Services\LeadConversionServices;
 
 class LeadController extends Controller
 {
@@ -20,10 +21,12 @@ class LeadController extends Controller
     use UserScope, BranchMutationHelper, LeadsValidation;
     protected $leadRepository;
     protected $leadServices;
-    public function __construct(LeadsRepository $leadRepository, LeadServices $leadServices)
+    protected $leadConversionServices;
+    public function __construct(LeadsRepository $leadRepository, LeadServices $leadServices, LeadConversionServices $leadConversionServices)
     {
         $this->leadRepository = $leadRepository;
         $this->leadServices = $leadServices;
+        $this->leadConversionServices = $leadConversionServices;
     }
     public function index(Request $request)
     {
@@ -56,6 +59,7 @@ class LeadController extends Controller
         $user = auth()->user();
         $this->validateLeads($request->all());
         $lead = $this->leadServices->store($request->all(), $user);
+        // $this->leadConversionServices->convertLeadToSales($lead, $request->all());
         $this->invalidateCaches(LeadsRepository::class, ['global', $user->id_branch]);
         return redirect()->back()->with([
             'message' => 'Lead berhasil ditambahkan',
@@ -67,8 +71,6 @@ class LeadController extends Controller
     {
         $user = auth()->user();
         $this->validateLeads($request->all(), $id);
-
-
         $lead = $this->leadServices->update($id, $request->all(), $user);
         $this->invalidateCaches(LeadsRepository::class, ['global', $user->id_branch]);
         return redirect()->back()->with('message', 'Perubahan data dari lead pelanggan ' . $lead->name . ' berhasil diperbarui');

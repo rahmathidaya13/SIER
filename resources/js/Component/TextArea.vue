@@ -37,6 +37,10 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+    disabled: {
+        type: Boolean,
+        default: false,
+    },
 })
 const model = defineModel({
     type: [String, Number, Array, Object, Boolean, null],
@@ -71,7 +75,7 @@ defineExpose({ focus: () => textarea.value.focus() });
         'border-danger': props.isInvalid && props.error,
         'border-success': props.isValid && model && !props.error,
     }">
-        <textarea ref="textarea" v-model="model" :rows="rows" :cols="cols" :name="props.name"
+        <textarea :disabled="props.disabled" ref="textarea" v-model="model" :rows="rows" :cols="cols" :name="props.name"
             :id="props.name + '_input'" :placeholder="props.placeholder || 'Masukkan deskripsi...'"
             class="form-control border-0 shadow-none resize-none" :class="inputClass"></textarea>
 

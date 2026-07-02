@@ -15,7 +15,7 @@ trait ImmutableFieldValidator
      * @throws ValidationException // Jika ada field yang tidak boleh berubah namun nilainya berbeda dari nilai saat ini
      * @return void
      */
-    public static function validate(object $model, array $newData, array $rules): void
+    public static function __validate(object $model, array $newData, array $rules): void
     {
         foreach ($rules as $field => $rule) {
 

@@ -54,19 +54,19 @@ watch(
 
 const close = async () => {
     // 1. GERBANG UTAMA: Jika ada data yang sudah diubah/diketik oleh Sales
-    if (form.isDirty) {
-        const setConfirm = await confirm.ask({
-            title: 'Peringatan Pembatalan',
-            message: `Anda sedang dalam proses mengesahkan transaksi closing. Jika Anda keluar sekarang, seluruh data nominal uang yang sudah diketik akan HILANG.\n\nApakah Anda yakin ingin membatalkan?`,
-            confirmText: 'Ya, Batalkan Transaksi', // Teks tegas: Menjawab pertanyaan "Yakin batal?"
-            variant: 'danger'
-        });
+    // if (form.isDirty) {
+    //     const setConfirm = await confirm.ask({
+    //         title: 'Peringatan Pembatalan',
+    //         message: `Anda sedang dalam proses mengesahkan transaksi closing. Jika Anda keluar sekarang, seluruh data nominal uang yang sudah diketik akan HILANG.\n\nApakah Anda yakin ingin membatalkan?`,
+    //         confirmText: 'Ya, Batalkan Transaksi', // Teks tegas: Menjawab pertanyaan "Yakin batal?"
+    //         variant: 'danger'
+    //     });
 
-        // Jika Sales mengklik "Batal/Tidak" di pop-up konfirmasi, hentikan proses keluar!
-        if (!setConfirm) {
-            return;
-        }
-    }
+    //     // Jika Sales mengklik "Batal/Tidak" di pop-up konfirmasi, hentikan proses keluar!
+    //     if (!setConfirm) {
+    //         return;
+    //     }
+    // }
 
     // 2. JALUR BEBAS: Jika form masih bersih ATAU Sales sudah setuju untuk membatalkan
     form.reset();
@@ -119,6 +119,7 @@ watch(
             title="Sahkan Closing Transaksi" @closed="close" :mobileFullscreen="false">
 
             <template #body>
+                <alert-error-all  :errors="form.errors" @close="form.clearErrors()" />
 
                 <form-wrapper @submit.prevent="submit">
 
@@ -143,7 +144,7 @@ watch(
                                 :error="form.errors.deal_price" v-model="form.deal_price" placeholder="0" />
                             <input-error :message="form.errors.deal_price" />
                             <small class="text-muted d-block mt-1">Terbilang: <strong>{{ formatRupiah(form.deal_price)
-                            }}</strong></small>
+                                    }}</strong></small>
                         </div>
 
                         <div class="col-md-6">
