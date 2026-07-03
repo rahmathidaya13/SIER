@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Leads\LeadActivityController;
 use App\Http\Controllers\Leads\LeadConversionController;
 use App\Http\Controllers\Product\ProductController;
+use App\Http\Controllers\Sales\SaleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -59,6 +60,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::controller(ProductController::class)->group(function () {
         Route::get('/product/keyword', 'productSearch')->name('product.search');
+    });
+    Route::controller(SaleController::class)->group(function () {
+        Route::get('/sales/list', 'index')->name('sales.index');
     });
 });
 

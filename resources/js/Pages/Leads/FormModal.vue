@@ -245,6 +245,7 @@ const submit = () => {
             // Auto-redirect ke tab yang error
             if (isErrorInConvert && form.status === 'CLOSED_WON' && form.temperature === 'HOT' && activeTab.value !== 'convert_lead') {
                 activeTab.value = 'convert_lead';
+
             }
             else if (isErrorInProspect && activeTab.value !== 'prospect') {
                 activeTab.value = 'prospect';
@@ -282,8 +283,8 @@ const close = () => {
 }
 const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
-    if (form.status === 'CLOSED_WON' && form.temperature === 'HOT') return 'PROSES CLOSING';
-    return isEdit.value ? 'Menyimpan...' : 'Simpan Prospek';
+    if (form.status === 'CLOSED_WON' && form.temperature === 'HOT') return 'Proses Closing';
+    return isEdit.value ? 'Simpan Perubahan' : 'Simpan Prospek';
 });
 const getRoleName = (data, mode = 'create') => {
     let role;
@@ -439,8 +440,8 @@ const isLocked = computed(() => {
                                         YANG
                                         DIMINATI</label>
 
-                                    <span v-if="form.id_product && !isChangingProduct" @click="isChangingProduct = true"
-                                        class="small fw-bold text-primary"
+                                    <span v-if="form.id_product && !isChangingProduct && !isLocked"
+                                        @click="isChangingProduct = true" class="small fw-bold text-primary"
                                         style="cursor: pointer; text-decoration: none;">
                                         Ganti produk
                                     </span>
@@ -724,8 +725,6 @@ const isLocked = computed(() => {
 
                     </form-wrapper>
 
-
-
                 </template>
 
                 <template #footer>
@@ -736,7 +735,7 @@ const isLocked = computed(() => {
 
                         <button @click.prevent="submit" type="button"
                             :disabled="form.processing || isLoading || isLocked" class="btn btn-height-1 fw-semibold"
-                            :class="form.status === 'CLOSED_WON' ? 'btn-c-success text-dark' : 'btn-c-primary'">
+                            :class="form.status === 'CLOSED_WON' ? 'btn-c-success' : 'btn-c-primary'">
                             <span v-if="isLocked"><i class="bi bi-lock-fill me-1"></i> Data Terkunci</span>
                             <span v-else>
                                 <span v-if="form.processing" class="spinner-border spinner-border-sm me-2"></span>

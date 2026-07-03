@@ -1,9 +1,8 @@
 <script setup>
 import { watch, computed, ref } from "vue";
-import { router, useForm } from "@inertiajs/vue3";
+import { useForm } from "@inertiajs/vue3";
+import { currencyFormat } from "@/Helpers/currencyFormat";
 import axios from "axios";
-import { useConfirm } from "@/Composables/useConfirm"
-const confirm = useConfirm();
 const props = defineProps({
     show: Boolean,
     idLead: {
@@ -38,37 +37,17 @@ watch(
 );
 
 // Persiapan Data saat Modal Terbuka
-// watch(
-//     () => props.show,
-//     (isOpen) => {
-//         if (isOpen && props.lead) {
-//             form.deal_price = props.lead.product?.base_price || 0;
-//             form.payment_status = 'LUNAS';
-//             form.paid_amount = form.deal_price;
-//             form.deal_at = new Date().toISOString().substring(0, 10);
-//             form.notes = '';
-//             form.clearErrors();
-//         }
-//     }
-// );
+watch(
+    () => props.show,
+    (isOpen) => {
+        if (isOpen && props.idLead) {
+            loadLead();
+            form.clearErrors();
+        }
+    }
+);
 
 const close = async () => {
-    // 1. GERBANG UTAMA: Jika ada data yang sudah diubah/diketik oleh Sales
-    // if (form.isDirty) {
-    //     const setConfirm = await confirm.ask({
-    //         title: 'Peringatan Pembatalan',
-    //         message: `Anda sedang dalam proses mengesahkan transaksi closing. Jika Anda keluar sekarang, seluruh data nominal uang yang sudah diketik akan HILANG.\n\nApakah Anda yakin ingin membatalkan?`,
-    //         confirmText: 'Ya, Batalkan Transaksi', // Teks tegas: Menjawab pertanyaan "Yakin batal?"
-    //         variant: 'danger'
-    //     });
-
-    //     // Jika Sales mengklik "Batal/Tidak" di pop-up konfirmasi, hentikan proses keluar!
-    //     if (!setConfirm) {
-    //         return;
-    //     }
-    // }
-
-    // 2. JALUR BEBAS: Jika form masih bersih ATAU Sales sudah setuju untuk membatalkan
     form.reset();
     form.clearErrors();
     emit("update:show", false);
@@ -86,11 +65,6 @@ const submit = () => {
     });
 };
 
-// Helper Format Rupiah untuk Visualisasi
-const formatRupiah = (angka) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
-};
-
 const dataLead = ref(null);
 const loadLead = async () => {
     try {
@@ -102,15 +76,7 @@ const loadLead = async () => {
     }
 
 }
-watch(
-    () => props.show,
-    (isOpen) => {
-        if (isOpen && props.idLead) {
-            loadLead();
-            form.clearErrors();
-        }
-    }
-);
+
 </script>
 
 <template>
@@ -119,7 +85,7 @@ watch(
             title="Sahkan Closing Transaksi" @closed="close" :mobileFullscreen="false">
 
             <template #body>
-                <alert-error-all  :errors="form.errors" @close="form.clearErrors()" />
+                <alert-error-all :errors="form.errors" @close="form.clearErrors()" />
 
                 <form-wrapper @submit.prevent="submit">
 
@@ -143,7 +109,7 @@ watch(
                             <input-currency inputClass="text-success" :decimals="0" name="deal_price"
                                 :error="form.errors.deal_price" v-model="form.deal_price" placeholder="0" />
                             <input-error :message="form.errors.deal_price" />
-                            <small class="text-muted d-block mt-1">Terbilang: <strong>{{ formatRupiah(form.deal_price)
+                            <small class="text-muted d-block mt-1">Terbilang: <strong>{{ currencyFormat(form.deal_price)
                                     }}</strong></small>
                         </div>
 
@@ -166,7 +132,7 @@ watch(
                             <input-error :message="form.errors.paid_amount" />
                             <small v-if="form.deal_price - form.paid_amount > 0"
                                 class="text-danger mt-1 d-block fw-medium" style="font-size: 11px;">
-                                Sisa Tagihan: {{ formatRupiah(form.deal_price - form.paid_amount) }}
+                                Sisa Tagihan: {{ currencyFormat(form.deal_price - form.paid_amount) }}
                             </small>
                         </div>
 

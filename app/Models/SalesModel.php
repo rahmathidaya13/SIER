@@ -34,19 +34,16 @@ class SalesModel extends Model
         'paid_amount' => 'integer',
         'deal_at' => 'datetime',
     ];
-    public function scopeAllowedForUser($query)
+    public function scopeAllowedForUser($query, User $user)
     {
-        $user = auth()->user();
-
         // Jika yang login Orang Pusat (Superadmin), BUKA SEMUA DATA!
         if ($user->hasRole('super_admin')) {
             return $query;
         }
 
         // Jika yang login SPV/Sales/Admin Cabang, KUNCI HANYA DI CABANG DIA!
-        return $query->where('id_branch', $user->id_branch);
+        return $query->where('sales.id_branch', $user->id_branch);
     }
-
     public static function boot()
     {
         parent::boot();
@@ -88,7 +85,7 @@ class SalesModel extends Model
     }
     public function lead()
     {
-        return $this->belongsTo(LeadModel::class);
+        return $this->belongsTo(LeadModel::class, 'id_lead', 'id_lead');
     }
     public function user()
     {

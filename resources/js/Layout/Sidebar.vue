@@ -26,6 +26,13 @@ const menuItems = [
 
     },
     {
+        title: 'Rekap Closing',
+        icon: 'bi bi-graph-up-arrow',
+        route: 'sales.index',
+        prefixUrl: 'sales*'
+
+    },
+    {
         title: 'Data Pegawai',
         icon: 'bi bi-person-fill',
         route: 'employee.index',
