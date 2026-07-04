@@ -1,0 +1,12 @@
+export function formatDate(dateString) {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        timeZone: "Asia/Jakarta",
+        timeZoneName: "short",
+    });
+}

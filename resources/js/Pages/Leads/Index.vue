@@ -63,7 +63,7 @@ const header = [
     },
     {
         label: "STATUS",
-        key: "status",
+        key: "status_",
         attrs: {
             class: 'text-center',
         },

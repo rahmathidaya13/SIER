@@ -13,7 +13,6 @@ class LeadConversionServices
     use ImmutableFieldValidator;
     public function convertLeadToSales(LeadModel $leads, array $data): SalesModel
     {
-       
 
         if ($data['payment_status'] === 'DP') {
             $minimalDp = $data['deal_price'] * 0.5; // Hitung 50% dari harga deal
@@ -37,7 +36,7 @@ class LeadConversionServices
                 'paid_amount'    => $data['paid_amount'],
                 'payment_status' => $data['payment_status'],
                 'payment_method' => $data['payment_method'],
-                'deal_at'        => $data['deal_at'],
+                'deal_at'        => now()->toDateTimeString(),
                 'notes'          => $data['notes']
             ]);
 

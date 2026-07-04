@@ -267,7 +267,11 @@ watch(
             resetForm();
             activeTab.value = 'prospect'
         }
-        if (dataLead.value.status === 'CLOSED_WON' && dataLead.value.temperature === 'HOT') {
+
+        // Jika dataLead sudah ada, cek status & suhu untuk menentukan tab aktif
+        if (dataLead.value?.status !== 'CLOSED_WON' && dataLead.value?.temperature !== 'HOT') {
+            activeTab.value = 'prospect';
+        } else {
             activeTab.value = 'activity';
         }
 
@@ -516,7 +520,7 @@ const isLocked = computed(() => {
                                 </div>
                             </div>
 
-                            <div class="col-12">
+                            <div class="col-6">
                                 <label for="deal_price_input" class="form-label small fw-bold text-muted">HARGA
                                     DEAL*</label>
                                 <input-currency :disabled="isLocked" inputClass="text-success" :decimals="0"
@@ -526,18 +530,6 @@ const isLocked = computed(() => {
                                 <small class="text-muted d-block mt-1">Terbilang: <strong>{{
                                     currencyFormat(form.deal_price)
                                         }}</strong></small>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="payment_status_select" class="form-label small fw-bold text-muted">STATUS
-                                    BAYAR
-                                    *</label>
-                                <select-input :disabled="isLocked" name="payment_status" v-model="form.payment_status"
-                                    :error="form.errors.payment_status" :options="[
-                                        { label: '✅ LUNAS Penuh', value: 'LUNAS' },
-                                        { label: '⏳ Uang Muka (DP)', value: 'DP' },
-                                    ]" />
-                                <input-error :message="form.errors.payment_status" />
                             </div>
 
                             <div class="col-md-6">
@@ -554,6 +546,20 @@ const isLocked = computed(() => {
                             </div>
 
                             <div class="col-md-6">
+                                <label for="payment_status_select" class="form-label small fw-bold text-muted">STATUS
+                                    BAYAR
+                                    *</label>
+                                <select-input :disabled="isLocked" name="payment_status" v-model="form.payment_status"
+                                    :error="form.errors.payment_status" :options="[
+                                        { label: '✅ LUNAS Penuh', value: 'LUNAS' },
+                                        { label: '⏳ Uang Muka (DP)', value: 'DP' },
+                                    ]" />
+                                <input-error :message="form.errors.payment_status" />
+                            </div>
+
+
+
+                            <div class="col-md-6">
                                 <label for="payment_method_select" class="form-label small fw-bold text-muted">METODE
                                     PEMBAYARAN *</label>
                                 <select-input :disabled="isLocked" name="payment_method" v-model="form.payment_method"
@@ -566,15 +572,7 @@ const isLocked = computed(() => {
                                 <input-error :message="form.errors.payment_method" />
                             </div>
 
-                            <div class="col-md-6">
-                                <label for="deal_at_input" class="form-label small fw-bold text-muted">TANGGAL TRANSAKSI
-                                    *</label>
-                                <input-text :disabled="isLocked" :error="form.errors.deal_at" name="deal_at" type="date"
-                                    v-model="form.deal_at" />
-                                <input-error :message="form.errors.deal_at" />
-                            </div>
-
-                            <div class="col-12 mt-3 border-top pt-3">
+                            <div class="col-12 mt-3">
                                 <label for="notes_sales_input" class="form-label small fw-bold text-muted">CATATAN
                                     TRANSAKSI
                                     (Opsional)</label>

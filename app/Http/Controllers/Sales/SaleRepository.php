@@ -30,8 +30,11 @@ class SaleRepository extends BaseCacheRepository
                 'sales.payment_status',
                 'sales.payment_method',
                 'sales.deal_at',
-                'leads.name as lead_name',
-                'leads.phone as lead_phone',
+                'sales.created_at',
+                'sales.updated_at',
+                'leads.name as lead_customer_name',
+                'leads.phone as lead_customer_phone',
+                'leads.email as lead_customer_email',
                 'users.name as sales_name',
                 'products.name as product_name',
             ]);
@@ -47,15 +50,16 @@ class SaleRepository extends BaseCacheRepository
         [$column, $direction] = $this->resolveSorting($filters);
         return $query
             ->orderBy($column, $direction)
-            ->paginate($filters['limit'] ?? 10);
+            ->paginate($filters['limit'] ?? 10)
+            ->withQueryString();
     }
     protected function resolveSorting(array $filters): ?array
     {
         return match ($filters['order_by'] ?? 'latest') {
 
-            'oldest' => ['leads.created_at', 'asc'],
+            'oldest' => ['sales.created_at', 'asc'],
 
-            default => ['leads.created_at', 'desc'],
+            default => ['sales.created_at', 'desc'],
         };
     }
 }

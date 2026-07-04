@@ -77,11 +77,10 @@ trait LeadsValidation
                     'max:2500',
                 ],
 
-                'deal_price'     => 'required_if:status,CLOSED_WON|numeric|min:1000',
+                'deal_price'     =>  'required_if:status,CLOSED_WON|numeric|min:1000',
                 'paid_amount'    => 'required_if:status,CLOSED_WON|numeric|min:1000',
                 'payment_status' => 'required_if:status,CLOSED_WON|in:LUNAS,DP',
                 'payment_method' => 'required_if:status,CLOSED_WON|in:cash,transfer,debit,qris',
-                'deal_at'        => 'required_if:status,CLOSED_WON|date',
                 'notes_sales'    => 'nullable|string|max:500',
             ],
             [
@@ -128,8 +127,6 @@ trait LeadsValidation
                 'payment_method.required_if' => 'Metode pembayaran wajib diisi saat status prospek adalah Closing / Terjual.',
                 'payment_method.in' => 'Metode pembayaran tidak valid.',
 
-                'deal_at.required_if' => 'Tanggal deal wajib diisi saat status prospek adalah Closing / Terjual.',
-                'deal_at.date' => 'Tanggal deal tidak valid.',
 
                 'notes_sales.max' => 'Catatan maksimal 500 karakter.',
             ]

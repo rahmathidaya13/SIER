@@ -15,7 +15,6 @@ trait LeadConversionValidation
                 'paid_amount'    => 'required|numeric|min:1000',
                 'payment_status' => 'required|in:LUNAS,DP',
                 'payment_method' => 'required|in:cash,transfer,debit,qris',
-                'deal_at'        => 'required|date',
                 'notes'          => 'nullable|string|max:500',
             ],
             [
@@ -29,8 +28,6 @@ trait LeadConversionValidation
                 'payment_status.in' => 'Status pembayaran harus LUNAS atau DP',
                 'payment_method.required' => 'Metode pembayaran tidak boleh kosong',
                 'payment_method.in' => 'Metode pembayaran harus salah satu dari: Tunai, Transfer, Debit, Qris',
-                'deal_at.required' => 'Tanggal deal tidak boleh kosong',
-                'deal_at.date' => 'Tanggal deal harus berupa tanggal yang valid',
                 'notes.string' => 'Catatan harus berupa teks',
                 'notes.max' => 'Catatan maksimal 500 karakter'
             ]
