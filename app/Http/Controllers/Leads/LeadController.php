@@ -10,9 +10,13 @@ use Illuminate\Http\Request;
 use App\Services\LeadServices;
 use App\Traits\LeadsValidation;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Sales\SaleRepository;
 use App\Traits\BranchMutationHelper;
 use App\Services\LeadConversionServices;
+use function Symfony\Component\Translation\t;
+use App\Http\Controllers\Sales\SaleRepository;
+use App\Services\Authorization\ActionPermissionService;
+use Illuminate\Validation\ValidationException;
+use App\Services\Authorization\ScopeResolverService;
 
 class LeadController extends Controller
 {
@@ -23,6 +27,7 @@ class LeadController extends Controller
     protected $leadRepository;
     protected $leadServices;
     protected $leadConversionServices;
+    protected $scopeResolverService = ScopeResolverService::class;
     public function __construct(LeadsRepository $leadRepository, LeadServices $leadServices, LeadConversionServices $leadConversionServices)
     {
         $this->leadRepository = $leadRepository;
@@ -41,6 +46,9 @@ class LeadController extends Controller
             'page',
 
         ]);
+
+        $filters = app(ScopeResolverService::class)->filters($filters);
+
         $leads = $this->leadRepository->getCached($this->scopeId($user), $filters);
         $channels = ChannelModel::select('id_channel', 'name', 'icon')->get();
         $products = ProductModel::select('id_product', 'name')->get();
@@ -59,7 +67,18 @@ class LeadController extends Controller
     {
         $user = auth()->user();
         $this->validateLeads($request->all());
+
+        if ($request['status'] === 'CLOSED_WON' && $request['payment_status'] === 'DP') {
+            $minimalDp = $request['deal_price'] * 0.5;
+            if ($request['paid_amount'] < $minimalDp) {
+                throw ValidationException::withMessages([
+                    'paid_amount' => 'Uang muka (DP) minimal harus 50% (Minimal: Rp ' . number_format($minimalDp, 0, ',', '.') . ')'
+                ]);
+            }
+        }
+
         $this->leadServices->store($request->all(), $user);
+
         $this->invalidateCaches([LeadsRepository::class, SaleRepository::class], ['global', $user->id_branch]);
         return redirect()->back()->with([
             'message' => 'Lead berhasil ditambahkan',
@@ -72,7 +91,7 @@ class LeadController extends Controller
         $this->validateLeads($request->all(), $id);
         $lead = $this->leadServices->update($id, $request->all(), $user);
         $this->invalidateCaches([LeadsRepository::class, SaleRepository::class], ['global', $user->id_branch]);
-        return redirect()->back()->with('message', 'Perubahan data dari lead pelanggan ' . $lead->name . ' berhasil diperbarui');
+        return redirect()->back()->with('message', 'Perubahan data dari lead ' . $lead->name . ' berhasil diperbarui');
     }
 
     public function show(string $id)
@@ -89,8 +108,10 @@ class LeadController extends Controller
             ->findOrFail($id);
         return response()->json($leads);
     }
-    public function destroy(LeadModel $leadModel, string $id)
+    public function destroy(LeadModel $leads)
     {
-        //
+        $this->leadServices->delete($leads);
+        $this->invalidateCaches([LeadsRepository::class, SaleRepository::class], ['global', $leads->id_branch]);
+        return redirect()->back()->with('message', 'Lead ' . $leads->name . ' berhasil dihapus');
     }
 }

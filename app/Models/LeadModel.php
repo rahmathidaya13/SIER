@@ -31,14 +31,18 @@ class LeadModel extends Model
 
     public function scopeAllowedForUser($query, User $user)
     {
-        // Jika yang login Orang Pusat (Superadmin), BUKA SEMUA DATA!
-        if ($user->hasRole('super_admin')) {
-            return $query;
-        }
-
-        // Jika yang login SPV/Sales/Admin Cabang, KUNCI HANYA DI CABANG DIA!
-        return $query->where('leads.id_branch', $user->id_branch);
+        return match (true) {
+            $user->hasRole('super_admin') => $query,
+            $user->hasRole('supervisor') => $query->where('leads.id_branch', $user->id_branch),
+            default => $query->where('leads.id_user', $user->id),
+        };
     }
+
+    public function paymentHistory()
+    {
+        return $this->hasMany(PaymentHistory::class, 'id_lead', 'id_lead')->latest();
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class, 'id_user', 'id');

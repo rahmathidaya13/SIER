@@ -81,7 +81,17 @@ const visibleActions = computed(() => {
             if (!canShow) {
                 return null;
             }
+
             if (action.permission && !hasPermission(action.permission)) {
+                return null;
+            }
+
+            const canDisable =
+                typeof action.disabled === 'function'
+                    ? action.disabled(props.item)
+                    : action.disabled !== false;
+
+            if (!canDisable) {
                 return null;
             }
 

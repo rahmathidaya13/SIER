@@ -23,7 +23,6 @@ class SalesModel extends Model
         'remaining_bill',
         'paid_amount',
         'payment_status',
-        'payment_method',
         'deal_at',
         'notes',
     ];
@@ -36,13 +35,12 @@ class SalesModel extends Model
     ];
     public function scopeAllowedForUser($query, User $user)
     {
-        // Jika yang login Orang Pusat (Superadmin), BUKA SEMUA DATA!
-        if ($user->hasRole('super_admin')) {
-            return $query;
-        }
-
-        // Jika yang login SPV/Sales/Admin Cabang, KUNCI HANYA DI CABANG DIA!
-        return $query->where('sales.id_branch', $user->id_branch);
+        return match (true) {
+            $user->hasRole('super_admin') => $query,
+            $user->hasRole('supervisor') => $query->where('sales.id_branch', $user->id_branch)
+                ->where('sales.id_user', $user->id),
+            default => $query->where('sales.id_user', $user->id),
+        };
     }
     public static function boot()
     {
@@ -82,6 +80,11 @@ class SalesModel extends Model
 
         // Pad dengan angka 0 di depan agar selalu 5 digit: INV/2026/03/00046
         return $prefix . str_pad($sequence, 5, '0', STR_PAD_LEFT);
+    }
+
+    public function paymentHistory()
+    {
+        return $this->hasMany(PaymentHistory::class, 'id_sales', 'id_sales')->latest();
     }
     public function lead()
     {

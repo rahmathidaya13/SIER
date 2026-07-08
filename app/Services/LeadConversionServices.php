@@ -11,33 +11,32 @@ use Illuminate\Validation\ValidationException;
 class LeadConversionServices
 {
     use ImmutableFieldValidator;
-    public function convertLeadToSales(LeadModel $leads, array $data): SalesModel
+    public function convertLeadToSales(LeadModel $leads, array $validated): SalesModel
     {
 
-        if ($data['payment_status'] === 'DP') {
-            $minimalDp = $data['deal_price'] * 0.5; // Hitung 50% dari harga deal
-            if ($data['paid_amount'] < $minimalDp) {
+        if ($validated['payment_status'] === 'DP') {
+            $minimalDp = $validated['deal_price'] * 0.5; // Hitung 50% dari harga deal
+            if ($validated['paid_amount'] < $minimalDp) {
                 throw ValidationException::withMessages([
                     'paid_amount' => 'Uang muka (DP) minimal harus 50% (Min: Rp ' . number_format($minimalDp, 0, ',', '.') . ')'
                 ]);
             }
         }
 
-        return DB::transaction(function () use ($leads, $data) {
-            $remaining = max(0,  $data['deal_price'] - $data['paid_amount']);
+        return DB::transaction(function () use ($leads, $validated) {
+            $remaining = max(0,  $validated['deal_price'] - $validated['paid_amount']);
 
             $sales = SalesModel::create([
                 'id_lead'        => $leads->id_lead,
                 'id_user'        => $leads->id_user,
                 'id_product'     => $leads->id_product,
                 'id_branch'      => $leads->id_branch,
-                'deal_price'     => $data['deal_price'],
+                'deal_price'     => $validated['deal_price'],
                 'remaining_bill' => $remaining,
-                'paid_amount'    => $data['paid_amount'],
-                'payment_status' => $data['payment_status'],
-                'payment_method' => $data['payment_method'],
+                'payment_status' => $validated['payment_status'],
+                'paid_amount'    => $validated['paid_amount'],
                 'deal_at'        => now()->toDateTimeString(),
-                'notes'          => $data['notes']
+                'notes'          => $validated['notes']
             ]);
 
             $leads->update([
@@ -46,11 +45,25 @@ class LeadConversionServices
                 'updated_by' => auth()->id(),
             ]);
 
-            $leads->activity()->create([
-                'id_user'     =>  $leads->id_user,
-                'id_lead'     =>  $leads->id_lead,
-                'description' => '🎉 Pelanggan DEAL! Transaksi disahkan dengan nilai Rp ' . number_format($data['deal_price'], 0, ',', '.') . ' (' . $data['payment_status'] . ').'
+            $message = '💰 Transaksi ' . $validated['payment_method'] === 'LUNAS' ? 'lunas' : 'Dana Awal (Dp)' . ' dari pelanggan ' . ucwords($leads->name) . ' sebesar Rp ' . number_format($validated['paid_amount'], 0, ',', '.') . ' (' . $validated['payment_status'] . ').';
+            $sales->paymentHistory()->create([
+                'id_sales' => $sales->id_sales,
+                'id_user' => $sales->id_user,
+                'id_lead' => $sales->id_lead,
+                'payment_method' => $validated['payment_method'],
+                'bank_name' => $validated['bank_name'] ?? null,
+                'paid_amount' => $validated['paid_amount'],
+                'notes_payment' => $validated['notes_payment'] ?? $message,
+                'payment_at' => now()->toDateTimeString()
             ]);
+
+            if ($sales->lead) {
+                $leads->activity()->create([
+                    'id_user'     =>  $leads->id_user,
+                    'id_lead'     =>  $leads->id_lead,
+                    'description' => '🎉 Pelanggan DEAL! Transaksi disahkan dengan nilai Rp ' . number_format($validated['deal_price'], 0, ',', '.') . ' (' . $validated['payment_status'] . ').'
+                ]);
+            }
 
             return $sales;
         });

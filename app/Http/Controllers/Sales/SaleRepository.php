@@ -9,6 +9,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class SaleRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'sales_cache_';
+
     protected function getData(string|int|null $branchId, array $filters = []): LengthAwarePaginator
     {
         $query = SalesModel::query()
@@ -28,7 +29,6 @@ class SaleRepository extends BaseCacheRepository
                 'sales.remaining_bill',
                 'sales.paid_amount',
                 'sales.payment_status',
-                'sales.payment_method',
                 'sales.deal_at',
                 'sales.created_at',
                 'sales.updated_at',
@@ -44,10 +44,12 @@ class SaleRepository extends BaseCacheRepository
 
             $q->where(function ($subQuery) use ($search) {
                 $subQuery->where('leads.name', 'like', "%{$search}%")
-                    ->orWhere('leads.phone', 'like', "%{$search}%");
+                    ->orWhere('leads.phone', 'like', "%{$search}%")
+                    ->orWhere('sales.invoice', 'like', "%{$search}%");
             });
         });
         [$column, $direction] = $this->resolveSorting($filters);
+
         return $query
             ->orderBy($column, $direction)
             ->paginate($filters['limit'] ?? 10)

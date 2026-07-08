@@ -6,7 +6,7 @@ import { Head } from '@inertiajs/vue3';
     <Head title="Home" />
     <app-layout>
         <template #content>
-            <div class="row g-3">
+            <div class="row g-3 view-section">
                 <div class="col-12">
                     <callout />
                 </div>

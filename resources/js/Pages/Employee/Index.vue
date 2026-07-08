@@ -176,7 +176,7 @@ onMounted(() => {
     <Head title="Halaman Data Pegawai" />
     <app-layout>
         <template #content>
-            <div class="row">
+            <div class="row g-3 view-section">
                 <div class="col-12">
                     <callout />
                     <div class="card border-0 rounded-4 overflow-hidden">

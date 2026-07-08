@@ -68,7 +68,7 @@ const menus = computed(() => {
 const rolesName = (role) => {
     const roles = {
         'super_admin': {
-            label: 'SUPER ADMIN',
+            label: 'HEAD OFFICE',
             color: 'bg-dark text-white'
         },
         'supervisor': {

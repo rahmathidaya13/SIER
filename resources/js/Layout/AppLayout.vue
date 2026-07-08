@@ -68,7 +68,7 @@ onUnmounted(() => {
 
         <Sidebar :isOpen="sideBarOpen" @close="closeSideBar" />
 
-        <div class="page-content-wrapper" :class="{ 'expanded': !sideBarOpen }">
+        <div class="page-content-wrapper " :class="{ 'expanded': !sideBarOpen }">
             <Header @close="toggleSidebar" />
             <main class="container-fluid px-3 py-4">
                 <slot name="content" />

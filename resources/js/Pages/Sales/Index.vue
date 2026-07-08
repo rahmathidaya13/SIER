@@ -7,6 +7,8 @@ import { highlight } from "@/Helpers/Highlight";
 import axios from 'axios';
 import { formatDate } from '@/Helpers/formatDate';
 import { currencyFormat } from '@/Helpers/currencyFormat';
+import PaymentModal from './PaymentModal.vue';
+import ActivityTimelineModal from './ActivityTimelineModal.vue';
 const props = defineProps({
     sales: Object,
     filters: Object,
@@ -28,13 +30,21 @@ const {
         'limit',
         'order_by',
     ],
-    only: ['leads', 'filters'],
+    only: ['sales', 'filters'],
     debounceTime: 500,
 });
 
 const showPaymentModal = ref(false);
+const showActivityModal = ref(false);
 const selectedIdSale = ref(null);
-
+const openPaymentModal = (data) => {
+    selectedIdSale.value = data.id_sales;
+    showPaymentModal.value = true;
+}
+const openActivityModal = (data) => {
+    selectedIdSale.value = data.id_sales;
+    showActivityModal.value = true;
+}
 const header = [
     {
         label: "No",
@@ -70,7 +80,7 @@ const header = [
             style: {
                 width: '15%'
             },
-            class: 'text-center',
+            class: 'text-end',
         },
     },
     {
@@ -100,14 +110,36 @@ const header = [
         },
     },
 ];
-console.log(props.sales.data);
+console.log(props.sales);
+
+const payActions = [
+    {
+        label: 'Lihat history aktivitas',
+        action: 'history',
+        protectedSelf: true,
+        icon: 'bi bi-clock-history',
+        title: 'Lihat history aktivitas',
+        class: 'btn btn-c-slate',
+    },
+
+    {
+        label: 'Lakukan pembayaran',
+        action: 'pay',
+        protectedSelf: true,
+        icon: 'bi bi-wallet2',
+        title: 'Lakukan pembayaran',
+        class: 'btn btn-c-success',
+        show: (item) => item.payment_status !== 'LUNAS',
+    },
+];
+
 </script>
 <template>
 
     <Head title="Rekap Closing" />
     <app-layout>
         <template #content>
-            <div class="row g-3">
+            <div class="row g-3 view-section">
                 <div class="col-12">
                     <callout />
                     <div class="card border-0 rounded-4 overflow-hidden">
@@ -120,9 +152,25 @@ console.log(props.sales.data);
                                     <small class="text-muted">Manajemen transaksi masuk dan pelunasan tagihan
                                         pelanggan.</small>
                                 </div>
-                                <!-- <button @click.prevent="openCreateModal" class="btn btn-c-primary px-4 py-2">
-                                    <i class="bi bi-plus-circle me-1"></i> Lead Baru
-                                </button> -->
+                                <div class="dropdown">
+                                    <button data-bs-toggle="dropdown" class="btn btn-c-slate dropdown-toggle"
+                                        type="button">
+                                        <i class="bi bi-download me-2 "></i>
+                                        Export Data
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item text-success" href="#">
+                                                <i class="bi bi-file-earmark-excel-fill me-1 "></i>
+                                                Unduh Excel
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#">
+                                                <i class="bi bi-file-earmark-pdf-fill me-1 "></i> Unduh PDF</a>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                         <div class="row p-3 g-2 align-items-center">
@@ -131,7 +179,7 @@ console.log(props.sales.data);
                                     <i class="bi bi-search input-icon-left"></i>
                                     <input-text ref="keywordRef" :isValid="false" v-model="filters.keyword"
                                         inputClass="input-fixed-height input-height-1 rounded-pill"
-                                        placeholder="Cari nama...." />
+                                        placeholder="Cari nama pelanggan dan nomor handphone...." />
                                 </div>
                             </div>
                             <div class="col-xl-1 col-3 col-md-3 col-lg-3">
@@ -175,18 +223,24 @@ console.log(props.sales.data);
 
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
-                                            <div class="badge bg-primary-subtle text-primary p-2 rounded-circle">
+                                            <div class="badge bg-primary-subtle text-primary p-2 rounded-circle fs-4">
                                                 <i class="bi bi-person-fill"></i>
                                             </div>
                                             <div class="text-capitalize">
-                                                <span class="d-block fw-bold text-dark mb-0">{{
-                                                    item.lead_customer_name ||
-                                                    'Unknown' }}</span>
-                                                <span class="text-muted small" style="font-size: 11px;">
+                                                <span class="fw-bold text-dark mb-0" v-html="highlight(item.lead_customer_name ||
+                                                    'Unknown', filters.keyword)"></span>
+                                                <div class="d-block mb-0 small fw-medium">
+                                                    <i class="bi bi-whatsapp me-1"></i>
+                                                    <span v-html="highlight(item.lead_customer_phone ||
+                                                        'Unknown', filters.keyword)">
+                                                    </span>
+                                                </div>
+                                                <span class="text-muted small" style="font-size: 14px;">
                                                     <i class="bi bi-box me-1"></i> {{ item.product_name || '-'
                                                     }}
                                                 </span>
                                             </div>
+
                                         </div>
                                     </td>
 
@@ -195,7 +249,6 @@ console.log(props.sales.data);
                                     </td>
 
                                     <td class="text-center">
-                                        <!-- Jika LUNAS -->
                                         <div v-if="item.payment_status === 'LUNAS'"
                                             class="d-inline-flex align-items-center gap-2 ">
                                             <span
@@ -204,7 +257,6 @@ console.log(props.sales.data);
                                             </span>
                                         </div>
 
-                                        <!-- Jika DP / TERMIN (Masih Punya Sisa Tagihan) -->
                                         <div v-else class="d-flex flex-column">
                                             <div class="d-flex align-items-center gap-2 mb-1">
                                                 <span
@@ -216,7 +268,6 @@ console.log(props.sales.data);
                                                 </span>
                                             </div>
                                             <div class="progress" style="height: 4px;">
-                                                <!-- Visualisasi Progress Bar Uang Masuk -->
                                                 <div class="progress-bar bg-success"
                                                     :style="`width: ${(item.paid_amount / item.deal_price) * 100}%`">
                                                 </div>
@@ -234,7 +285,7 @@ console.log(props.sales.data);
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.sales_name || 'Sistem'
-                                                    }}</span>
+                                                }}</span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>
                                                         {{ formatDate(item.created_at) }}
@@ -250,26 +301,9 @@ console.log(props.sales.data);
                                     </td>
 
                                     <td class="text-center">
-                                        <div class="d-flex justify-content-center gap-2">
-                                            <!-- Tombol Invoice (Selalu Muncul) -->
-                                            <button class="btn btn-light btn-sm border shadow-sm text-primary"
-                                                title="Lihat Invoice">
-                                                <i class="bi bi-receipt"></i>
-                                            </button>
-
-                                            <!-- TOMBOL SAKTI: Pelunasan (Hanya muncul jika bukan Lunas) -->
-                                            <!-- <button v-if="sale.payment_status !== 'LUNAS' && sale.remaining_bill > 0"
-                                                @click="openPaymentModal(sale)"
-                                                class="btn btn-c-success btn-sm shadow-sm fw-medium d-flex align-items-center gap-1">
-                                                <i class="bi bi-wallet2"></i> Tagih
-                                            </button> -->
-                                        </div>
+                                        <action-button :item="item" :actions="payActions" @pay="openPaymentModal(item)"
+                                            @history="openActivityModal(item)" />
                                     </td>
-
-                                    <!-- <td class="text-center">
-                                        <action-button :item="item" :actions="leadActions" @edit="openEditModal(item)"
-                                            @delete="deleted('sales.delete', item)" @deals="openConvertModal(item)" />
-                                    </td> -->
 
                                 </template>
 
@@ -299,6 +333,9 @@ console.log(props.sales.data);
                 </div>
 
             </div>
+            <PaymentModal :idSales="selectedIdSale" :show="showPaymentModal" @update:show="showPaymentModal = $event" />
+            <ActivityTimelineModal :idSales="selectedIdSale" :show="showActivityModal"
+                @update:show="showActivityModal = $event" />
         </template>
     </app-layout>
 </template>

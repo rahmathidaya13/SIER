@@ -3,37 +3,49 @@
 namespace App\Services;
 
 use App\Models\LeadModel;
-use App\Traits\ImmutableFieldValidator;
+use App\Models\SalesModel;
 use Illuminate\Support\Facades\DB;
+use App\Traits\BranchMutationHelper;
+use App\Traits\ImmutableFieldValidator;
 use App\Services\LeadConversionServices;
+use App\Http\Controllers\Sales\SaleRepository;
+use Illuminate\Validation\ValidationException;
+use App\Http\Controllers\Leads\LeadsRepository;
+use App\Services\Authorization\LeadAuthorizationService;
 
 class LeadServices
 {
     use ImmutableFieldValidator;
 
     protected $leadConversionServices;
-    public function __construct(LeadConversionServices $leadConversionServices)
+    protected $authorization;
+    public function __construct(LeadConversionServices $leadConversionServices, LeadAuthorizationService $authorization)
     {
         $this->leadConversionServices = $leadConversionServices;
+        $this->authorization = $authorization;
     }
-    public function store(array $data, $user): LeadModel
+
+    public function store(array $validated, $user): LeadModel
     {
-        return DB::transaction(function () use ($data, $user) {
+        return DB::transaction(function () use ($validated, $user) {
+
             $leads = LeadModel::create([
                 'id_user' => $user->id,
                 'id_branch' => $user->id_branch,
-                'id_channel' => $data['id_channel'],
-                'id_product' => $data['id_product'],
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'phone' => $data['phone'],
-                'status' => $data['status'],
-                'temperature' => $data['temperature'],
-                'follow_up_date' => $data['follow_up_date'],
-                'notes' => $data['notes'],
+                'id_channel' => $validated['id_channel'],
+                'id_product' => $validated['id_product'],
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'],
+                'status' => $validated['status'],
+                'temperature' => $validated['temperature'],
+                'follow_up_date' => $validated['follow_up_date'],
+                'notes' => $validated['notes'],
             ]);
-            $activityDesc = $data['new_activity'] ?? '✨ Prospek baru berhasil ditambahkan ke dalam sistem.';
-            if (!empty($data['new_activity'])) {
+
+            $activityDesc = $validated['new_activity'] ?? '✨ Prospek baru berhasil ditambahkan ke dalam sistem.';
+
+            if (!empty($validated['new_activity'])) {
                 $leads->activity()->create([
                     'id_user'     => $user->id,
                     'id_lead'     => $leads->id_lead,
@@ -41,9 +53,28 @@ class LeadServices
                 ]);
             }
 
-            if ($data['status'] === 'CLOSED_WON' && $data['temperature'] === 'HOT') {
-                $this->leadConversionServices->convertLeadToSales($leads, $data);
+            if ($validated['status'] === 'CLOSED_WON' && $validated['temperature'] === 'HOT') {
+
+                $sales = $this->convertLeadToSales($leads, $validated);
+
+                $sales->paymentHistory()->create([
+                    'id_sales' => $sales->id_sales,
+                    'id_user' => $user->id,
+                    'id_lead' => $leads->id_lead,
+                    'payment_method' => $validated['payment_method'],
+                    'bank_name' => $validated['bank_name'] ?? null,
+                    'paid_amount' => $validated['paid_amount'],
+                    'notes_payment' => 'Transaksi awal pada saat pengesahan closing / deal',
+                    'payment_at' => now()->toDateTimeString()
+                ]);
+
+                $leads->activity()->create([
+                    'id_user'     => $user->id,
+                    'id_lead'     => $leads->id_lead,
+                    'description' => '🎉 TRANSAKSI DISAHKAN! Nilai transaksi: Rp ' . number_format($validated['deal_price'], 0, ',', '.') . ' dengan Metode ' . strtoupper($validated['payment_method'])
+                ]);
             }
+
             return $leads;
         });
     }
@@ -78,6 +109,7 @@ class LeadServices
                 'temperature' => $data['temperature'],
                 'notes' => $data['notes'],
             ]);
+
             if (!empty($data['new_activity'])) {
                 $leads->activity()->create([
                     'id_user' => $user->id,
@@ -87,6 +119,42 @@ class LeadServices
                 $leads->touch();
             }
             return $leads;
+        });
+    }
+    public function delete(LeadModel $leads)
+    {
+        $user = auth()->user();
+
+        $this->authorization->ensureCanDelete($user, $leads);
+
+        $leads->delete();
+    }
+
+    private function convertLeadToSales(LeadModel $leads, array $validated)
+    {
+        return DB::transaction(function () use ($leads, $validated) {
+            $remaining = max(0,  $validated['deal_price'] - $validated['paid_amount']);
+
+            $sales = SalesModel::create([
+                'id_lead'        => $leads->id_lead,
+                'id_user'        => $leads->id_user,
+                'id_product'     => $leads->id_product,
+                'id_branch'      => $leads->id_branch,
+                'deal_price'     => $validated['deal_price'],
+                'paid_amount'    => $validated['paid_amount'],
+                'remaining_bill' => $remaining,
+                'payment_status' => $validated['payment_status'],
+                'deal_at'        => now()->toDateTimeString(),
+                'notes'          => $validated['notes']
+            ]);
+
+            $leads->update([
+                'status' => 'CLOSED_WON',
+                'temperature' => 'HOT',
+                'updated_by' => auth()->id(),
+            ]);
+
+            return $sales;
         });
     }
 }

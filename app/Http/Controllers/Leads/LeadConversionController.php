@@ -12,6 +12,7 @@ use App\Services\LeadConversionServices;
 use App\Traits\LeadConversionValidation;
 use Illuminate\Validation\ValidationException;
 use App\Http\Controllers\Leads\LeadsRepository;
+use App\Http\Controllers\Sales\SaleRepository;
 
 class LeadConversionController extends Controller
 {
@@ -20,7 +21,7 @@ class LeadConversionController extends Controller
     {
         $this->validateLeadConversion($request->all());
 
-        $this->__validate($leads, $request['status'], [
+        $this->__validate($leads, $request->all(), [
             'status' => [
                 'locked_value' => 'CLOSED_WON',
                 'message' => 'Tidak dapat mengubah status prospek yang sudah disahkan menjadi status lain.',
@@ -30,7 +31,7 @@ class LeadConversionController extends Controller
         try {
             $services->convertLeadToSales($leads, $request->all());
             $user = auth()->user();
-            $this->invalidateCaches(LeadsRepository::class, ['global', $user->id_branch]);
+            $this->invalidateCaches([LeadsRepository::class, SaleRepository::class], ['global', $user->id_branch]);
             return redirect()->back()->with('success', 'Transaksi atas nama ' . $leads->name . ' sudah berhasil closing.');
         } catch (ValidationException $error) {
             throw $error;

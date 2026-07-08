@@ -4,6 +4,7 @@ import { useForm, router, usePage } from "@inertiajs/vue3";
 import { hasRole } from '@/Composables/useAuth';
 import { useRowAlert } from '@/Composables/useAlert';
 import { currencyFormat } from "@/Helpers/currencyFormat";
+import { formatDate } from "@/Helpers/formatDate";
 const { show, __alert, hide } = useRowAlert();
 import axios from "axios";
 const props = defineProps({
@@ -43,7 +44,6 @@ const form = useForm({
     paid_amount: 0,
     payment_status: 'LUNAS',
     payment_method: 'cash',
-    deal_at: new Date().toISOString().substring(0, 10),
     notes_sales: ''
 });
 
@@ -58,10 +58,12 @@ watch(
         }
     }
 );
+
 // Auto-Pindah Tab jika Sales ubah Status & Suhu
 watch(
     () => [form.status, form.temperature],
     ([newStatus, newTemp]) => {
+
         // Jika Sales ubah status jadi Closing & Suhu HOT, paksa pindah ke Tab Uang!
         if (newStatus === 'CLOSED_WON' && newTemp === 'HOT') {
             activeTab.value = 'convert_lead';
@@ -91,7 +93,6 @@ const fillForm = (data) => {
         paid_amount: 0,
         payment_status: 'LUNAS',
         payment_method: 'cash',
-        deal_at: new Date().toISOString().substring(0, 10),
         notes_sales: ''
     })
 
@@ -117,7 +118,6 @@ const resetForm = () => {
         paid_amount: 0,
         payment_status: 'LUNAS',
         payment_method: 'cash',
-        deal_at: new Date().toISOString().substring(0, 10),
         notes_sales: ''
     })
     form.reset();
@@ -211,10 +211,27 @@ const submit = () => {
         ? route('leads.update', props.idLead)
         : route('leads.store');
 
-    // Jika Edit, Laravel butuh trik method spoofing (_method: put) untuk upload file
-    const transformData = isEdit.value
-        ? (data) => ({ ...data, _method: 'put' })
-        : (data) => data;
+    const transformData = (data) => {
+        const payload = {
+            ...data,
+            ...(isEdit.value && { _method: 'put' }),
+        };
+
+        // Apakah sedang melakukan closing?
+        const isClosing =
+            payload.temperature === 'HOT' &&
+            payload.status === 'CLOSED_WON';
+
+        // Jika bukan closing, kosongkan field transaksi
+        if (!isClosing) {
+            delete payload.deal_price;
+            delete payload.paid_amount;
+            delete payload.payment_status;
+            delete payload.payment_method;
+            delete payload.notes_sales;
+        }
+        return payload;
+    }
 
     form.transform(transformData).post(url, {
         preserveScroll: true,
@@ -266,13 +283,6 @@ watch(
         } else {
             resetForm();
             activeTab.value = 'prospect'
-        }
-
-        // Jika dataLead sudah ada, cek status & suhu untuk menentukan tab aktif
-        if (dataLead.value?.status !== 'CLOSED_WON' && dataLead.value?.temperature !== 'HOT') {
-            activeTab.value = 'prospect';
-        } else {
-            activeTab.value = 'activity';
         }
 
     }, {
@@ -376,7 +386,39 @@ const isLocked = computed(() => {
     return isEdit.value && dataLead.value?.status === 'CLOSED_WON' && dataLead.value?.temperature === 'HOT';
 });
 
+const prospectOptions = computed(() => {
+    let options = [
+        { label: '⭐ Baru Masuk', value: 'NEW' },
+        { label: '💬 Sedang Follow Up', value: 'FOLLOW_UP' },
+        { label: '❌ Lost / Batal', value: 'CLOSED_LOST' },
+        { label: '✔️ Closing (Terjual)', value: 'CLOSED_WON' },
+    ];
+    if (isEdit.value) {
+        options =
+            [
+                { label: '⭐ Baru Masuk', value: 'NEW' },
+                { label: '💬 Sedang Follow Up', value: 'FOLLOW_UP' },
+                { label: '❌ Lost / Batal', value: 'CLOSED_LOST' },
+            ]
+    }
 
+    return options
+})
+const tempOptions = computed(() => {
+    let options = [
+        { label: '🔥 HOT (Siap Bayar)', value: 'HOT' },
+        { label: '⏳ WARM (Tanya-tanya)', value: 'WARM' },
+        { label: '❄️ COLD (Sekedar Lewat)', value: 'COLD' },
+    ];
+    if (isEdit.value) {
+        options =
+            [
+                { label: '⏳ WARM (Tanya-tanya)', value: 'WARM' },
+                { label: '❄️ COLD (Sekedar Lewat)', value: 'COLD' },
+            ]
+    }
+    return options;
+})
 </script>
 <template>
     <div class="row" v-if="props.show">
@@ -404,8 +446,8 @@ const isLocked = computed(() => {
                     </div>
 
                     <form-wrapper @submit.prevent="submit">
-                        <div v-show="activeTab === 'prospect'" class="row g-3 animate-fade-in">
-                            <div class="col-md-6">
+                        <div v-show="activeTab === 'prospect'" class="row g-2 animate-fade-in">
+                            <div class="col-md-6 mb-2">
                                 <label for="name_input" class="form-label small fw-bold text-muted">NAMA PROSPEK
                                     *</label>
                                 <input-text :error="form.errors.name" v-model="form.name" name="name"
@@ -413,7 +455,7 @@ const isLocked = computed(() => {
                                 <input-error :message="form.errors.name" />
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-6 mb-2">
                                 <label for="phone_input" class="form-label small fw-bold text-muted">NO. HANDPHONE / WA
                                     *</label>
                                 <input-number :maxChar="15" :error="form.errors.phone" v-model="form.phone" name="phone"
@@ -421,7 +463,7 @@ const isLocked = computed(() => {
                                 <input-error :message="form.errors.phone" />
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-6 mb-2">
                                 <label for="email_input" class="form-label small fw-bold text-muted">EMAIL
                                     PELANGGAN (Opsional)</label>
                                 <input-text :error="form.errors.email" v-model="form.email" name="email"
@@ -429,7 +471,7 @@ const isLocked = computed(() => {
                                 <input-error :message="form.errors.email" />
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-6 mb-2">
                                 <label for="channels_select" class="form-label small fw-bold text-muted">SUMBER
                                     TRAFIK
                                     (CHANNEL) *</label>
@@ -438,7 +480,7 @@ const isLocked = computed(() => {
                                 <input-error :message="form.errors.id_channel" />
                             </div>
 
-                            <div class="col-md-12">
+                            <div class="col-md-12 mb-2">
                                 <div class="d-flex justify-content-between">
                                     <label for="product_select" class="form-label small fw-bold text-muted">PRODUK
                                         YANG
@@ -467,36 +509,27 @@ const isLocked = computed(() => {
                                 <input-error :message="form.errors.id_product" />
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-4 mb-2">
                                 <label for="temp_select" class="form-label small fw-bold text-muted">SUHU
                                     KETERTARIKAN</label>
                                 <select-input :disabled="isLocked" text="-- Pilih Suhu --" name="temp"
                                     v-model="form.temperature" :error="form.errors.temperature"
                                     :selectClass="{ 'text-danger': form.temperature === 'COLD', 'text-warning': form.temperature === 'WARM', 'text-success': form.temperature === 'HOT' }"
-                                    :options="[
-                                        { label: '🔥 HOT (Siap Bayar)', value: 'HOT' },
-                                        { label: '⏳ WARM (Tanya-tanya)', value: 'WARM' },
-                                        { label: '❄️ COLD (Sekedar Lewat)', value: 'COLD' },
-                                    ]" />
+                                    :options="tempOptions" />
                                 <input-error :message="form.errors.temperature" />
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-4 mb-2">
                                 <label for="status_select" class="form-label small fw-bold text-muted">STATUS
                                     PROSPEK</label>
                                 <select-input :disabled="isLocked" text="-- Pilih Status --" v-model="form.status"
-                                    name="status" :error="form.errors.status" :options="[
-                                        { label: '⭐ Baru Masuk', value: 'NEW' },
-                                        { label: '💬 Sedang Follow Up', value: 'FOLLOW_UP' },
-                                        { label: '✖ Lost / Batal', value: 'CLOSED_LOST' },
-                                        { label: '✔ Closing (Terjual)', value: 'CLOSED_WON' },
-                                    ]" />
+                                    name="status" :error="form.errors.status" :options="prospectOptions" />
                                 <input-error :message="form.errors.status" />
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-4 mb-2">
                                 <label for="follow_up_date_input" class="form-label small fw-bold text-muted">JADWAL
-                                    FOLLOW UP</label>
+                                    FOLLOW UP (Opsional)</label>
                                 <input-text name="follow_up_date" v-model="form.follow_up_date" type="date" />
                             </div>
 
@@ -658,26 +691,12 @@ const isLocked = computed(() => {
                                                     <div class="d-flex flex-column">
                                                         <span class="text-muted" style="font-size: 12px;">
                                                             <i class="bi bi-plus-circle"></i>
-                                                            {{ new Date(act.created_at).toLocaleString('id-ID',
-                                                                {
-                                                                    day: 'numeric',
-                                                                    month: 'short',
-                                                                    year: 'numeric',
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit'
-                                                                }) }}
+                                                            {{ formatDate(act.created_at) }}
                                                         </span>
                                                         <span v-if="act.created_at !== act.updated_at"
                                                             class="text-muted" style="font-size: 12px;">
                                                             <i class="bi bi-pencil-square"></i>
-                                                            {{ new Date(act.updated_at).toLocaleString('id-ID',
-                                                                {
-                                                                    day: 'numeric',
-                                                                    month: 'short',
-                                                                    year: 'numeric',
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit'
-                                                                }) }}
+                                                            {{ formatDate(act.updated_at) }}
                                                         </span>
 
                                                     </div>

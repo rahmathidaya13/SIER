@@ -1,7 +1,6 @@
 <script setup>
 import { usePage } from "@inertiajs/vue3"
-import { ref, watch } from "vue"
-
+import { onMounted, ref, watch } from "vue"
 const props = defineProps({
     modelValue: {
         type: [Number, String],
@@ -96,10 +95,18 @@ const page = usePage()
 
 // Ambil error dari inertia errors
 const errors = page.props.errors
+
+const inputRef = ref(null);
+onMounted(() => {
+    if (inputRef.value && inputRef.value.hasAttribute("autofocus")) {
+        inputRef.value.focus();
+    }
+});
+defineExpose({ focus: () => inputRef.value?.focus() });
 </script>
 
 <template>
-    <input type="text" :class="['form-control', inputClass, {
+    <input ref="inputRef" type="text" :class="['form-control', inputClass, {
         'is-invalid': props.isInvalid && props.error,
         'is-valid': props.isValid && modelValue && !props.error,
     }]" :name="props.name" :id="props.name + '_input'" v-model="displayValue" @input="onInput" />

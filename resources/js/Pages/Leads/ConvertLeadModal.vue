@@ -18,7 +18,7 @@ const form = useForm({
     paid_amount: 0,
     payment_status: 'LUNAS',
     payment_method: 'cash',
-    deal_at: new Date().toISOString().substring(0, 10),
+    bank_name: '',
     notes: ''
 });
 
@@ -95,7 +95,7 @@ const loadLead = async () => {
                             <div>
                                 <h6 class="mb-1 fw-bold text-dark fs-5">{{ dataLead?.name }}</h6>
                                 <p class="mb-0 text-muted small">
-                                    Paket Diminati: <strong class="text-primary">
+                                    Produk Diminati: <strong class="text-primary">
                                         {{ dataLead?.product.product_name || 'Belum Pilih Paket' }}</strong>
                                 </p>
                             </div>
@@ -147,6 +147,13 @@ const loadLead = async () => {
                                     { label: '💵 QRIS', value: 'qris' }
                                 ]" />
                             <input-error :message="form.errors.payment_method" />
+                        </div>
+
+                        <div v-if="form.payment_method === 'transfer' || form.payment_method === 'debit'" class="col-12">
+                            <label class="form-label small fw-bold text-muted mb-2">NAMA BANK*</label>
+                            <input-text name="bank_name" v-model="form.bank_name" :error="form.errors.bank_name"
+                                placeholder="Cth: BCA, Mandiri, BNI Dll" />
+                            <input-error :message="form.errors.bank_name" />
                         </div>
 
                         <div class="col-12 mt-3 border-top pt-3">

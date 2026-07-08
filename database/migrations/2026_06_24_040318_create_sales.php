@@ -24,9 +24,8 @@ return new class extends Migration
             $table->unsignedBigInteger('remaining_bill')->default(0); // Berapa duit yang udah masuk ke rekening?
 
             $table->enum('payment_status', ['LUNAS', 'DP'])->default('LUNAS');
-            $table->enum('payment_method', ['cash', 'transfer', 'debit', 'qris'])->default('cash'); // Kalau Lunas, diisi tunai]; // Cth: 'BCA - 123456', 'QRIS'
 
-            $table->dateTime('deal_at'); // Waktu pasti closing terekam
+            $table->dateTime('deal_at');
             $table->text('notes')->nullable();
             $table->softDeletes();
             $table->timestamps();

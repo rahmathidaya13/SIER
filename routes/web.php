@@ -43,7 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/leads/show/{id}', 'show')->name('leads.show');
         Route::post('/leads/store', 'store')->name('leads.store');
         Route::put('/leads/update/{id}', 'update')->name('leads.update');
-        Route::delete('/leads/delete/{id}', 'destroy')->name('leads.delete');
+        Route::delete('/leads/delete/{leads}', 'destroy')->name('leads.delete');
     });
     Route::controller(LeadActivityController::class)->group(function () {
         Route::put('/leads/activity/update/{id}', 'update')->name('leads.activity.update');
@@ -63,6 +63,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::controller(SaleController::class)->group(function () {
         Route::get('/sales/list', 'index')->name('sales.index');
+        Route::get('/sales/show/{sales}', 'show')->name('sales.show');
+        Route::post('/sales/pay/{sales}', 'payRemaining')->name('sales.pay');
     });
 });
 

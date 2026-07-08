@@ -7,82 +7,118 @@ use Illuminate\Support\Facades\Validator;
 
 trait LeadsValidation
 {
+    protected  function isClosing(array $data): bool
+    {
+        return ($data['status'] ?? null) === 'CLOSED_WON'
+            && ($data['temperature'] ?? null) === 'HOT';
+    }
+    protected function closingRules(): array
+    {
+        return [
+            'deal_price' => [
+                'required',
+                'numeric',
+                'min:1000',
+            ],
+
+            'paid_amount' => [
+                'required',
+                'numeric',
+                'min:1000',
+            ],
+
+            'payment_status' => [
+                'required',
+                Rule::in(['LUNAS', 'DP']),
+            ],
+
+            'payment_method' => [
+                'required',
+                Rule::in(['cash', 'transfer', 'debit', 'qris']),
+            ],
+
+            'notes_sales' => [
+                'nullable',
+                'string',
+                'max:500',
+            ],
+        ];
+    }
     public function validateLeads(array $request, ?string $id = null)
     {
+        $rules = [
+            'name' => [
+                'required',
+                'string',
+                'max:100',
+            ],
+
+            'phone' => [
+                'required',
+                'string',
+                'max:15',
+            ],
+
+            'email' => [
+                'nullable',
+                'email',
+                'max:100',
+                Rule::unique('leads', 'email')->ignore($id, 'id_lead'),
+            ],
+
+            'id_channel' => [
+                'required',
+                'exists:channels,id_channel',
+            ],
+
+            'id_product' => [
+                'required',
+                'exists:products,id_product',
+            ],
+
+            'temperature' => [
+                'required',
+                Rule::in([
+                    'HOT',
+                    'WARM',
+                    'COLD'
+                ]),
+            ],
+
+            'status' => [
+                'required',
+                Rule::in([
+                    'NEW',
+                    'FOLLOW_UP',
+                    'CLOSED_WON',
+                    'CLOSED_LOST'
+                ]),
+            ],
+
+            'follow_up_date' => [
+                'nullable',
+                'date',
+            ],
+
+            'notes' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'new_activity' => [
+                'nullable',
+                'string',
+                'max:2500',
+            ],
+        ];
+
+        if ($this->isClosing($request)) {
+            $rules = array_merge($rules, $this->closingRules());
+        }
         return Validator::make(
             $request,
-            [
-                'name' => [
-                    'required',
-                    'string',
-                    'max:100',
-                ],
-
-                'phone' => [
-                    'required',
-                    'string',
-                    'max:15',
-                ],
-
-                'email' => [
-                    'nullable',
-                    'email',
-                    'max:100',
-                    Rule::unique('leads', 'email')->ignore($id, 'id_lead'),
-                ],
-
-                'id_channel' => [
-                    'required',
-                    'exists:channels,id_channel',
-                ],
-
-                'id_product' => [
-                    'required',
-                    'exists:products,id_product',
-                ],
-
-                'temperature' => [
-                    'required',
-                    Rule::in([
-                        'HOT',
-                        'WARM',
-                        'COLD'
-                    ]),
-                ],
-
-                'status' => [
-                    'required',
-                    Rule::in([
-                        'NEW',
-                        'FOLLOW_UP',
-                        'CLOSED_WON',
-                        'CLOSED_LOST'
-                    ]),
-                ],
-
-                'follow_up_date' => [
-                    'nullable',
-                    'date',
-                ],
-
-                'notes' => [
-                    'nullable',
-                    'string',
-                    'max:1000',
-                ],
-
-                'new_activity' => [
-                    'nullable',
-                    'string',
-                    'max:2500',
-                ],
-
-                'deal_price'     =>  'required_if:status,CLOSED_WON|numeric|min:1000',
-                'paid_amount'    => 'required_if:status,CLOSED_WON|numeric|min:1000',
-                'payment_status' => 'required_if:status,CLOSED_WON|in:LUNAS,DP',
-                'payment_method' => 'required_if:status,CLOSED_WON|in:cash,transfer,debit,qris',
-                'notes_sales'    => 'nullable|string|max:500',
-            ],
+            $rules,
             [
                 'name.required' => 'Nama prospek wajib diisi.',
                 'name.max' => 'Nama maksimal 100 karakter.',
@@ -111,6 +147,7 @@ trait LeadsValidation
                 'notes.max' => 'Catatan maksimal 1000 karakter.',
 
                 'new_activity.max' => 'Aktivitas maksimal 5000 karakter.',
+
 
 
                 'deal_price.required_if' => 'Harga deal wajib diisi saat status prospek adalah Closing / Terjual.',

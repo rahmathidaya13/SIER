@@ -1,12 +1,14 @@
 <script setup>
-import { Form, Head, usePage, router, Link } from '@inertiajs/vue3';
-import { onMounted, reactive, ref } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { onMounted, ref } from 'vue';
 import { useFilter } from '@/Composables/useFilter';
 import { useConfirm } from "@/Composables/useConfirm"
 import { highlight } from "@/Helpers/Highlight";
+import { formatDate } from '@/Helpers/formatDate';
 import FormModal from './FormModal.vue';
-import axios from 'axios';
 import ConvertLeadModal from './ConvertLeadModal.vue';
+import ActivityTimelineModal from './ActivityTimelineModal.vue';
+const confirm = useConfirm();
 const props = defineProps({
     leads: Object,
     filters: Object,
@@ -132,7 +134,7 @@ const leadActions = [
         icon: 'bi bi-bag-check-fill',
         title: 'Jadikan Deal (Closing)',
         class: 'btn btn-c-success opacity-75',
-        show: (item) => item.status !== 'CLOSED_WON',
+        disabled: (item) => item.status !== 'CLOSED_WON',
     },
     {
         label: 'Ubah Data Lead',
@@ -142,6 +144,8 @@ const leadActions = [
         title: 'Ubah Data Lead',
         buttonClass: 'btn-action',
         variant: 'edit',
+        show: (item) => item.status !== 'CLOSED_WON',
+
     },
     {
         label: 'Hapus Data Lead',
@@ -151,6 +155,8 @@ const leadActions = [
         buttonClass: 'btn-action',
         variant: 'delete',
         title: 'Hapus Data Lead',
+        disabled: (item) => item.status !== 'CLOSED_WON',
+
     },
 ];
 
@@ -217,13 +223,35 @@ const rowClasses = (item) => ({
     'tr-highlight-warning': isOverdue(item.follow_up_date, item.status),
 })
 
+const deleted = async (nameRoute, data) => {
+    const setConfirm = await confirm.ask({
+        title: 'Hapus',
+        message: `Kamu ingin menghapus Data Lead ini ${data.name} ?`,
+        confirmText: 'Ya, Hapus',
+        variant: 'danger'
+    });
+
+    if (setConfirm) {
+        router.delete(route(nameRoute, data.id_lead), {
+            preserveScroll: false,
+            replace: true,
+            preserveState: true
+        });
+    }
+}
+const showHistoryModal = ref(false);
+const openHistoryModal = (data) => {
+    console.log(data);
+    selectedId.value = data.id_lead;
+    showHistoryModal.value = true
+}
 </script>
 <template>
 
     <Head title="Data Rekap Leads" />
     <app-layout>
         <template #content>
-            <div class="row g-3">
+            <div class="row g-3 view-section">
                 <div class="col-12">
                     <callout />
                     <div class="card border-0 rounded-4 overflow-hidden">
@@ -342,7 +370,8 @@ const rowClasses = (item) => ({
                                     </td>
 
                                     <td class="text-center">
-                                        <span class="badge rounded-pill px-3 py-1"
+                                        <span
+                                            class="badge rounded-pill px-3 py-1 badge-soft-success border-success border-1"
                                             :title="getStatusBadge(item.status).label"
                                             :class="getStatusBadge(item.status).class">
                                             {{ getStatusBadge(item.status).label }}
@@ -355,11 +384,7 @@ const rowClasses = (item) => ({
                                             <i class="bi bi-calendar-event me-2"></i>
                                             <i v-if="isOverdue(item.follow_up_date, item.status)"
                                                 class="bi bi-exclamation-circle-fill me-1" title="Telat dihubungi!"></i>
-                                            {{ new Date(item.follow_up_date).toLocaleDateString('id-ID', {
-                                                day: 'numeric',
-                                                month: 'short',
-                                                year: 'numeric'
-                                            }) }}
+                                            {{ formatDate(item.follow_up_date) }}
                                         </div>
                                         <span v-else class="text-muted small">-</span>
                                     </td>
@@ -377,41 +402,49 @@ const rowClasses = (item) => ({
                                                 }}</span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>
-                                                        {{ new Date(item.created_at).toLocaleDateString('id-ID', {
-                                                            day: 'numeric',
-                                                            month: 'short',
-                                                            year: 'numeric',
-                                                            hour: 'numeric',
-                                                            minute: 'numeric',
-                                                            timeZone: 'Asia/Jakarta',
-                                                            timeZoneName: 'short',
-                                                        }) }}
+                                                        {{ formatDate(item.created_at)
+                                                        }}
                                                     </span>
                                                     <span v-if="item.updated_at !== item.created_at">
-                                                        <i class="fas fa-pencil-alt me-1 opacity-50"></i> {{ new
-                                                            Date(item.updated_at).toLocaleDateString('id-ID', {
-                                                                day: 'numeric',
-                                                                month: 'short',
-                                                                year: 'numeric',
-                                                                hour: 'numeric',
-                                                                minute: 'numeric',
-                                                                timeZone: 'Asia/Jakarta',
-                                                                timeZoneName: 'short',
-                                                            }) }}
+                                                        <i class="fas fa-pencil-alt me-1 opacity-50"></i> {{
+                                                            formatDate(item.updated_at) }}
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
 
-                                    <!-- <button v-if="item.status !== 'CLOSED_WON'"
-                                            @click="alert('Sabtu depan kita rakit modal Closingnya!')"
-                                            class="btn btn-c-success btn-sm px-2 py-1" title="Deal! Jadikan Closing">
-                                            <i class="bi bi-bag-check-fill"></i>
-                                        </button> -->
                                     <td class="text-center">
-                                        <action-button :item="item" :actions="leadActions" @edit="openEditModal(item)"
-                                            @delete="deleted('leads.delete', item)" @deals="openConvertModal(item)" />
+                                        <div class="d-flex justify-content-center gap-1">
+
+                                            <button @click="openHistoryModal(item)" class="btn btn-c-slate"
+                                                title="Lihat Riwayat Aktivitas">
+                                                <i class="bi bi-clock-history"></i>
+                                            </button>
+
+
+                                            <template v-if="item.status !== 'CLOSED_WON'">
+
+                                                <button @click="openConvertModal(item)" class="btn btn-c-info"
+                                                    title="Sahkan Closing">
+                                                    <i class="bi bi-rocket-takeoff-fill"></i>
+                                                </button>
+                                                <button @click="openEditModal(item)" class="btn btn-c-success"
+                                                    title="Edit Data">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+
+                                            </template>
+
+
+                                            <template v-else>
+                                                <Link :href="route('sales.index', { keyword: item.invoice })"
+                                                    class="btn btn-c-primary" title="Lihat Invoice">
+                                                    <i class="bi bi-receipt"></i>
+                                                </Link>
+                                            </template>
+
+                                        </div>
                                     </td>
 
                                 </template>
@@ -446,6 +479,9 @@ const rowClasses = (item) => ({
                     :idLead="selectedId" :show="showModal" @update:show="showModal = $event" />
                 <ConvertLeadModal :idLead="selectedId" :show="showConvertModal"
                     @update:show="showConvertModal = $event" />
+
+                <ActivityTimelineModal :idLead="selectedId" :show="showHistoryModal"
+                    @update:show="showHistoryModal = $event" />
             </div>
         </template>
     </app-layout>

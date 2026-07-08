@@ -78,3 +78,10 @@
     opacity: 0.55;
     background-color: #f1f5f9;
 }
+
+/* Efek Baris Terhapus tabel */
+.row-removing {
+    transition: all 0.3s ease !important;
+    opacity: 0 !important;
+    transform: translateX(-30px);
+}

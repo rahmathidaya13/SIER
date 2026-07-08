@@ -18,6 +18,7 @@ class LeadsRepository extends BaseCacheRepository
             ->leftJoin('users', 'users.id', '=', 'leads.id_user')
             ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')
             ->leftJoin('products', 'products.id_product', '=', 'leads.id_product')
+            ->leftJoin('sales', 'sales.id_lead', '=', 'leads.id_lead')
             ->select([
                 'leads.id_lead',
                 'leads.name',
@@ -33,6 +34,7 @@ class LeadsRepository extends BaseCacheRepository
                 'channels.name as channel_name',
                 'channels.icon',
                 'products.name as product_name',
+                'sales.invoice',
             ]);
 
 
@@ -42,8 +44,8 @@ class LeadsRepository extends BaseCacheRepository
             fn($q) => $q->where('leads.status', $status)
         );
         $temperature = $this->resolveTemperature($filters);
-        $query->when(!empty($temperature), function ($query) use ($filters) {
-            $query->where('leads.temperature', $filters['temperature']);
+        $query->when(!empty($temperature), function ($query) use ($temperature) {
+            $query->where('leads.temperature', $temperature);
         });
 
         $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
