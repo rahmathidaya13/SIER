@@ -22,7 +22,7 @@ return new class extends Migration
             $table->unsignedBigInteger('deal_price')->default(0); // Harga deal (bisa beda dengan base_price kalau dikasih diskon)
             $table->unsignedBigInteger('paid_amount')->default(0); // Berapa duit yang udah masuk ke rekening?
             $table->unsignedBigInteger('remaining_bill')->default(0); // Berapa duit yang udah masuk ke rekening?
-
+            $table->integer('quantity')->default(0);
             $table->enum('payment_status', ['LUNAS', 'DP'])->default('LUNAS');
 
             $table->dateTime('deal_at');

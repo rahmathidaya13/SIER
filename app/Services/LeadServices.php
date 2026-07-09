@@ -5,17 +5,14 @@ namespace App\Services;
 use App\Models\LeadModel;
 use App\Models\SalesModel;
 use Illuminate\Support\Facades\DB;
-use App\Traits\BranchMutationHelper;
 use App\Traits\ImmutableFieldValidator;
 use App\Services\LeadConversionServices;
-use App\Http\Controllers\Sales\SaleRepository;
-use Illuminate\Validation\ValidationException;
-use App\Http\Controllers\Leads\LeadsRepository;
 use App\Services\Authorization\LeadAuthorizationService;
+use App\Traits\ActivityMessageFormatter;
 
 class LeadServices
 {
-    use ImmutableFieldValidator;
+    use ImmutableFieldValidator, ActivityMessageFormatter;
 
     protected $leadConversionServices;
     protected $authorization;
@@ -43,7 +40,7 @@ class LeadServices
                 'notes' => $validated['notes'],
             ]);
 
-            $activityDesc = $validated['new_activity'] ?? '✨ Prospek baru berhasil ditambahkan ke dalam sistem.';
+            $activityDesc = $validated['new_activity'] ?? $this->msgLeadCreated($validated);
 
             if (!empty($validated['new_activity'])) {
                 $leads->activity()->create([
@@ -71,7 +68,7 @@ class LeadServices
                 $leads->activity()->create([
                     'id_user'     => $user->id,
                     'id_lead'     => $leads->id_lead,
-                    'description' => '🎉 TRANSAKSI DISAHKAN! Nilai transaksi: Rp ' . number_format($validated['deal_price'], 0, ',', '.') . ' dengan Metode ' . strtoupper($validated['payment_method'])
+                    'description' => $this->msgClosingDeal($validated)
                 ]);
             }
 
@@ -144,6 +141,7 @@ class LeadServices
                 'paid_amount'    => $validated['paid_amount'],
                 'remaining_bill' => $remaining,
                 'payment_status' => $validated['payment_status'],
+                'quantity'       => $validated['quantity'],
                 'deal_at'        => now()->toDateTimeString(),
                 'notes'          => $validated['notes']
             ]);

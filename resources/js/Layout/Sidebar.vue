@@ -104,7 +104,9 @@ const getNameRoles = () => {
         <section class="p-3 text-center border-bottom mx-3 mb-3" aria-label="User Info">
             <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
                 class="rounded-circle mb-2 object-fit-cover shadow-sm" width="65" height="65" alt="Foto Profil">
-            <h6 class="mb-1 fw-bold text-capitalize">{{ $page.props.auth.user.name }}</h6>
+            <Link class="nav-link text-primary text-decoration-underline">
+                <span class="mb-1 fw-bold text-capitalize">{{ $page.props.auth.user.name }}</span>
+            </Link>
             <span class="badge rounded-pill px-3 py-2 fw-medium" :class="getNameRoles().color">
                 <i class="bi bi-shield-check me-1 opacity-75"></i> {{
                     getNameRoles().label

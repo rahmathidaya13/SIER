@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasRoleJoin;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class SalesModel extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, HasRoleJoin;
     protected $table = 'sales';
     protected $primaryKey = 'id_sales';
     public $incrementing = false; // Karena pakai UUID
@@ -23,6 +24,7 @@ class SalesModel extends Model
         'remaining_bill',
         'paid_amount',
         'payment_status',
+        'quantity',
         'deal_at',
         'notes',
     ];
@@ -32,9 +34,11 @@ class SalesModel extends Model
         'remaining_bill' => 'integer',
         'paid_amount' => 'integer',
         'deal_at' => 'datetime',
+        'quantity' => 'integer',
     ];
-    public function scopeAllowedForUser($query, User $user)
+    public function scopeAllowedForUser($query)
     {
+        $user = auth()->user();
         return match (true) {
             $user->hasRole('super_admin') => $query,
             $user->hasRole('supervisor') => $query->where('sales.id_branch', $user->id_branch)

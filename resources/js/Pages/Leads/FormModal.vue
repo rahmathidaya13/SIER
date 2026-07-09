@@ -44,6 +44,8 @@ const form = useForm({
     paid_amount: 0,
     payment_status: 'LUNAS',
     payment_method: 'cash',
+    quantity: '',
+    bank_name: '',
     notes_sales: ''
 });
 
@@ -93,6 +95,9 @@ const fillForm = (data) => {
         paid_amount: 0,
         payment_status: 'LUNAS',
         payment_method: 'cash',
+        quantity: '',
+
+        bank_name: '',
         notes_sales: ''
     })
 
@@ -118,6 +123,9 @@ const resetForm = () => {
         paid_amount: 0,
         payment_status: 'LUNAS',
         payment_method: 'cash',
+        quantity: '',
+
+        bank_name: '',
         notes_sales: ''
     })
     form.reset();
@@ -228,6 +236,8 @@ const submit = () => {
             delete payload.paid_amount;
             delete payload.payment_status;
             delete payload.payment_method;
+            delete payload.quantity;
+            delete payload.bank_name;
             delete payload.notes_sales;
         }
         return payload;
@@ -553,7 +563,7 @@ const tempOptions = computed(() => {
                                 </div>
                             </div>
 
-                            <div class="col-6">
+                            <div class="col-md-4">
                                 <label for="deal_price_input" class="form-label small fw-bold text-muted">HARGA
                                     DEAL*</label>
                                 <input-currency :disabled="isLocked" inputClass="text-success" :decimals="0"
@@ -565,7 +575,7 @@ const tempOptions = computed(() => {
                                         }}</strong></small>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label for="paid_amount_input" class="form-label small fw-bold text-muted">UANG MASUK
                                     SEKARANG *</label>
                                 <input-currency :disabled="isLocked" :readonly="form.payment_status === 'LUNAS'"
@@ -576,6 +586,13 @@ const tempOptions = computed(() => {
                                     class="text-danger mt-1 d-block fw-medium" style="font-size: 11px;">
                                     Sisa Tagihan: {{ currencyFormat(form.deal_price - form.paid_amount) }}
                                 </small>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="quantity_input" class="form-label small fw-bold text-muted">QUANTITY
+                                    *</label>
+                                <input-number :disabled="isLocked" :maxChar="5" :error="form.errors.quantity"
+                                    name="quantity" v-model="form.quantity" placeholder="0" />
+                                <input-error :message="form.errors.quantity" />
                             </div>
 
                             <div class="col-md-6">
@@ -590,8 +607,6 @@ const tempOptions = computed(() => {
                                 <input-error :message="form.errors.payment_status" />
                             </div>
 
-
-
                             <div class="col-md-6">
                                 <label for="payment_method_select" class="form-label small fw-bold text-muted">METODE
                                     PEMBAYARAN *</label>
@@ -603,6 +618,14 @@ const tempOptions = computed(() => {
                                         { label: '💵 QRIS', value: 'qris' }
                                     ]" />
                                 <input-error :message="form.errors.payment_method" />
+                            </div>
+
+                            <div v-if="form.payment_method === 'transfer' || form.payment_method === 'debit'"
+                                class="col-12">
+                                <label class="form-label small fw-bold text-muted mb-2">NAMA BANK*</label>
+                                <input-text name="bank_name" v-model="form.bank_name" :error="form.errors.bank_name"
+                                    placeholder="Cth: BCA, Mandiri, BNI Dll" />
+                                <input-error :message="form.errors.bank_name" />
                             </div>
 
                             <div class="col-12 mt-3">

@@ -12,18 +12,17 @@ use App\Traits\LeadsValidation;
 use App\Http\Controllers\Controller;
 use App\Traits\BranchMutationHelper;
 use App\Services\LeadConversionServices;
-use function Symfony\Component\Translation\t;
 use App\Http\Controllers\Sales\SaleRepository;
-use App\Services\Authorization\ActionPermissionService;
 use Illuminate\Validation\ValidationException;
 use App\Services\Authorization\ScopeResolverService;
+use App\Traits\ActivityMessageFormatter;
 
 class LeadController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    use UserScope, BranchMutationHelper, LeadsValidation;
+    use UserScope, BranchMutationHelper, LeadsValidation, ActivityMessageFormatter;
     protected $leadRepository;
     protected $leadServices;
     protected $leadConversionServices;
@@ -81,7 +80,7 @@ class LeadController extends Controller
 
         $this->invalidateCaches([LeadsRepository::class, SaleRepository::class], ['global', $user->id_branch]);
         return redirect()->back()->with([
-            'message' => 'Lead berhasil ditambahkan',
+            'message' => 'Lead dari ' . strtoupper($request['name']) . ' berhasil ditambahkan',
         ]);
     }
 
@@ -91,7 +90,7 @@ class LeadController extends Controller
         $this->validateLeads($request->all(), $id);
         $lead = $this->leadServices->update($id, $request->all(), $user);
         $this->invalidateCaches([LeadsRepository::class, SaleRepository::class], ['global', $user->id_branch]);
-        return redirect()->back()->with('message', 'Perubahan data dari lead ' . $lead->name . ' berhasil diperbarui');
+        return redirect()->back()->with('message', $this->msgLeadUpdated($request->only(['status', 'temperature'])));
     }
 
     public function show(string $id)

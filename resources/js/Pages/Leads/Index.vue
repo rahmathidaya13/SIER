@@ -16,7 +16,7 @@ const props = defineProps({
     products: Array,
     role_name: String
 });
-
+console.log(props.leads);
 const {
     filters,
     isLoading,
@@ -241,7 +241,6 @@ const deleted = async (nameRoute, data) => {
 }
 const showHistoryModal = ref(false);
 const openHistoryModal = (data) => {
-    console.log(data);
     selectedId.value = data.id_lead;
     showHistoryModal.value = true
 }
@@ -399,7 +398,8 @@ const openHistoryModal = (data) => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.creator_name || 'Sistem'
-                                                }}</span>
+                                                }} {{ `(${item.role_name})` }}
+                                                </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>
                                                         {{ formatDate(item.created_at)
@@ -423,17 +423,17 @@ const openHistoryModal = (data) => {
                                             </button>
 
 
+                                            <button :disabled="item.status === 'CLOSED_WON'"
+                                                @click="openEditModal(item)"
+                                                :class="`btn btn-c-success ${item.status === 'CLOSED_WON' ? 'disabled' : ''}`"
+                                                title="Edit Data">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
                                             <template v-if="item.status !== 'CLOSED_WON'">
-
                                                 <button @click="openConvertModal(item)" class="btn btn-c-info"
                                                     title="Sahkan Closing">
                                                     <i class="bi bi-rocket-takeoff-fill"></i>
                                                 </button>
-                                                <button @click="openEditModal(item)" class="btn btn-c-success"
-                                                    title="Edit Data">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </button>
-
                                             </template>
 
 

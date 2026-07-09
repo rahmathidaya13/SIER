@@ -10,12 +10,13 @@ class SaleRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'sales_cache_';
 
-    protected function getData(string|int|null $branchId, array $filters = []): LengthAwarePaginator
+    protected function buildBaseQuery(string|int|null $branchId, array $filters = [])
     {
+        $user = auth()->user();
         $query = SalesModel::query()
-            ->allowedForUser(auth()->user())
+            ->allowedForUser()
+            ->joinUserRole()
             ->leftJoin('leads', 'leads.id_lead', '=', 'sales.id_lead')
-            ->leftJoin('users', 'users.id', '=', 'sales.id_user')
             ->leftJoin('products', 'products.id_product', '=', 'sales.id_product')
             ->leftJoin('branches', 'branches.id_branch', '=', 'sales.id_branch')
             ->select([
@@ -36,8 +37,16 @@ class SaleRepository extends BaseCacheRepository
                 'leads.phone as lead_customer_phone',
                 'leads.email as lead_customer_email',
                 'users.name as sales_name',
+                'roles.name as role_name',
                 'products.name as product_name',
+                'branches.name as branch_name',
             ]);
+
+        if ($user->hasRole('super_admin')) {
+            $query->when(!empty($filters['branch']), function ($q) use ($filters) {
+                $q->where('branches.name', $filters['branch']);
+            });
+        }
 
         $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
             $search = $filters['keyword'];
@@ -48,6 +57,13 @@ class SaleRepository extends BaseCacheRepository
                     ->orWhere('sales.invoice', 'like', "%{$search}%");
             });
         });
+
+        return $query;
+    }
+    protected function getData(string|int|null $branchId, array $filters = []): LengthAwarePaginator
+    {
+
+        $query = $this->buildBaseQuery($branchId, $filters);
         [$column, $direction] = $this->resolveSorting($filters);
 
         return $query
@@ -63,5 +79,17 @@ class SaleRepository extends BaseCacheRepository
 
             default => ['sales.created_at', 'desc'],
         };
+    }
+
+    public function getSalesStats(string|int|null $branchId, array $filters = []): array
+    {
+        // Panggil pabrik kueri yang sama, jadi filternya tetap akurat
+        $query = $this->buildBaseQuery($branchId, $filters);
+
+        return [
+            'omset_lunas' => (clone $query)->sum('sales.paid_amount'),
+            'piutang'     => (clone $query)->sum('sales.remaining_bill'),
+            'avg_deal'    => (clone $query)->avg('sales.deal_price') ?? 0,
+        ];
     }
 }

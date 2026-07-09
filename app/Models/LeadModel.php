@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasRoleJoin;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class LeadModel extends Model
 {
-    use HasFactory, HasUuids, SoftDeletes;
+    use HasFactory, HasUuids, SoftDeletes, HasRoleJoin;
     protected $table = 'leads';
     protected $primaryKey = 'id_lead';
     public $incrementing = false; // Karena pakai UUID
@@ -37,7 +38,6 @@ class LeadModel extends Model
             default => $query->where('leads.id_user', $user->id),
         };
     }
-
     public function paymentHistory()
     {
         return $this->hasMany(PaymentHistory::class, 'id_lead', 'id_lead')->latest();

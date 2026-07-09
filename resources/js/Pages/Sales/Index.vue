@@ -1,6 +1,6 @@
 <script setup>
 import { Form, Head, usePage, router, Link } from '@inertiajs/vue3';
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useFilter } from '@/Composables/useFilter';
 import { useConfirm } from "@/Composables/useConfirm"
 import { highlight } from "@/Helpers/Highlight";
@@ -9,11 +9,15 @@ import { formatDate } from '@/Helpers/formatDate';
 import { currencyFormat } from '@/Helpers/currencyFormat';
 import PaymentModal from './PaymentModal.vue';
 import ActivityTimelineModal from './ActivityTimelineModal.vue';
+import { hasRole } from '@/Composables/useAuth';
+
 const props = defineProps({
     sales: Object,
     filters: Object,
+    stats: Object,
+    branch: Array
 });
-
+console.log(props.branch);
 const {
     filters,
     isLoading,
@@ -23,14 +27,16 @@ const {
         keyword: props.filters.keyword ?? '',
         limit: props.filters.limit ?? 10,
         order_by: props.filters.order_by ?? 'latest',
+        branch: props.filters.branch ?? 'all',
         page: props.filters.page ?? 1,
     },
     watchFields: [
         'keyword',
         'limit',
         'order_by',
+        'branch'
     ],
-    only: ['sales', 'filters'],
+    only: ['sales', 'filters', 'stats', 'branch'],
     debounceTime: 500,
 });
 
@@ -93,7 +99,6 @@ const header = [
             class: 'text-center',
         },
     },
-
     {
         label: "Dibuat Oleh",
         key: "sales_name",
@@ -110,7 +115,6 @@ const header = [
         },
     },
 ];
-console.log(props.sales);
 
 const payActions = [
     {
@@ -132,7 +136,20 @@ const payActions = [
         show: (item) => item.payment_status !== 'LUNAS',
     },
 ];
-
+const branchOptions = computed(() => [
+    {
+        label: 'Semua Cabang',
+        value: 'all',
+    },
+    ...props.branch.map(data => ({
+        label: data.name,
+        value: data.name,
+    }))
+]);
+const keywordRef = ref(null);
+onMounted(() => {
+    keywordRef.value.focus();
+})
 </script>
 <template>
 
@@ -142,6 +159,47 @@ const payActions = [
             <div class="row g-3 view-section">
                 <div class="col-12">
                     <callout />
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-12 col-12 col-xl-4">
+                            <div class="card p-3 bg-success text-white border-0 shadow-sm rounded-3">
+                                <small class="text-white-50 fw-medium">Omset Masuk (Verified)</small>
+                                <h3 class="fw-bold mb-0 mt-1">{{ currencyFormat(stats.omset_lunas) }}</h3>
+                                <div class="border-top border-light border-opacity-25 mt-3 pt-2">
+                                    <small class="text-white-50" style="font-size: 12px;">
+                                        <i class="bi bi-info-circle me-1"></i> Total akumulasi dana yang telah dibayar.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-12 col-xl-4">
+                            <div class="card p-3 bg-warning-subtle text-dark border border-warning shadow-sm rounded-3">
+                                <small class="text-muted fw-medium">Piutang / Menunggu Pelunasan</small>
+                                <h3 class="fw-bold mb-0 mt-1 text-warning-emphasis">{{ currencyFormat(stats.piutang) }}
+                                </h3>
+                                <div class="border-top border-warning border-opacity-25 mt-3 pt-2">
+                                    <small class="text-muted" style="font-size: 12px;">
+                                        <i class="bi bi-info-circle me-1"></i> Σ (Nilai Harga Deal Keseluruhan - Dana
+                                        Masuk)
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-12 col-xl-4">
+                            <div class="card p-3 bg-white border-0 shadow-sm rounded-3">
+                                <small class="text-muted fw-medium">Rata-rata Nilai Deal (Ticket Size)</small>
+                                <h3 class="fw-bold mb-0 mt-1 text-dark">{{ currencyFormat(stats.avg_deal) }}</h3>
+                                <div class="border-top mt-3 pt-2">
+                                    <small class="text-muted" style="font-size: 12px;">
+                                        <i class="bi bi-info-circle me-1"></i> Σ Total Nilai Harga Deal ÷ Jumlah
+                                        Transaksi
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
                     <div class="card border-0 rounded-4 overflow-hidden">
 
                         <div class="card-header p-4 bg-white">
@@ -182,6 +240,10 @@ const payActions = [
                                         placeholder="Cari nama pelanggan dan nomor handphone...." />
                                 </div>
                             </div>
+                            <div v-if="hasRole('super_admin')" class="col-xl-1 col-3 col-md-3 col-lg-3">
+                                <select-input :isValid="false" name="branch" v-model="filters.branch"
+                                    text="Pilih Cabang" :options="branchOptions" />
+                            </div>
                             <div class="col-xl-1 col-3 col-md-3 col-lg-3">
                                 <select-input :isValid="false" name="limit" v-model="filters.limit"
                                     text="Pilih Batas Data" :options="[
@@ -217,7 +279,7 @@ const payActions = [
                                     </td>
 
                                     <td class="ps-4">
-                                        <span class="d-block fw-bold text-dark">{{ item.invoice }}</span>
+                                        <span class="d-block fw-bold text-primary">{{ item.invoice }}</span>
                                         <span class="text-muted small">{{ formatDate(item.deal_at) }}</span>
                                     </td>
 
@@ -285,7 +347,8 @@ const payActions = [
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.sales_name || 'Sistem'
-                                                }}</span>
+                                                    }} {{ `(${item.role_name ?? 'Unknown'})` }}
+                                                </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>
                                                         {{ formatDate(item.created_at) }}
@@ -322,7 +385,8 @@ const payActions = [
                                                 keyword: filters.keyword,
                                                 limit: filters.limit,
                                                 order_by: filters.order_by,
-                                            }" :only="['sales', 'filters']" />
+                                                branch: filters.branch,
+                                            }" :only="['sales', 'filters', 'stats', 'branch']" />
                                     </div>
                                 </template>
 

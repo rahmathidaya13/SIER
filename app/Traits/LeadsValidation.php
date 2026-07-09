@@ -36,7 +36,8 @@ trait LeadsValidation
                 'required',
                 Rule::in(['cash', 'transfer', 'debit', 'qris']),
             ],
-
+            'quantity' => ['required', 'numeric', 'min:1'],
+            'bank_name'      => 'nullable|required_if:payment_method,transfer,debit',
             'notes_sales' => [
                 'nullable',
                 'string',
@@ -148,7 +149,9 @@ trait LeadsValidation
 
                 'new_activity.max' => 'Aktivitas maksimal 5000 karakter.',
 
-
+                'quantity.required' => 'Jumlah produk wajib diisi saat status prospek adalah Closing / Terjual.',
+                'quantity.numeric' => 'Jumlah produk harus berupa angka.',
+                'quantity.min' => 'Jumlah produk minimal 1.',
 
                 'deal_price.required_if' => 'Harga deal wajib diisi saat status prospek adalah Closing / Terjual.',
                 'deal_price.numeric' => 'Harga deal harus berupa angka.',
@@ -164,8 +167,10 @@ trait LeadsValidation
                 'payment_method.required_if' => 'Metode pembayaran wajib diisi saat status prospek adalah Closing / Terjual.',
                 'payment_method.in' => 'Metode pembayaran tidak valid.',
 
-
                 'notes_sales.max' => 'Catatan maksimal 500 karakter.',
+
+                'bank_name.required_if' => 'Nama bank harus diisi jika metode pembayaran Transfer atau Debit.',
+                'bank_name.string' => 'Nama bank harus berupa teks.',
             ]
         )->validate();
     }

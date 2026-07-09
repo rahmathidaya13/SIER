@@ -95,7 +95,7 @@ const getPaymentMethodStyle = (method) => {
 <template>
     <div v-if="props.show">
         <modal width="750px" size="modal-md" :icon="['text-primary', 'bi bi-clock-history']" :show="props.show"
-            title="Riwayat Jejak Rekam" @closed="close" :mobileFullscreen="true">
+            title="Riwayat Jejak Aktivitas" @closed="close" :mobileFullscreen="false">
 
             <template #body>
                 <div class="bg-c-slate text-white p-3 rounded-3 mb-4 shadow-sm d-flex align-items-center gap-3">
@@ -136,58 +136,61 @@ const getPaymentMethodStyle = (method) => {
                             </div>
 
                             <div class="p-0">
-                                <table class="table table-borderless align-middle mb-0 custom-fin-table">
-                                    <thead class="text-muted small text-uppercase" style="letter-spacing: 0.5px;">
-                                        <tr class="align-middle">
-                                            <th class="fw-bold" style="font-size: 11px;">Metode & Waktu</th>
-                                            <th class="fw-bold text-center" style="font-size: 11px;">Penerima</th>
-                                            <th class="text-end fw-bold" style="font-size: 11px;">Nominal
-                                                Masuk</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="pay in paymentHistories" :key="pay.id_payment_history"
-                                            class="border-bottom border-light row-hover-effect">
-                                            <td class="px-4 py-3">
-                                                <div class="d-flex align-items-center gap-3">
-                                                    <div class="icon-box rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                                                        :class="getPaymentMethodStyle(pay.payment_method).bg">
-                                                        <i class="fs-5"
-                                                            :class="getPaymentMethodStyle(pay.payment_method).icon"></i>
-                                                    </div>
-                                                    <div>
-                                                        <div class="fw-bolder text-dark text-uppercase"
-                                                            style="font-size: 13px; letter-spacing: 0.5px;">
-                                                            {{ pay.payment_method }}
+                                <div class="table-responsive">
+                                    <table class="table table-borderless align-middle mb-0 custom-fin-table">
+                                        <thead class="text-muted small text-uppercase" style="letter-spacing: 0.5px;">
+                                            <tr class="align-middle">
+                                                <th class="fw-bold" style="font-size: 11px;">Metode & Waktu</th>
+                                                <th class="fw-bold text-center" style="font-size: 11px;">SALES</th>
+                                                <th class="text-end fw-bold" style="font-size: 11px;">Nominal
+                                                    Masuk</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="pay in paymentHistories" :key="pay.id_payment_history"
+                                                class="border-bottom border-light row-hover-effect">
+                                                <td class="px-4 py-3">
+                                                    <div class="d-flex align-items-center gap-3">
+                                                        <div class="icon-box rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                                            :class="getPaymentMethodStyle(pay.payment_method).bg">
+                                                            <i class="fs-5"
+                                                                :class="getPaymentMethodStyle(pay.payment_method).icon"></i>
                                                         </div>
-                                                        <div class="text-muted fw-medium" style="font-size: 11px;">
-                                                            {{ formatDate(pay.created_at) }}
+                                                        <div>
+                                                            <div class="fw-bolder text-dark text-uppercase"
+                                                                style="font-size: 13px; letter-spacing: 0.5px;">
+                                                                {{ pay.payment_method }}
+                                                            </div>
+                                                            <div class="text-muted fw-medium" style="font-size: 11px;">
+                                                                {{ formatDate(pay.created_at) }}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </td>
+                                                </td>
 
-                                            <td class="text-center">
-                                                <div class="d-flex align-items-center gap-2 justify-content-center">
-                                                    <span
-                                                        class="badge badge-soft-success border border-success rounded-5 px-2 py-1 fw-medium text-capitalize"
-                                                        style="font-size: 14px;">
-                                                        <i class="bi bi-person-circle me-1"></i> {{ pay.user?.name ||
-                                                            'Sistem' }}
+                                                <td class="text-center">
+                                                    <div class="d-flex align-items-center gap-2 justify-content-center">
+                                                        <span
+                                                            class="badge badge-soft-success border border-success rounded-5 px-2 py-1 fw-medium text-capitalize"
+                                                            style="font-size: 11px;">
+                                                            <i class="bi bi-person-circle me-1"></i> {{ pay.user?.name
+                                                                ||
+                                                            'Sistem' }} {{ `(${pay.user.roles[0].name})` }}
+                                                        </span>
+                                                    </div>
+                                                </td>
+
+                                                <td class="px-4 py-3 text-end">
+                                                    <span class="fw-bold text-success font-monospace"
+                                                        style="font-size: 16px;">
+                                                        + {{ currencyFormat(pay.paid_amount) }}
                                                     </span>
-                                                </div>
-                                            </td>
+                                                </td>
 
-                                            <td class="px-4 py-3 text-end">
-                                                <span class="fw-bold text-success font-monospace"
-                                                    style="font-size: 16px;">
-                                                    + {{ currencyFormat(pay.paid_amount) }}
-                                                </span>
-                                            </td>
-
-                                        </tr>
-                                    </tbody>
-                                </table>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
 
                             <div
@@ -234,7 +237,7 @@ const getPaymentMethodStyle = (method) => {
 
                                 <div class="flex-grow-1 bg-white border rounded-3 p-3 shadow-sm">
                                     <div
-                                        class="d-flex justify-content-between align-items-start mb-2 border-bottom pb-2">
+                                        class="d-xl-flex d-block justify-content-between align-items-start mb-2 border-bottom pb-3">
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="badge bg-light text-dark border small">
                                                 <i class="bi bi-person-fill me-1"></i>
@@ -243,7 +246,7 @@ const getPaymentMethodStyle = (method) => {
                                                 </span>
                                             </div>
                                         </div>
-                                        <span class="text-muted small fw-medium" style="font-size: 11px;">
+                                        <span class="text-muted small fw-medium ms-1" style="font-size: 11px;">
                                             <i class="bi bi-calendar2-event me-1"></i> {{ formatDate(act.created_at) }}
                                         </span>
                                     </div>
