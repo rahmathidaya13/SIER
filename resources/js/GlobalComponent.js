@@ -20,6 +20,7 @@ import Alert from "./Component/Alert.vue";
 import Selects2 from "./Component/Selects2.vue";
 import CurrencyInput from "./Component/CurrencyInput.vue";
 import AlertErrorAll from "./Component/AlertErrorAll.vue";
+import ChartBar from "./Component/ChartBar.vue";
 export default {
     install(app) {
         app.component("app-layout", AppLayout);
@@ -44,5 +45,6 @@ export default {
         app.component("alert", Alert);
         app.component("alert-error-all", AlertErrorAll);
         app.component("select-2", Selects2);
+        app.component("chart-bar", ChartBar);
     },
 };

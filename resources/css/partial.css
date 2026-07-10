@@ -147,6 +147,15 @@
     --c-info-disabled: #94a3b8;
     --c-gradient-info: linear-gradient(135deg, #0ea5e9, #94a3b8);
 
+    /* LIGHT: White (Teks Utama, Tombol Utama, Konten Utama) */
+    --c-light: #f8fafc;
+    --c-light-hover: #e5e7eb;
+    --c-light-subtle: #f1f5f9;
+    --c-light-active: #334155;
+    --c-light-disabled: #64748b;
+    --c-gradient-light: linear-gradient(135deg, #f8fafc, #64748b);
+
+
     /* SPACE DARK: Midnight (Superadmin, Kantor Pusat, Header Tabel) */
     --c-dark: #0f172a;
     --c-dark-subtle: #f1f5f9;

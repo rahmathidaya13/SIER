@@ -23,6 +23,11 @@
     color: white;
 }
 
+.bg-c-light {
+    background-color: var(--c-light);
+    color: white;
+}
+
 .bg-c-slate {
     background-color: var(--c-slate);
     color: white;

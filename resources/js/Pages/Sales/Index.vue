@@ -17,7 +17,6 @@ const props = defineProps({
     stats: Object,
     branch: Array
 });
-console.log(props.branch);
 const {
     filters,
     isLoading,
@@ -162,7 +161,7 @@ onMounted(() => {
 
                     <div class="row g-3 mb-4">
                         <div class="col-md-12 col-12 col-xl-4">
-                            <div class="card p-3 bg-success text-white border-0 shadow-sm rounded-3">
+                            <div class="card p-3 bg-success text-white border shadow-sm rounded-3">
                                 <small class="text-white-50 fw-medium">Omset Masuk (Verified)</small>
                                 <h3 class="fw-bold mb-0 mt-1">{{ currencyFormat(stats.omset_lunas) }}</h3>
                                 <div class="border-top border-light border-opacity-25 mt-3 pt-2">
@@ -186,7 +185,7 @@ onMounted(() => {
                             </div>
                         </div>
                         <div class="col-md-6 col-12 col-xl-4">
-                            <div class="card p-3 bg-white border-0 shadow-sm rounded-3">
+                            <div class="card p-3 bg-white border shadow-sm rounded-3">
                                 <small class="text-muted fw-medium">Rata-rata Nilai Deal (Ticket Size)</small>
                                 <h3 class="fw-bold mb-0 mt-1 text-dark">{{ currencyFormat(stats.avg_deal) }}</h3>
                                 <div class="border-top mt-3 pt-2">
@@ -347,7 +346,7 @@ onMounted(() => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.sales_name || 'Sistem'
-                                                    }} {{ `(${item.role_name ?? 'Unknown'})` }}
+                                                }} {{ `(${item.role_name ?? 'Unknown'})` }}
                                                 </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>

@@ -33,6 +33,13 @@ const menuItems = [
 
     },
     {
+        title: 'Sumber Trafik',
+        icon: 'bi bi-broadcast',
+        route: 'channel.index',
+        prefixUrl: 'channel*'
+
+    },
+    {
         title: 'Data Pegawai',
         icon: 'bi bi-person-fill',
         route: 'employee.index',
@@ -104,7 +111,7 @@ const getNameRoles = () => {
         <section class="p-3 text-center border-bottom mx-3 mb-3" aria-label="User Info">
             <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
                 class="rounded-circle mb-2 object-fit-cover shadow-sm" width="65" height="65" alt="Foto Profil">
-            <Link class="nav-link text-primary text-decoration-underline">
+            <Link class="nav-link text-primary">
                 <span class="mb-1 fw-bold text-capitalize">{{ $page.props.auth.user.name }}</span>
             </Link>
             <span class="badge rounded-pill px-3 py-2 fw-medium" :class="getNameRoles().color">

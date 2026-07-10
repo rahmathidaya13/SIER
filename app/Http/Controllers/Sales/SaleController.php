@@ -4,19 +4,20 @@ namespace App\Http\Controllers\Sales;
 
 use App\Traits\UserScope;
 use App\Models\SalesModel;
+use App\Models\BranchModel;
 use Illuminate\Http\Request;
+use App\Traits\SalesValidation;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Leads\LeadsRepository;
-use App\Http\Controllers\Sales\SaleRepository;
-use App\Models\BranchModel;
-use Illuminate\Validation\ValidationException;
-use App\Services\Authorization\DataScopeService;
-use App\Services\Authorization\ScopeResolverService;
 use App\Traits\BranchMutationHelper;
-use App\Traits\SalesValidation;
-use App\Services\Sales\PaymentValidationService;
 use App\Services\Sales\SalePaymentService;
+use App\Http\Controllers\Sales\SaleRepository;
+use Illuminate\Validation\ValidationException;
+use App\Http\Controllers\Leads\LeadsRepository;
+use App\Services\Authorization\DataScopeService;
+use App\Services\Sales\PaymentValidationService;
+use App\Http\Controllers\Channel\ChannelRepository;
+use App\Services\Authorization\ScopeResolverService;
 
 class SaleController extends Controller
 {
@@ -72,7 +73,7 @@ class SaleController extends Controller
         $this->salePaymentService->payRemaining($sales, $request->all());
 
         $user = auth()->user();
-        $this->invalidateCaches([SaleRepository::class, LeadsRepository::class], ['global', $user->id_branch]);
+        $this->invalidateCaches([SaleRepository::class, LeadsRepository::class, ChannelRepository::class], ['global', $user->id_branch]);
         return redirect()->back()->with('message', 'Pelunasan berhasil dilakukan');
     }
 }

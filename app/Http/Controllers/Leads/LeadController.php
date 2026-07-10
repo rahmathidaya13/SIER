@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Leads;
 
+use App\Http\Controllers\Channel\ChannelRepository;
 use App\Models\LeadModel;
 use App\Traits\UserScope;
 use App\Models\ChannelModel;
@@ -78,7 +79,7 @@ class LeadController extends Controller
 
         $this->leadServices->store($request->all(), $user);
 
-        $this->invalidateCaches([LeadsRepository::class, SaleRepository::class], ['global', $user->id_branch]);
+        $this->invalidateCaches([LeadsRepository::class, SaleRepository::class, ChannelRepository::class], ['global', $user->id_branch]);
         return redirect()->back()->with([
             'message' => 'Lead dari ' . strtoupper($request['name']) . ' berhasil ditambahkan',
         ]);
@@ -89,7 +90,7 @@ class LeadController extends Controller
         $user = auth()->user();
         $this->validateLeads($request->all(), $id);
         $lead = $this->leadServices->update($id, $request->all(), $user);
-        $this->invalidateCaches([LeadsRepository::class, SaleRepository::class], ['global', $user->id_branch]);
+        $this->invalidateCaches([LeadsRepository::class, SaleRepository::class, ChannelRepository::class], ['global', $user->id_branch]);
         return redirect()->back()->with('message', $this->msgLeadUpdated($request->only(['status', 'temperature'])));
     }
 
@@ -110,7 +111,7 @@ class LeadController extends Controller
     public function destroy(LeadModel $leads)
     {
         $this->leadServices->delete($leads);
-        $this->invalidateCaches([LeadsRepository::class, SaleRepository::class], ['global', $leads->id_branch]);
+        $this->invalidateCaches([LeadsRepository::class, SaleRepository::class, ChannelRepository::class], ['global', $leads->id_branch]);
         return redirect()->back()->with('message', 'Lead ' . $leads->name . ' berhasil dihapus');
     }
 }

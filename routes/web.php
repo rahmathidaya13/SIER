@@ -9,6 +9,7 @@ use App\Http\Controllers\Leads\LeadController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Channel\ChannelController;
 use App\Http\Controllers\Leads\LeadActivityController;
 use App\Http\Controllers\Leads\LeadConversionController;
 use App\Http\Controllers\Product\ProductController;
@@ -61,6 +62,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::controller(ProductController::class)->group(function () {
         Route::get('/product/keyword', 'productSearch')->name('product.search');
     });
+
+    Route::controller(ChannelController::class)->group(function () {
+        Route::get('/channel/list', 'index')->name('channel.index');
+    });
+
     Route::controller(SaleController::class)->group(function () {
         Route::get('/sales/list', 'index')->name('sales.index');
         Route::get('/sales/show/{sales}', 'show')->name('sales.show');
