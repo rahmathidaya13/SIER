@@ -18,7 +18,7 @@ return new class extends Migration
                 ->constrained('users', 'id')
                 ->onDelete('cascade');
             $table->string('name'); // Cth: 'WhatsApp Direct', 'TikTok Ads'
-            $table->string('code', 20)->unique(); // Cth: 'WA', 'TT', 'FB'
+            $table->string('code', 50)->unique(); // Cth: 'WA', 'TT', 'FB'
             $table->string('icon')->nullable(); // Cth: 'bi-whatsapp'
             $table->timestamps();
         });

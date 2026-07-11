@@ -7,21 +7,24 @@ import { highlight } from "@/Helpers/Highlight";
 import { formatDate } from '@/Helpers/formatDate';
 import { currencyFormat } from '@/Helpers/currencyFormat';
 import { hasRole } from '@/Composables/useAuth';
+import FormModal from './FormModal.vue';
 const confirm = useConfirm();
 
 const props = defineProps({
     channels: Object,
     filters: Object,
 });
-console.log(props.channels);
 const showModal = ref(false);
 const selectedData = ref(null);
 
 const openCreateModal = () => {
     showModal.value = true;
-    selectedData.value = {};
+    selectedData.value = null;
 }
-
+const openEditModal = async (data) => {
+    showModal.value = true;
+    selectedData.value = data;
+}
 const {
     filters,
     isLoading,
@@ -233,7 +236,8 @@ const channelChartData = computed(() => {
                                     </td>
 
                                     <td v-if="hasRole('super_admin')" class="text-center pe-4 py-3">
-                                        <button type="button" class="btn btn-c-slate" title="Edit Channel">
+                                        <button @click.prevent="openEditModal(item.id_channel)" type="button"
+                                            class="btn btn-c-slate" title="Edit Channel">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
                                     </td>
@@ -298,6 +302,7 @@ const channelChartData = computed(() => {
                     </div>
                 </div>
             </div>
+            <FormModal :idChannel="selectedData" :show="showModal" @update:show="showModal = $event" />
         </template>
     </app-layout>
 </template>

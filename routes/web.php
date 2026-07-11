@@ -65,6 +65,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::controller(ChannelController::class)->group(function () {
         Route::get('/channel/list', 'index')->name('channel.index');
+        Route::post('/channel/store', 'store')->name('channel.store');
+        Route::get('/channel/show/{id}', 'show')->name('channel.show');
+        Route::put('/channel/update/{channel}', 'update')->name('channel.update');
+        Route::delete('/channel/delete/{channel}', 'destroy')->name('channel.delete');
     });
 
     Route::controller(SaleController::class)->group(function () {

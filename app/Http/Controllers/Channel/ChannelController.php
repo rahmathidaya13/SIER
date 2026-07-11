@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Channel;
 use App\Traits\UserScope;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\ChannelModel;
 use App\Services\Authorization\ScopeResolverService;
 
 class ChannelController extends Controller
@@ -48,7 +49,7 @@ class ChannelController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        dd($request->all());
     }
 
     /**
@@ -56,7 +57,9 @@ class ChannelController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $channel = ChannelModel::with(['user', 'leads'])
+            ->findOrFail($id);
+        return response()->json($channel);
     }
 
     /**
