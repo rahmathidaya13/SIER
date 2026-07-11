@@ -92,3 +92,169 @@
 .resize-none {
     resize: none;
 }
+
+
+
+/* ===========================================================
+   MULTISELECT - CELESTIAL UI
+=========================================================== */
+
+.multiselect {
+    width: 100%;
+    font-size: .925rem;
+}
+
+.multiselect__tags {
+    min-height: calc(1.5em + .75rem + 2px);
+    padding: .375rem .75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    transition:
+        border-color .15s ease,
+        box-shadow .15s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
+}
+
+.multiselect:hover .multiselect__tags {
+    border-color: #a2b0c4;
+}
+
+/* ===========================
+   Focus
+=========================== */
+
+.multiselect--active .multiselect__tags {
+    border-color: var(--c-primary);
+    box-shadow: 0 0 0 3.5px rgba(255, 94, 108, .18);
+}
+
+/* ===========================
+   Placeholder
+=========================== */
+
+.multiselect__placeholder {
+    color: #94a3b8;
+    margin: 0;
+    padding-top: 2px;
+    font-size: .885rem;
+}
+
+/* ===========================
+   Selected text
+=========================== */
+
+.multiselect__single {
+    margin: 0;
+    padding-top: 2px;
+    font-size: .925rem;
+    font-weight: 500;
+    color: var(--c-dark);
+}
+
+/* ===========================
+   Search
+=========================== */
+
+.multiselect__input {
+    margin: 0;
+    padding: 0;
+    font-size: .925rem;
+    background: transparent;
+}
+
+.multiselect__input::placeholder {
+    color: #94a3b8;
+}
+
+/* ===========================
+   Arrow
+=========================== */
+
+.multiselect__select {
+    height: 100%;
+}
+
+.multiselect__select:before {
+    border-width: 6px 5px 0;
+    border-color: #64748b transparent transparent;
+}
+
+.multiselect--active .multiselect__select:before {
+    border-width: 0 5px 6px;
+    /* border-color: transparent transparent var(--c-primary); */
+}
+
+/* ===========================
+   Dropdown
+=========================== */
+
+.multiselect__content-wrapper {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-top: 6px;
+    box-shadow:
+        0 8px 24px rgba(15, 23, 42, .08);
+}
+
+/* ===========================
+   Option
+=========================== */
+
+.multiselect__option {
+    padding: 12px 15px;
+    font-size: .92rem;
+}
+
+.multiselect__option--highlight {
+    background: #fff5f5;
+    color: var(--c-primary);
+}
+
+.multiselect__option--selected {
+    background: rgba(255, 94, 108, .08);
+    color: var(--c-primary);
+    font-weight: 600;
+}
+
+/* ===========================
+   Disabled
+=========================== */
+
+.multiselect.multiselect--disabled .multiselect__tags {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #64748b;
+}
+
+/* ===========================
+   Error
+=========================== */
+
+.multiselect.is-invalid .multiselect__tags {
+    border-color: var(--c-danger);
+}
+
+.multiselect.is-invalid.multiselect--active .multiselect__tags {
+    box-shadow: 0 0 0 3.5px rgba(239, 68, 68, .18);
+}
+
+/* ===========================
+   Option Icon
+=========================== */
+
+.multiselect-option {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+}
+
+.multiselect-option i {
+    font-size: 1rem;
+}
+
+.multiselect-single {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}

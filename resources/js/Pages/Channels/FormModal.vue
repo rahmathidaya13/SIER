@@ -100,58 +100,21 @@ const submitTextButton = computed(() => {
 });
 
 
-const presetIcons = [{
-    icon: 'bi-whatsapp',
-    color: 'text-success'
-},
-{
-    icon: 'bi-instagram',
-    color: 'text-primary'
-},
-{
-    icon: 'bi-tiktok',
-    color: 'text-dark'
-},
-{
-    icon: 'bi-facebook',
-    color: 'text-primary'
-},
-{
-    icon: 'bi-twitter-x',
-    color: 'text-dark'
-},
-{
-    icon: 'bi-youtube',
-    color: 'text-danger'
-},
-{
-    icon: 'bi-telegram',
-    color: 'text-primary'
-},
-{
-    icon: 'bi-shop',
-    color: 'text-success'
-},
-{
-    icon: 'bi-globe',
-    color: 'text-info'
-},
-{
-    icon: 'bi-megaphone',
-    color: 'text-warning'
-},
-{
-    icon: 'bi-envelope',
-    color: 'text-danger'
-},
-{
-    icon: 'bi-telephone',
-    color: 'text-success'
-},
-{
-    icon: 'bi-people-fill',
-    color: 'text-info'
-},
+const presetIcons = [
+    'bi-whatsapp text-success',
+    'bi-instagram text-danger',
+    'bi-tiktok text-dark',
+    'bi-facebook text-primary',
+    'bi-twitter-x text-dark',
+    'bi-youtube text-danger',
+    'bi-telegram text-primary',
+    'bi-shop text-success',
+    'bi-bag-fill text-warning',
+    'bi-globe text-info',
+    'bi-megaphone text-warning',
+    'bi-envelope text-danger',
+    'bi-telephone text-success',
+    'bi-people-fill text-info',
 ];
 const selectIcon = (iconClass) => {
     form.icon = iconClass;
@@ -177,31 +140,31 @@ const selectIcon = (iconClass) => {
                             <label for="name_icon_input" class="form-label fw-semibold text-muted small">Nama
                                 Channel</label>
                             <input-text v-model="form.name" name="name_icon" :error="form.errors.name"
-                                placeholder="Contoh: WhatsApp" />
+                                placeholder="Contoh: WhatsApp" inputClass="text-capitalize" />
                             <input-error :message="form.errors.name" />
                         </div>
 
                         <div class="mb-3">
                             <label for="code_input" class="form-label fw-semibold text-muted small">Kode (Unik)</label>
-                            <input-text name="code" v-model="form.code" inputClass="text-uppercase"
-                                :error="form.errors.code" placeholder="Contoh: [WA, IG, FB Dll]" />
+                            <input-text name="code" v-model="form.code" :error="form.errors.code"
+                                inputClass="text-uppercase" placeholder="Contoh: [WA, IG, FB Dll]" />
                             <input-error :message="form.errors.code" />
                         </div>
 
                         <div class="mb-4">
                             <label class="form-label fw-semibold text-muted small">Pilih Ikon Platform</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                <button v-for="icons in presetIcons" :key="icons.icon" type="button"
-                                    @click="selectIcon(`${icons.icon} ${icons.color}`)"
-                                    class="btn btn-light border shadow-sm fs-5 d-flex align-items-center justify-content-center transition-all"
-                                    style="width: 45px; height: 45px;" :class="[
-                                        icons.color,
-                                        { 'border-primary border-1 text-primary scale-up': form.icon === `${icons.icon} ${icons.color}` },
-                                        { 'bg-white': form.icon !== `${icons.icon} ${icons.color}` }
+                            <div class="d-flex flex-wrap gap-2 bg-c-light border align-items-center rounded-3 p-3">
+                                <button v-for="icons in presetIcons" :key="icons" type="button"
+                                    @click="selectIcon(icons)"
+                                    class="btn btn-light border shadow-sm fs-3 d-flex align-items-center justify-content-center transition-all"
+                                    style="width: 60px; height: 60px;" :class="[
+                                        { 'border-primary border-1 text-primary scale-up': form.icon === icons },
+                                        { 'bg-white': form.icon !== icons }
                                     ]">
-                                    <i :class="icons.icon"></i>
+                                    <i :class="icons"></i>
                                 </button>
                             </div>
+                            <input-error :message="form.errors.icon" />
                         </div>
                     </form-wrapper>
 

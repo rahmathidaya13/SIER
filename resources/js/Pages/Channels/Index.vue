@@ -150,6 +150,7 @@ const channelChartData = computed(() => {
         }
     ];
 });
+
 </script>
 <template>
 
@@ -158,7 +159,40 @@ const channelChartData = computed(() => {
         <template #content>
             <div class="row g-3 view-section">
                 <callout />
-                <div class="col-12 col-md-12 col-lg-8 col-xl-8">
+                <div class="col-12 col-md-12 col-lg-4 col-xl-4">
+                    <div class="card border-0 rounded-4 overflow-hidden">
+
+                        <div class="card-header p-4 bg-white">
+                            <div
+                                class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                                <div>
+                                    <h5 class="fw-bold mb-1">Pangsa Volume Trafik</h5>
+                                    <small class="text-muted">Persentase distribusi sebaran prospek masuk</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="py-3">
+                            <chart-bar type="doughnut" :height="280" :labels="channelLabels"
+                                :datasets="channelChartData" :hide-scales="true" tooltip-suffix=" Leads" />
+                        </div>
+
+                        <div class="p-3 bg-light rounded-3 text-start small text-muted border-0">
+                            💡 <b>Kesimpulan Otomatis:</b>
+                            <span v-if="bestChannel && bestChannel.total_leads > 0">
+                                Performa terbaik saat ini dipegang oleh channel <b>{{ bestChannel.name }}</b> dengan
+                                rasio closing
+                                sebesar <b>{{ bestChannel.conversion_rate }}%</b>. Pertahankan stabilitas alokasi di
+                                channel ini.
+                            </span>
+                            <span v-else>
+                                Belum ada aktivitas konversi data transaksi untuk ditarik kesimpulan.
+                            </span>
+                        </div>
+
+                    </div>
+                </div>
+                 <div class="col-12 col-md-12 col-lg-8 col-xl-8">
                     <div class="card border-0 rounded-4 overflow-hidden">
 
                         <div class="card-header p-4 bg-white">
@@ -199,7 +233,7 @@ const channelChartData = computed(() => {
                                         <div class="d-flex align-items-center gap-3">
                                             <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center flex-shrink-0"
                                                 style="width: 40px; height: 40px;">
-                                                <i class="fs-5 text-secondary" :class="item.icon || 'bi-box'"></i>
+                                                <i class="fs-5" :class="item.icon || 'bi-box'"></i>
                                             </div>
                                             <div>
                                                 <div class="fw-bold text-dark">{{ item.name }}</div>
@@ -255,7 +289,7 @@ const channelChartData = computed(() => {
                                                 }}</strong>
                                         </small>
                                         <pagination size="pagination-sm" :links="channels?.links"
-                                            routeName="channels.index" :additionalQuery="{
+                                            routeName="channel.index" :additionalQuery="{
                                                 keyword: filters.keyword,
                                                 limit: filters.limit,
                                                 order_by: filters.order_by,
@@ -266,39 +300,6 @@ const channelChartData = computed(() => {
 
                             </table-wrapper>
                         </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-12 col-lg-4 col-xl-4">
-                    <div class="card border-0 rounded-4 overflow-hidden">
-
-                        <div class="card-header p-4 bg-white">
-                            <div
-                                class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                                <div>
-                                    <h5 class="fw-bold mb-1">Pangsa Volume Trafik</h5>
-                                    <small class="text-muted">Persentase distribusi sebaran prospek masuk</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="py-3">
-                            <chart-bar type="doughnut" :height="280" :labels="channelLabels"
-                                :datasets="channelChartData" :hide-scales="true" tooltip-suffix=" Leads" />
-                        </div>
-
-                        <div class="p-3 bg-light rounded-3 text-start small text-muted border-0">
-                            💡 <b>Kesimpulan Otomatis:</b>
-                            <span v-if="bestChannel && bestChannel.total_leads > 0">
-                                Performa terbaik saat ini dipegang oleh channel <b>{{ bestChannel.name }}</b> dengan
-                                rasio closing
-                                sebesar <b>{{ bestChannel.conversion_rate }}%</b>. Pertahankan stabilitas alokasi di
-                                channel ini.
-                            </span>
-                            <span v-else>
-                                Belum ada aktivitas konversi data transaksi untuk ditarik kesimpulan.
-                            </span>
-                        </div>
-
                     </div>
                 </div>
             </div>

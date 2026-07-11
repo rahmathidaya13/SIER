@@ -66,23 +66,24 @@ class LeadController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        $this->validateLeads($request->all());
+        dd($request->all());
+        // $this->validateLeads($request->all());
 
-        if ($request['status'] === 'CLOSED_WON' && $request['payment_status'] === 'DP') {
-            $minimalDp = $request['deal_price'] * 0.5;
-            if ($request['paid_amount'] < $minimalDp) {
-                throw ValidationException::withMessages([
-                    'paid_amount' => 'Uang muka (DP) minimal harus 50% (Minimal: Rp ' . number_format($minimalDp, 0, ',', '.') . ')'
-                ]);
-            }
-        }
+        // if ($request['status'] === 'CLOSED_WON' && $request['payment_status'] === 'DP') {
+        //     $minimalDp = $request['deal_price'] * 0.5;
+        //     if ($request['paid_amount'] < $minimalDp) {
+        //         throw ValidationException::withMessages([
+        //             'paid_amount' => 'Uang muka (DP) minimal harus 50% (Minimal: Rp ' . number_format($minimalDp, 0, ',', '.') . ')'
+        //         ]);
+        //     }
+        // }
 
-        $this->leadServices->store($request->all(), $user);
+        // $this->leadServices->store($request->all(), $user);
 
-        $this->invalidateCaches([LeadsRepository::class, SaleRepository::class, ChannelRepository::class], ['global', $user->id_branch]);
-        return redirect()->back()->with([
-            'message' => 'Lead dari ' . strtoupper($request['name']) . ' berhasil ditambahkan',
-        ]);
+        // $this->invalidateCaches([LeadsRepository::class, SaleRepository::class, ChannelRepository::class], ['global', $user->id_branch]);
+        // return redirect()->back()->with([
+        //     'message' => 'Lead dari ' . strtoupper($request['name']) . ' berhasil ditambahkan',
+        // ]);
     }
 
     public function update(Request $request, string $id)

@@ -100,7 +100,6 @@ const fillForm = (data) => {
         bank_name: '',
         notes_sales: ''
     })
-
     dataLead.value = data
     form.reset();
 }
@@ -178,39 +177,33 @@ const loadLead = async () => {
 
 }
 
-const channelOptions = computed(() => [
-    ...props.channels.map(data => ({
-        label: data.name,
-        value: data.id_channel,
-    }))
-]);
 
-const selectedProduct = {
-    width: '100%',
-    placeholder: 'Ketik nama produk...',
-    allowClear: true,
-    minimumInputLength: 2,
-    ajax: {
-        url: route('product.search'), // Arahkan ke endpoint controller Anda
-        dataType: 'json',
-        delay: 300, // Tunggu 300ms setelah user berhenti mengetik baru request ke backend (Debounce)
-        data: function (params) {
-            return {
-                keyword: params.term // Kata kunci yang diketik user dikirim sebagai ?keyword=...
-            };
-        },
-        processResults: function (data) {
-            // Mapping respon backend menjadi format {id, text} yang dipahami Select2
-            return {
-                results: data.map(item => ({
-                    id: item.id_product,
-                    text: item.name,
-                    product_name: item.name
-                }))
-            };
-        }
-    }
-}
+// const selectedProduct = {
+//     width: '100%',
+//     placeholder: 'Ketik nama produk...',
+//     allowClear: true,
+//     minimumInputLength: 2,
+//     ajax: {
+//         url: route('product.search'), // Arahkan ke endpoint controller Anda
+//         dataType: 'json',
+//         delay: 300, // Tunggu 300ms setelah user berhenti mengetik baru request ke backend (Debounce)
+//         data: function (params) {
+//             return {
+//                 keyword: params.term // Kata kunci yang diketik user dikirim sebagai ?keyword=...
+//             };
+//         },
+//         processResults: function (data) {
+//             // Mapping respon backend menjadi format {id, text} yang dipahami Select2
+//             return {
+//                 results: data.map(item => ({
+//                     id: item.id_product,
+//                     text: item.name,
+//                     product_name: item.name
+//                 }))
+//             };
+//         }
+//     }
+// }
 const onProductSelected = (selectedOption) => {
     form.product_name = selectedOption?.product_name || '';
 };
@@ -429,6 +422,57 @@ const tempOptions = computed(() => {
     }
     return options;
 })
+const selectedChannel = computed({
+    get() {
+        return props.channels.find(
+            x => x.id_channel === form.id_channel
+        ) || null
+    },
+
+    set(value) {
+        form.id_channel = value?.id_channel ?? null
+    }
+})
+const productOptions = ref([])
+const loadingProduct = ref(false)
+const searchProduct = async (query) => {
+    // Jangan tampilkan apa pun kalau belum 2 karakter
+    if (query.length < 2) {
+        productOptions.value = []
+        return
+    }
+
+    loadingProduct.value = true
+
+    try {
+        const { data } = await axios.get(route('product.search'), {
+            params: {
+                keyword: query
+            }
+        })
+
+        productOptions.value = data
+    } finally {
+        loadingProduct.value = false
+    }
+}
+const selectedProduct = computed({
+
+    get() {
+
+        return props.products.find(
+            x => x.id_product == form.id_product
+        ) ?? null;
+
+    },
+
+    set(product) {
+
+        form.id_product = product?.id_product ?? null;
+
+    }
+
+});
 </script>
 <template>
     <div class="row" v-if="props.show">
@@ -485,8 +529,24 @@ const tempOptions = computed(() => {
                                 <label for="channels_select" class="form-label small fw-bold text-muted">SUMBER
                                     TRAFIK
                                     (CHANNEL) *</label>
-                                <select-input text="-- Pilih Channel --" name="channels" v-model="form.id_channel"
-                                    :error="form.errors.id_channel" :options="channelOptions" />
+
+                                <multi-select :class="{ 'is-invalid': form.errors.id_channel }"
+                                    v-model="selectedChannel" :options="channels" track-by="id_channel" label="name"
+                                    placeholder="Pilih Channel">
+                                    <template #singleLabel="{ option }">
+                                        <div class="multiselect-single">
+                                            <i :class="option.icon"></i>
+                                            <span>{{ option.name }}</span>
+                                        </div>
+                                    </template>
+
+                                    <template #option="{ option }">
+                                        <div class="multiselect-option">
+                                            <i :class="option.icon"></i>
+                                            <span>{{ option.name }}</span>
+                                        </div>
+                                    </template>
+                                </multi-select>
                                 <input-error :message="form.errors.id_channel" />
                             </div>
 
@@ -509,12 +569,18 @@ const tempOptions = computed(() => {
                                     </span>
                                 </div>
 
-                                <select-2 v-if="!form.id_product || isChangingProduct" :error="form.errors.id_product"
+                                <!-- <select-2 v-if="!form.id_product || isChangingProduct" :error="form.errors.id_product"
                                     @select="onProductSelected" :settings="selectedProduct" name="product"
-                                    v-model="form.id_product" />
+                                    v-model="form.id_product" /> -->
 
-                                <input-text v-else inputClass="text-danger fw-bold" name="products"
-                                    v-model="form.product_name" :disabled="true" />
+                                <multi-select v-model="form.id_product" :options="productOptions"
+                                    :loading="loadingProduct" track-by="id_product" label="name"
+                                    :internal-search="false" :clear-on-select="true"
+                                    placeholder="Ketik minimal 2 huruf..." :searchable="true" :close-on-select="true"
+                                    @search-change="searchProduct" :show-labels="false" open-direction="bottom" />
+
+                                <!-- <input-text v-else inputClass="text-danger fw-bold" name="products"
+                                    v-model="form.product_name" :disabled="true" /> -->
 
                                 <input-error :message="form.errors.id_product" />
                             </div>

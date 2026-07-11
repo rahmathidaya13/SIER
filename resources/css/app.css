@@ -1,4 +1,5 @@
 @import url('bootstrap');
+@import url('vue-multiselect/dist/vue-multiselect.min.css');
 @import url('./partial.css');
 @import url('./xpart.css');
 @import url('./button.css');
