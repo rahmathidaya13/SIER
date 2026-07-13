@@ -18,6 +18,7 @@ const form = useForm({
     paid_amount: 0,
     payment_status: 'LUNAS',
     payment_method: 'cash',
+    quantity: '',
     bank_name: '',
     notes: ''
 });
@@ -102,18 +103,18 @@ const loadLead = async () => {
                         </div>
                     </div>
 
-                    <div class="row g-3">
-                        <div class="col-6">
+                    <div class="row g-2">
+                        <div class="col-md-4">
                             <label for="deal_price_input" class="form-label small fw-bold text-muted">HARGA
                                 DEAL*</label>
                             <input-currency inputClass="text-success" :decimals="0" name="deal_price"
                                 :error="form.errors.deal_price" v-model="form.deal_price" placeholder="0" />
                             <input-error :message="form.errors.deal_price" />
                             <small class="text-muted d-block mt-1">Terbilang: <strong>{{ currencyFormat(form.deal_price)
-                                    }}</strong></small>
+                            }}</strong></small>
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label for="paid_amount_input" class="form-label small fw-bold text-muted">UANG MASUK
                                 SEKARANG *</label>
                             <input-currency :readonly="form.payment_status === 'LUNAS'" :error="form.errors.paid_amount"
@@ -123,6 +124,13 @@ const loadLead = async () => {
                                 class="text-danger mt-1 d-block fw-medium" style="font-size: 11px;">
                                 Sisa Tagihan: {{ currencyFormat(form.deal_price - form.paid_amount) }}
                             </small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="quantity_input" class="form-label small fw-bold text-muted">QUANTITY
+                                *</label>
+                            <input-number :maxChar="5" :error="form.errors.quantity"
+                                name="quantity" v-model="form.quantity" placeholder="0" />
+                            <input-error :message="form.errors.quantity" />
                         </div>
 
                         <div class="col-md-6">
@@ -149,7 +157,8 @@ const loadLead = async () => {
                             <input-error :message="form.errors.payment_method" />
                         </div>
 
-                        <div v-if="form.payment_method === 'transfer' || form.payment_method === 'debit'" class="col-12">
+                        <div v-if="form.payment_method === 'transfer' || form.payment_method === 'debit'"
+                            class="col-12">
                             <label class="form-label small fw-bold text-muted mb-2">NAMA BANK*</label>
                             <input-text name="bank_name" v-model="form.bank_name" :error="form.errors.bank_name"
                                 placeholder="Cth: BCA, Mandiri, BNI Dll" />

@@ -43,6 +43,7 @@ trait UserValidation
                 'id_branch' => $actor->hasRole('super_admin')
                     ? ['required', 'exists:branches,id_branch']
                     : ['nullable'],
+                'is_active' => ['required', 'in:active,inactive'],
             ],
             [
                 'name.required'      => 'Nama tidak boleh kosong.',
@@ -60,6 +61,9 @@ trait UserValidation
 
                 'id_branch.required' => 'Cabang tidak boleh kosong.',
                 'id_branch.exists'   => 'Cabang tidak valid.',
+
+                'is_active.required' => 'Status wajib dipilih.',
+                'is_active.in'  => 'Status tidak valid.',
             ]
         )->validate();
     }

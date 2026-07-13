@@ -22,6 +22,7 @@ import CurrencyInput from "./Component/CurrencyInput.vue";
 import AlertErrorAll from "./Component/AlertErrorAll.vue";
 import ChartBar from "./Component/ChartBar.vue";
 import Multiselect from "vue-multiselect";
+import RadioBox from "./Component/RadioBox.vue";
 export default {
     install(app) {
         app.component("app-layout", AppLayout);
@@ -48,5 +49,6 @@ export default {
         app.component("select-2", Selects2);
         app.component("chart-bar", ChartBar);
         app.component("multi-select", Multiselect);
+        app.component("radio-button", RadioBox);
     },
 };

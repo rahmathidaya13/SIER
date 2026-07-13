@@ -133,7 +133,7 @@ const selectIcon = (iconClass) => {
                 :mobileFullscreen="false" @closed="close">
 
                 <template #body>
-
+                    <alert-error-all :errors="form.errors" @close="form.clearErrors()" />
 
                     <form-wrapper @submit.prevent="submit">
                         <div class="mb-3">

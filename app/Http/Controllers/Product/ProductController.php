@@ -11,7 +11,8 @@ class ProductController extends Controller
     public function productSearch(Request $request)
     {
         $keyword = $request->input('keyword');
-        $products = ProductModel::select('id_product', 'name')
+        $products = ProductModel::with('prices')
+            ->select('id_product', 'name', 'image_link', 'image_path')
             ->when($keyword, function ($q, $search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('id_product', 'like', "%{$search}%");

@@ -30,8 +30,9 @@ class LeadModel extends Model
     ];
     protected $dates    = ["deleted_at"];
 
-    public function scopeAllowedForUser($query, User $user)
+    public function scopeAllowedForUser($query)
     {
+        $user = auth()->user();
         return match (true) {
             $user->hasRole('super_admin') => $query,
             $user->hasRole('supervisor') => $query->where('leads.id_branch', $user->id_branch),

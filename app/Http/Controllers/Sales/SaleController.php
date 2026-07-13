@@ -7,16 +7,13 @@ use App\Models\SalesModel;
 use App\Models\BranchModel;
 use Illuminate\Http\Request;
 use App\Traits\SalesValidation;
-use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Traits\BranchMutationHelper;
+use App\Repository\Lead\LeadsRepository;
 use App\Services\Sales\SalePaymentService;
+use App\Repository\Channel\ChannelRepository;
 use App\Http\Controllers\Sales\SaleRepository;
-use Illuminate\Validation\ValidationException;
-use App\Http\Controllers\Leads\LeadsRepository;
-use App\Services\Authorization\DataScopeService;
 use App\Services\Sales\PaymentValidationService;
-use App\Http\Controllers\Channel\ChannelRepository;
 use App\Services\Authorization\ScopeResolverService;
 
 class SaleController extends Controller
@@ -62,7 +59,7 @@ class SaleController extends Controller
 
     public function show(SalesModel $sales)
     {
-        $sales->load(['lead', 'user', 'product', 'branch', 'lead.activity.user', 'paymentHistory.user.roles']);
+        $sales->load(['lead', 'user', 'product', 'branch', 'lead.activity.user.roles', 'paymentHistory.user.roles']);
         return response()->json($sales);
     }
     public function payRemaining(Request $request, SalesModel $sales)

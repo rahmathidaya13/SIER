@@ -1,14 +1,13 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Lead;
 
 use App\Models\LeadModel;
 use App\Models\SalesModel;
 use Illuminate\Support\Facades\DB;
 use App\Traits\ImmutableFieldValidator;
-use App\Services\LeadConversionServices;
-use App\Services\Authorization\LeadAuthorizationService;
 use App\Traits\ActivityMessageFormatter;
+use App\Services\Authorization\LeadAuthorizationService;
 
 class LeadServices
 {

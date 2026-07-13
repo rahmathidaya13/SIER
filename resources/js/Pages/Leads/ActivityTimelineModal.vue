@@ -67,6 +67,31 @@ const getTimelineStyle = (description) => {
     // Default untuk Follow Up biasa
     return { icon: 'bi-chat-dots-fill', color: 'secondary', bg: 'bg-light', text: 'text-secondary' };
 };
+const getRoleName = (roleName) => {
+    const roles = {
+        'super_admin': {
+            label: 'Head Office',
+            color: 'bg-dark text-white'
+        },
+        'supervisor': {
+            label: 'Supervisor',
+            color: 'bg-primary text-white'
+        },
+        'admin': {
+            label: 'Admin',
+            color: 'bg-info text-dark'
+        },
+        'sales': {
+            label: 'Sales',
+            color: 'bg-success text-white'
+        },
+        'teknisi': {
+            label: 'Teknisi',
+            color: 'bg-secondary text-white'
+        }
+    };
+    return roles[roleName] || 'bg-light text-dark border';
+};
 </script>
 
 <template>
@@ -116,7 +141,7 @@ const getTimelineStyle = (description) => {
                                             <i class="bi bi-person-fill me-1"></i>
                                             <span class="text-capitalize">
                                                 {{ act.user?.activity_creator_name || 'Sistem' }} - {{
-                                                act.user?.roles[0]?.name }}
+                                                    getRoleName(act.user?.roles[0]?.name).label }}
                                             </span>
                                         </div>
                                     </div>

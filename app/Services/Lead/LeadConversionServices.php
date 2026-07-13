@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Lead;
 
 use App\Models\LeadModel;
 use App\Models\SalesModel;
@@ -35,6 +35,7 @@ class LeadConversionServices
                 'remaining_bill' => $remaining,
                 'payment_status' => $validated['payment_status'],
                 'paid_amount'    => $validated['paid_amount'],
+                'quantity'       => $validated['quantity'],
                 'deal_at'        => now()->toDateTimeString(),
                 'notes'          => $validated['notes']
             ]);

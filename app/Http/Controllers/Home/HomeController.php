@@ -2,17 +2,49 @@
 
 namespace App\Http\Controllers\Home;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Models\BranchModel;
+use App\Services\Dashboard\DashboardService;
 
 class HomeController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    protected $repository;
+    public function __construct(DashboardService $repository)
     {
-        return inertia('Home/Index');
+        $this->repository = $repository;
+    }
+    public function index(Request $request)
+    {
+        $month = $request->input('month', now()->month);
+        $year  = $request->input('year', now()->year);
+        $branchName = $request->input('branch', '');
+
+        $branchId = null;
+
+        if (!empty($branchName)) {
+            $branch = BranchModel::where('name', $branchName)->first();
+            $branchId = $branch ? $branch->id_branch : null;
+        }
+
+        // tampilkan semua cabang jika user super admin
+        $user = auth()->user();
+        $branches = [];
+        if ($user->hasRole('super_admin')) {
+            $branches = BranchModel::select('id_branch', 'name')->get();
+        }
+        return inertia('Home/Index', [
+            'stats' => $this->repository->getStats($month, $year, $branchId),
+            'branches' => $branches,
+            'filters' => [
+                'month' => (int) $month,
+                'year'  => (int) $year,
+                'branch' => $branchName
+            ]
+        ]);
     }
 
     /**

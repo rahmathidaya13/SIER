@@ -90,6 +90,31 @@ const getPaymentMethodStyle = (method) => {
     // Default: CASH / Tunai
     return { icon: 'bi-cash-stack', bg: 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' };
 };
+const getRoleName = (roleName) => {
+    const roles = {
+        'super_admin': {
+            label: 'Head Office',
+            color: 'bg-dark text-white'
+        },
+        'supervisor': {
+            label: 'Supervisor',
+            color: 'bg-primary text-white'
+        },
+        'admin': {
+            label: 'Admin',
+            color: 'bg-info text-dark'
+        },
+        'sales': {
+            label: 'Sales',
+            color: 'bg-success text-white'
+        },
+        'teknisi': {
+            label: 'Teknisi',
+            color: 'bg-secondary text-white'
+        }
+    };
+    return roles[roleName] || 'bg-light text-dark border';
+};
 </script>
 
 <template>
@@ -175,7 +200,8 @@ const getPaymentMethodStyle = (method) => {
                                                             style="font-size: 11px;">
                                                             <i class="bi bi-person-circle me-1"></i> {{ pay.user?.name
                                                                 ||
-                                                            'Sistem' }} {{ `(${pay.user.roles[0].name})` }}
+                                                                'Sistem' }} {{
+                                                            `(${getRoleName(pay.user.roles[0].name).label})` }}
                                                         </span>
                                                     </div>
                                                 </td>
@@ -242,7 +268,7 @@ const getPaymentMethodStyle = (method) => {
                                             <div class="badge bg-light text-dark border small">
                                                 <i class="bi bi-person-fill me-1"></i>
                                                 <span class="text-capitalize">
-                                                    {{ act.user?.name || 'Sistem' }}
+                                                    {{ act.user?.name || 'Sistem' }} - {{ getRoleName(act.user?.roles[0]?.name).label }}
                                                 </span>
                                             </div>
                                         </div>

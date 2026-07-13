@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Channel;
+namespace App\Repository\Channel;
 
 use App\Models\ChannelModel;
 use App\Repository\BaseCacheRepository;

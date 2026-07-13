@@ -22,6 +22,7 @@ const form = useForm({
     password_confirmation: '',
     role: null, // Default
     id_branch: isSuperadmin ? null : currentUser.value.id_branch,
+    is_active: 'active',
 });
 
 const branchOptions = computed(() => [
@@ -69,21 +70,6 @@ const submit = () => {
         }
     });
 };
-// const previewImage = ref(null)
-// const fileName = ref("")
-// const onFileChange = (e) => {
-//     let file = e.target.files[0] || null
-//     if (file && file.type.startsWith("image/")) {
-//         fileName.value = file.name
-//         previewImage.value = URL.createObjectURL(file)
-//         form.image_upload = file
-//     } else {
-//         previewUrl.value = null;
-//         fileName.value = null;
-//         form.image_upload = null
-//     }
-// };
-
 watch(
     () => props.show,
     (isOpen) => {
@@ -94,6 +80,7 @@ watch(
                 form.email = props.data.email;
                 form.role = props.data.role_name;
                 form.id_branch = props.data.id_branch;
+                form.is_active = props.data.is_active;
             } else {
                 form.reset();
                 form.clearErrors();
@@ -135,18 +122,7 @@ const togglePasswordVisibilty = () => {
                 :mobileFullscreen="false" @closed="close">
 
                 <template #body>
-
-                    <div v-if="form.errors.unauthorized_action"
-                        class="alert alert-c-danger d-flex justify-content-between align-items-center" role="alert">
-                        <div class="d-flex align-items-center gap-2 fw-semibold">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            {{ form.errors.unauthorized_action }}
-                        </div>
-                        <button @click="form.clearErrors('unauthorized_action')" type="button"
-                            class="bg-transparent rounded-circle border-0 fs-4">
-                            <i class="bi bi-x"></i>
-                        </button>
-                    </div>
+                    <alert-error-all :errors="form.errors" @close="form.clearErrors()" />
 
                     <form-wrapper @submit.prevent="submit">
 
@@ -180,6 +156,16 @@ const togglePasswordVisibilty = () => {
                                     text="-- Pilih Cabang --" name="branch" :options="branchOptions" />
                                 <input-error :message="form.errors.id_branch" />
                             </div>
+                        </div>
+                        <div class="mb-3 bg-light p-3 rounded-3 border">
+                            <input-label labelClass="mb-2" for="is_active" value="Status Pegawai" />
+                            <div class="d-flex gap-5">
+                                <radio-button name="is_active" v-model:checked="form.is_active" value="active"
+                                    label="Aktif (Pegawai dapat login)" />
+                                <radio-button name="is_active" v-model:checked="form.is_active" value="inactive"
+                                    label="Tidak Aktif (Pegawai tidak dapat login)" />
+                            </div>
+                            <input-error :message="form.errors.phone" />
                         </div>
 
                         <div class="mb-3">

@@ -145,6 +145,31 @@ const branchOptions = computed(() => [
         value: data.name,
     }))
 ]);
+const getRoleName = (roleName) => {
+    const roles = {
+        'super_admin': {
+            label: 'Head Office',
+            color: 'bg-dark text-white'
+        },
+        'supervisor': {
+            label: 'Supervisor',
+            color: 'bg-primary text-white'
+        },
+        'admin': {
+            label: 'Admin',
+            color: 'bg-info text-dark'
+        },
+        'sales': {
+            label: 'Sales',
+            color: 'bg-success text-white'
+        },
+        'teknisi': {
+            label: 'Teknisi',
+            color: 'bg-secondary text-white'
+        }
+    };
+    return roles[roleName] || 'bg-light text-dark border';
+};
 const keywordRef = ref(null);
 onMounted(() => {
     keywordRef.value.focus();
@@ -278,7 +303,8 @@ onMounted(() => {
                                     </td>
 
                                     <td class="ps-4">
-                                        <span class="d-block fw-bold text-primary">{{ item.invoice }}</span>
+                                        <span class="d-block fw-bold text-primary"
+                                            v-html="highlight(item.invoice, filters.keyword)"></span>
                                         <span class="text-muted small">{{ formatDate(item.deal_at) }}</span>
                                     </td>
 
@@ -346,7 +372,7 @@ onMounted(() => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.sales_name || 'Sistem'
-                                                }} {{ `(${item.role_name ?? 'Unknown'})` }}
+                                                }} {{ `(${getRoleName(item.role_name).label ?? 'Unknown'})` }}
                                                 </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>

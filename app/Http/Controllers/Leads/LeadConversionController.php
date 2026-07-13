@@ -8,11 +8,12 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Traits\BranchMutationHelper;
 use App\Traits\ImmutableFieldValidator;
-use App\Services\LeadConversionServices;
+use App\Repository\Lead\LeadsRepository;
 use App\Traits\LeadConversionValidation;
-use Illuminate\Validation\ValidationException;
-use App\Http\Controllers\Leads\LeadsRepository;
+use App\Repository\Channel\ChannelRepository;
+use App\Services\Lead\LeadConversionServices;
 use App\Http\Controllers\Sales\SaleRepository;
+use Illuminate\Validation\ValidationException;
 
 class LeadConversionController extends Controller
 {
@@ -31,7 +32,7 @@ class LeadConversionController extends Controller
         try {
             $services->convertLeadToSales($leads, $request->all());
             $user = auth()->user();
-            $this->invalidateCaches([LeadsRepository::class, SaleRepository::class], ['global', $user->id_branch]);
+            $this->invalidateCaches([LeadsRepository::class, SaleRepository::class, ChannelRepository::class], ['global', $user->id_branch]);
             return redirect()->back()->with('success', 'Transaksi atas nama ' . $leads->name . ' sudah berhasil closing.');
         } catch (ValidationException $error) {
             throw $error;

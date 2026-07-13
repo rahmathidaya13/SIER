@@ -1,12 +1,11 @@
 <script setup>
-import { Form, Head, usePage, router } from '@inertiajs/vue3';
-import FormModal from './FormModal.vue';
+import { Head, router } from '@inertiajs/vue3';
 import { onMounted, ref } from 'vue';
 import { useFilter } from '@/Composables/useFilter';
 import { highlight } from "@/Helpers/Highlight";
-import { dateConvert } from "@/Helpers/dateConvert";
 import { useConfirm } from "@/Composables/useConfirm"
-
+import { formatDate } from '@/Helpers/formatDate';
+import FormModal from './FormModal.vue';
 const confirm = useConfirm();
 const props = defineProps({
     employee: Object,
@@ -28,7 +27,7 @@ const openEditModal = (data) => {
 const getRoleBadgeClass = (roleName) => {
     const roles = {
         'super_admin': {
-            label: 'Super Admin',
+            label: 'Head Office',
             color: 'bg-dark text-white'
         },
         'supervisor': {
@@ -103,6 +102,13 @@ const header = [
     {
         label: "PENEMPATAN CABANG",
         key: "branch",
+        attrs: {
+            class: 'py-3 font-medium',
+        },
+    },
+    {
+        label: "STATUS PEGAWAI",
+        key: "status",
         attrs: {
             class: 'py-3 font-medium',
         },
@@ -276,9 +282,17 @@ onMounted(() => {
                                             <i class="bi bi-building"></i> Kantor Pusat
                                         </div>
                                     </td>
+                                    <td class="text-center">
+                                        <div style="font-size: 13px;"
+                                            :class="`badge px-5 rounded-pill fw-medium ${item.is_active === 'active' ? 'badge-soft-success' : 'badge-soft-danger'}`">
+                                            <i
+                                                :class="` ${item.is_active === 'active' ? 'bi bi-unlock-fill' : 'bi bi-lock-fill'}`"></i>
+                                            {{ item.is_active === 'active' ? 'Aktif' : 'Tidak Aktif' }}
+                                        </div>
+                                    </td>
 
                                     <td class="py-3 text-center text-muted small">
-                                        {{ dateConvert(item.created_at, "DD-MM-YYYY") }}
+                                        {{ formatDate(item.created_at) }}
                                     </td>
                                     <td>
                                         <action-button :item="item" :actions="employeeActions"

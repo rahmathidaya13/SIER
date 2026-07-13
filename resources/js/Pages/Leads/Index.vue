@@ -25,7 +25,7 @@ const {
     initialFilters: {
         keyword: props.filters.keyword ?? '',
         limit: props.filters.limit ?? 10,
-        status: props.filters.status ?? 'all',
+        status: props.filters.status ?? 'new',
         temperature: props.filters.temperature ?? 'all',
         order_by: props.filters.order_by ?? 'latest',
         page: props.filters.page ?? 1,
@@ -177,17 +177,17 @@ const getEmail = (email) => {
 const getTempBadge = (temp) => {
     const map = {
         'HOT': {
-            class: 'badge-soft-success',
+            class: 'badge-soft-success border border-success',
             label: '🔥 HOT',
             title: 'Suhu Hot menandakan bahwa prospek sudah siap bayar'
         },
         'WARM': {
-            class: 'badge-soft-warning',
+            class: 'badge-soft-warning border border-warning',
             label: '⏳ WARM',
             title: 'Suhu Warm menandakan bahwa pelanggan bertanya-tanya tentang detail produk'
         },
         'COLD': {
-            class: 'badge-soft-info',
+            class: 'badge-soft-info border border-info',
             label: '❄️ COLD',
             title: 'Suhu Cold menandakan bahwa pelanggan hanya sekedar ingin kepoin produk'
         }
@@ -197,20 +197,20 @@ const getTempBadge = (temp) => {
 const getStatusBadge = (status) => {
     const map = {
         'NEW': {
-            class: 'badge-soft-primary',
+            class: 'badge-soft-primary border border-primary',
             label: '⭐ Baru Masuk'
         },
         'FOLLOW_UP': {
-            class: 'badge-soft-info',
+            class: 'badge-soft-info border border-info',
             label: '💬 Follow Up'
         },
         'CLOSED_WON': {
-            class: 'badge-soft-success fw-bold',
-            label: '✔ CLOSING (Terjual / Deal)'
+            class: 'badge-soft-success border border-success',
+            label: '✔ CLOSING (Terjual)'
 
         },
         'CLOSED_LOST': {
-            class: 'badge-soft-dark',
+            class: 'badge-soft-dark border border-danger',
             label: '✖ Batal / Lost'
         }
     };
@@ -219,7 +219,7 @@ const getStatusBadge = (status) => {
 const rowClasses = (item) => ({
     'tr-highlight-primary': item.status === 'NEW',
     'tr-dimmed': item.status === 'CLOSED_LOST',
-    'tr-highlight-success': item.status === 'CLOSED_WON',
+    // 'tr-highlight-success': item.status === 'CLOSED_WON',
     'tr-highlight-warning': isOverdue(item.follow_up_date, item.status),
 })
 
@@ -244,6 +244,32 @@ const openHistoryModal = (data) => {
     selectedId.value = data.id_lead;
     showHistoryModal.value = true
 }
+
+const getRoleName = (roleName) => {
+    const roles = {
+        'super_admin': {
+            label: 'Head Office',
+            color: 'bg-dark text-white'
+        },
+        'supervisor': {
+            label: 'Supervisor',
+            color: 'bg-primary text-white'
+        },
+        'admin': {
+            label: 'Admin',
+            color: 'bg-info text-dark'
+        },
+        'sales': {
+            label: 'Sales',
+            color: 'bg-success text-white'
+        },
+        'teknisi': {
+            label: 'Teknisi',
+            color: 'bg-secondary text-white'
+        }
+    };
+    return roles[roleName] || 'bg-light text-dark border';
+};
 </script>
 <template>
 
@@ -339,7 +365,7 @@ const openHistoryModal = (data) => {
                                             v-html="highlight(item.name, filters.keyword)"></div>
                                         <div v-if="item.email" class="text-muted small mb-2">
                                             <a :href="getEmail(item.email)" class="text-decoration-none">{{ item.email
-                                                }}</a>
+                                            }}</a>
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
                                             <a :href="getWaLink(item.phone)" target="_blank"
@@ -369,8 +395,7 @@ const openHistoryModal = (data) => {
                                     </td>
 
                                     <td class="text-center">
-                                        <span
-                                            class="badge rounded-pill px-3 py-1 badge-soft-success border-success border-1"
+                                        <span class="badge rounded-pill px-3 py-1 border-1"
                                             :title="getStatusBadge(item.status).label"
                                             :class="getStatusBadge(item.status).class">
                                             {{ getStatusBadge(item.status).label }}
@@ -398,7 +423,7 @@ const openHistoryModal = (data) => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.creator_name || 'Sistem'
-                                                }} {{ `(${item.role_name})` }}
+                                                    }} {{ `(${getRoleName(item.role_name).label})` }}
                                                 </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>

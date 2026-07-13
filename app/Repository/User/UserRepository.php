@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\User;
+namespace App\Repository\User;
 
 use App\Models\User;
 use App\Repository\BaseCacheRepository;

@@ -8,8 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use App\Traits\BranchMutationHelper;
+use App\Repository\Channel\ChannelRepository;
 use Illuminate\Validation\ValidationException;
-use App\Http\Controllers\Channel\ChannelRepository;
 use App\Services\Authorization\ScopeResolverService;
 
 class ChannelController extends Controller
@@ -31,7 +31,6 @@ class ChannelController extends Controller
 
         ]);
 
-        // inject id_branch and id_user
         $filters = app(ScopeResolverService::class)->filters($filters);
         $channels = $this->repository->getCached($this->scopeId($user), $filters);
         return inertia('Channels/Index', [

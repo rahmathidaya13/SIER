@@ -16,6 +16,7 @@ trait LeadConversionValidation
                 'payment_status' => 'required|in:LUNAS,DP',
                 'bank_name'      => 'nullable|required_if:payment_method,transfer,debit',
                 'payment_method' => 'required|in:cash,transfer,debit,qris',
+                'quantity'       => 'required|numeric|min:1',
                 'notes'          => 'nullable|string|max:500',
             ],
             [
@@ -31,6 +32,10 @@ trait LeadConversionValidation
                 'payment_method.in' => 'Metode pembayaran harus salah satu dari: Tunai, Transfer, Debit, Qris',
                 'notes.string' => 'Catatan harus berupa teks',
                 'notes.max' => 'Catatan maksimal 500 karakter',
+
+                'quantity.required' => 'Jumlah barang tidak boleh kosong',
+                'quantity.numeric' => 'Jumlah barang harus berupa angka',
+                'quantity.min' => 'Jumlah barang minimal 1',
 
                 'bank_name.required_if' => 'Nama bank harus diisi jika metode pembayaran Transfer atau Debit',
                 'bank_name.string' => 'Nama bank harus berupa teks',

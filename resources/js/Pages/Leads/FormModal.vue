@@ -5,6 +5,7 @@ import { hasRole } from '@/Composables/useAuth';
 import { useRowAlert } from '@/Composables/useAlert';
 import { currencyFormat } from "@/Helpers/currencyFormat";
 import { formatDate } from "@/Helpers/formatDate";
+import { debounce } from "lodash";
 const { show, __alert, hide } = useRowAlert();
 import axios from "axios";
 const props = defineProps({
@@ -14,11 +15,9 @@ const props = defineProps({
     },
     show: Boolean,
     channels: Array,
-    products: Array
 });
 
 const isEdit = computed(() => !!props.idLead);
-const isChangingProduct = ref(false);
 const isLoading = ref(false);
 const dataLead = ref(null);
 
@@ -82,7 +81,7 @@ const fillForm = (data) => {
         phone: data.phone,
         email: data.email,
         id_channel: data.id_channel,
-        id_product: data.id_product,
+        id_product: data.product?.id_product || '',
         temperature: data.temperature,
         status: data.status,
         follow_up_date: data.follow_up_date || '',
@@ -99,7 +98,20 @@ const fillForm = (data) => {
 
         bank_name: '',
         notes_sales: ''
-    })
+    });
+    console.log(data);
+    if (data.product?.id_product) {
+        selectedProductObj.value = {
+            id_product: data.product?.id_product,
+            name: data.product?.product_name || data.product?.product_name || 'Produk Terpilih',
+            image_path: data.product?.image_path || '',
+            image_link: data.product?.image_link || '',
+        };
+        productOptions.value = [selectedProductObj.value];
+    } else {
+        selectedProductObj.value = null;
+        productOptions.value = [];
+    }
     dataLead.value = data
     form.reset();
 }
@@ -177,36 +189,6 @@ const loadLead = async () => {
 
 }
 
-
-// const selectedProduct = {
-//     width: '100%',
-//     placeholder: 'Ketik nama produk...',
-//     allowClear: true,
-//     minimumInputLength: 2,
-//     ajax: {
-//         url: route('product.search'), // Arahkan ke endpoint controller Anda
-//         dataType: 'json',
-//         delay: 300, // Tunggu 300ms setelah user berhenti mengetik baru request ke backend (Debounce)
-//         data: function (params) {
-//             return {
-//                 keyword: params.term // Kata kunci yang diketik user dikirim sebagai ?keyword=...
-//             };
-//         },
-//         processResults: function (data) {
-//             // Mapping respon backend menjadi format {id, text} yang dipahami Select2
-//             return {
-//                 results: data.map(item => ({
-//                     id: item.id_product,
-//                     text: item.name,
-//                     product_name: item.name
-//                 }))
-//             };
-//         }
-//     }
-// }
-const onProductSelected = (selectedOption) => {
-    form.product_name = selectedOption?.product_name || '';
-};
 const submit = () => {
     const url = isEdit.value
         ? route('leads.update', props.idLead)
@@ -296,7 +278,8 @@ const emit = defineEmits(["update:show", "saved"]);
 const close = () => {
     emit("update:show", false);
     resetForm();
-    isChangingProduct.value = false;
+    selectedProductObj.value = null;
+    productOptions.value = [];
 }
 const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
@@ -433,46 +416,44 @@ const selectedChannel = computed({
         form.id_channel = value?.id_channel ?? null
     }
 })
-const productOptions = ref([])
-const loadingProduct = ref(false)
-const searchProduct = async (query) => {
-    // Jangan tampilkan apa pun kalau belum 2 karakter
+const productOptions = ref([]);
+const loadingProduct = ref(false);
+const selectedProductObj = ref(null);
+const searchProduct = debounce(async (query) => {
     if (query.length < 2) {
-        productOptions.value = []
-        return
+        productOptions.value = [];
+        return;
     }
 
-    loadingProduct.value = true
-
+    loadingProduct.value = true;
     try {
         const { data } = await axios.get(route('product.search'), {
-            params: {
-                keyword: query
-            }
-        })
-
-        productOptions.value = data
+            params: { keyword: query }
+        });
+        productOptions.value = data;
+    } catch (error) {
+        console.error("Gagal mengambil data produk", error);
     } finally {
-        loadingProduct.value = false
+        loadingProduct.value = false;
     }
-}
-const selectedProduct = computed({
+}, 400);
 
-    get() {
+const onSelectProduct = (product) => {
+    form.id_product = product?.id_product ?? null;
+    form.product_name = product?.name ?? null;
+};
+const onRemoveProduct = () => {
+    form.id_product = null;
+    form.product_name = null;
+};
+const imageSource = (product) => {
 
-        return props.products.find(
-            x => x.id_product == form.id_product
-        ) ?? null;
-
-    },
-
-    set(product) {
-
-        form.id_product = product?.id_product ?? null;
-
+    if (product?.image_link) {
+        return product?.image_link
     }
 
-});
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(product?.product_name)}`
+};
 </script>
 <template>
     <div class="row" v-if="props.show">
@@ -530,7 +511,7 @@ const selectedProduct = computed({
                                     TRAFIK
                                     (CHANNEL) *</label>
 
-                                <multi-select :class="{ 'is-invalid': form.errors.id_channel }"
+                                <multi-select :searchable="false" :show-labels="false" :class="{ 'is-invalid': form.errors.id_channel }"
                                     v-model="selectedChannel" :options="channels" track-by="id_channel" label="name"
                                     placeholder="Pilih Channel">
                                     <template #singleLabel="{ option }">
@@ -551,36 +532,37 @@ const selectedProduct = computed({
                             </div>
 
                             <div class="col-md-12 mb-2">
-                                <div class="d-flex justify-content-between">
-                                    <label for="product_select" class="form-label small fw-bold text-muted">PRODUK
-                                        YANG
-                                        DIMINATI</label>
+                                <label for="product_select" class="form-label small fw-bold text-muted">Pilih
+                                    Produk*</label>
+                                <multi-select :class="{ 'is-invalid': form.errors.id_product }"
+                                    placeholder="Ketik minimal 2 huruf..." v-model="selectedProductObj"
+                                    :options="productOptions" :loading="loadingProduct" track-by="id_product"
+                                    label="name" :internal-search="false" :clear-on-select="false" :searchable="true"
+                                    @search-change="searchProduct" @select="onSelectProduct" @remove="onRemoveProduct"
+                                    :show-labels="false" open-direction="bottom">
+                                    <template #option="{ option }">
 
-                                    <span v-if="form.id_product && !isChangingProduct && !isLocked"
-                                        @click="isChangingProduct = true" class="small fw-bold text-primary"
-                                        style="cursor: pointer; text-decoration: none;">
-                                        Ganti produk
-                                    </span>
+                                        <div class="d-flex align-items-center">
+                                            <img :src="imageSource(option)" width="45" height="45" class="rounded me-2"
+                                                style="object-fit:cover">
 
-                                    <span v-if="isChangingProduct && dataLead?.id_product"
-                                        @click="isChangingProduct = false" class="small fw-bold text-danger"
-                                        style="cursor: pointer;">
-                                        Batal
-                                    </span>
-                                </div>
+                                            <div class="fw-semibold mb-2">
+                                                {{ option.name }}
+                                            </div>
+                                        </div>
 
-                                <!-- <select-2 v-if="!form.id_product || isChangingProduct" :error="form.errors.id_product"
-                                    @select="onProductSelected" :settings="selectedProduct" name="product"
-                                    v-model="form.id_product" /> -->
+                                    </template>
+                                    <template #singleLabel="{ option }">
 
-                                <multi-select v-model="form.id_product" :options="productOptions"
-                                    :loading="loadingProduct" track-by="id_product" label="name"
-                                    :internal-search="false" :clear-on-select="true"
-                                    placeholder="Ketik minimal 2 huruf..." :searchable="true" :close-on-select="true"
-                                    @search-change="searchProduct" :show-labels="false" open-direction="bottom" />
+                                        <div class="d-flex align-items-center">
+                                            <img :src="imageSource(option)" width="35" height="35" class="rounded me-2"
+                                                style="object-fit:cover">
 
-                                <!-- <input-text v-else inputClass="text-danger fw-bold" name="products"
-                                    v-model="form.product_name" :disabled="true" /> -->
+                                            {{ option.name }}
+                                        </div>
+
+                                    </template>
+                                </multi-select>
 
                                 <input-error :message="form.errors.id_product" />
                             </div>

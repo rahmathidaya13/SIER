@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Leads;
+namespace App\Repository\Lead;
 
 use App\Models\User;
 use App\Models\LeadModel;
@@ -11,10 +11,11 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class LeadsRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'leads_cache';
-    protected function getData(string|int|null $branchId, array $filters = []): LengthAwarePaginator
+
+    protected function buildBaseQuery(array $filters = [])
     {
         $query = LeadModel::query()
-            ->allowedForUser(auth()->user())
+            ->allowedForUser()
             ->joinUserRole()
             ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')
             ->leftJoin('products', 'products.id_product', '=', 'leads.id_product')
@@ -58,10 +59,20 @@ class LeadsRepository extends BaseCacheRepository
             });
         });
 
+
+        return $query;
+    }
+
+    protected function getData(string|int|null $branchId, array $filters = []): LengthAwarePaginator
+    {
+
+        $query = $this->buildBaseQuery($filters);
         [$column, $direction] = $this->resolveSorting($filters);
+
         return $query
             ->orderBy($column, $direction)
-            ->paginate($filters['limit'] ?? 10);
+            ->paginate($filters['limit'] ?? 10)
+            ->withQueryString();
     }
 
     protected function resolveTemperature(array $filters): ?string
@@ -75,7 +86,7 @@ class LeadsRepository extends BaseCacheRepository
     }
     protected function resolveStatus(array $filters): ?string
     {
-        return match ($filters['status'] ?? 'all') {
+        return match ($filters['status'] ?? 'new') {
             'new' => 'NEW',
             'follow_up' => 'FOLLOW_UP',
             'closed_won' => 'CLOSED_WON',
