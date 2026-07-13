@@ -37,17 +37,7 @@ class LoginController extends Controller
 
         $this->authenticate($request);
         $request->session()->regenerate();
-        $user = auth()->user();
 
-        if ($user->is_active === 'inactive') {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            throw ValidationException::withMessages([
-                'email' => 'Akun Anda dinonaktifkan. Akses ditolak.',
-            ]);
-        }
         return redirect(RouteServiceProvider::HOME)->with('message', 'Login berhasil. Selamat datang kembali.');
     }
     public function authenticate(Request $request): void

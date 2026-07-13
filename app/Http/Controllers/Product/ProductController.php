@@ -8,6 +8,15 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
+    public function index(Request $request) {}
+
+    public function show(ProductModel $product) {}
+
+    public function store(Request $request) {}
+
+    public function update(Request $request, ProductModel $product) {}
+
+    public function destroy(ProductModel $product) {}
     public function productSearch(Request $request)
     {
         $keyword = $request->input('keyword');

@@ -41,13 +41,12 @@ class LeadController extends Controller
         $filters = $request->only([
             'keyword',
             'limit',
-            'temperature',
+            'periode',
             'status',
             'order_by',
             'page',
 
         ]);
-
         $filters = app(ScopeResolverService::class)->filters($filters);
 
         $leads = $this->repository->getCached($this->scopeId($user), $filters);

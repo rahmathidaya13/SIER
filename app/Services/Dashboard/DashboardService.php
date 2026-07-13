@@ -131,7 +131,7 @@ class DashboardService
         */
         $monthlyTrend = [];
         $daysInMonth = $dates->daysInMonth;
-        // Buat kerangka 7 hari terakhir (H-6 sampai H-0)
+
         for ($i = 1; $i <= $daysInMonth; $i++) {
             $dateKey = $dates->copy()->day($i)->format('Y-m-d');
             $dateLabel = $dates->copy()->day($i)->format('d M'); // Format UI: 12 Jul
@@ -158,7 +158,6 @@ class DashboardService
             ->groupBy('date')
             ->get();
 
-        // Gabungkan data dari database ke kerangka 7 hari
         foreach ($trendData as $row) {
             if (isset($monthlyTrend[$row->date])) {
                 $monthlyTrend[$row->date]['total'] = (int) $row->total_leads;

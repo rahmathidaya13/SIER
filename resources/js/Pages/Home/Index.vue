@@ -11,7 +11,6 @@ const props = defineProps({
     },
     filters: Object
 })
-console.log(props.stats);
 const {
     filters,
 } = useFilter({
@@ -128,6 +127,7 @@ const branchOptions = computed(() => [
         value: data.name,
     }))
 ])
+console.log((Math.max(props.stats.total_leads, 1)));
 </script>
 <template>
 
@@ -144,7 +144,7 @@ const branchOptions = computed(() => [
                                 <i class="bi bi-funnel-fill"></i>
                                 Saring Prospek
                             </h5>
-                            <small class="px-4 text-muted">filter berdasarkan Bulan dan Tahun</small>
+                            <small class="px-4 text-muted">Filter berdasarkan Bulan dan Tahun</small>
                         </span>
                         <div class="d-flex gap-2 bg-white p-2 rounded-3 border text-dark align-items-center ms-auto">
 
@@ -155,7 +155,7 @@ const branchOptions = computed(() => [
                                 class="form-select form-select-sm focus-none fw-semibold">
                                 <option v-for="month in months" :key="month.value" :value="month.value">{{
                                     month.label
-                                }}
+                                    }}
                                 </option>
                             </select>
                             <div class="vr my-1"></div>

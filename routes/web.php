@@ -33,7 +33,7 @@ Route::get('/', function () {
 //     return Inertia::render('Test/page');
 // })->name('leads');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'check.status.active'])->group(function () {
     Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 
     Route::controller(HomeController::class)->group(function () {

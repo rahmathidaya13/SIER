@@ -5,16 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProductModel extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
     protected $table = 'products';
     protected $primaryKey = 'id_product';
     public $incrementing = false; // Karena pakai UUID
     protected $keyType = 'string';
     protected $fillable = [
         'created_by',
+        'product_code',
         'source',
         'name',
         'slug',
@@ -24,6 +26,26 @@ class ProductModel extends Model
         'image_link',
         'image_path',
     ];
+
+    public static function boot()
+    {
+        parent::boot();
+        static::creating(function ($product) {
+            $product->product_code = self::generateUniqueCode();
+            $product->created_by = auth()->user()->id;
+        });
+    }
+
+    public static function generateUniqueCode()
+    {
+        do {
+            $randomNumber = str_pad(mt_rand(0, 99999999), 8, '0', STR_PAD_LEFT);
+            $code = $randomNumber;
+        } while (self::where('product_code', $code)->exists());
+        // Kembalikan kode yang sudah dipastikan unik
+        return $code;
+    }
+
     public function leads()
     {
         return $this->hasMany(LeadModel::class, 'id_product', 'id_product');

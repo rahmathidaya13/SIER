@@ -43,11 +43,25 @@ class LeadsRepository extends BaseCacheRepository
         $status = $this->resolveStatus($filters);
         $query->when(
             !empty($status),
-            fn($q) => $q->where('leads.status', $status)
+            function ($q) use ($status) {
+                if (is_array($status)) {
+                    $q->whereIn('leads.status', $status);
+                } else {
+                    $q->where('leads.status', $status);
+                }
+            }
         );
-        $temperature = $this->resolveTemperature($filters);
-        $query->when(!empty($temperature), function ($query) use ($temperature) {
-            $query->where('leads.temperature', $temperature);
+
+        $query->when(!empty($filters['periode']), function ($q) use ($filters) {
+            $datePart = explode('-', $filters['periode']);
+
+            if (count($datePart) === 2) {
+                $year = $datePart[0];
+                $month = $datePart[1];
+
+                $q->whereMonth('leads.created_at', $month)
+                    ->whereYear('leads.created_at', $year);
+            }
         });
 
         $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
@@ -65,41 +79,31 @@ class LeadsRepository extends BaseCacheRepository
 
     protected function getData(string|int|null $branchId, array $filters = []): LengthAwarePaginator
     {
-
         $query = $this->buildBaseQuery($filters);
         [$column, $direction] = $this->resolveSorting($filters);
-
         return $query
             ->orderBy($column, $direction)
             ->paginate($filters['limit'] ?? 10)
             ->withQueryString();
     }
 
-    protected function resolveTemperature(array $filters): ?string
+
+    protected function resolveStatus(array $filters): string|array|null
     {
-        return match ($filters['temperature'] ?? 'all') {
-            'hot' => 'HOT',
-            'warm' => 'WARM',
-            'cold' => 'COLD',
-            default => null,
-        };
-    }
-    protected function resolveStatus(array $filters): ?string
-    {
-        return match ($filters['status'] ?? 'new') {
+        return match ($filters['status'] ?? 'active') {
             'new' => 'NEW',
             'follow_up' => 'FOLLOW_UP',
             'closed_won' => 'CLOSED_WON',
             'closed_lost' => 'CLOSED_LOST',
+            'active' => ['NEW', 'FOLLOW_UP'],
+            'all' => null,
             default => null,
         };
     }
     protected function resolveSorting(array $filters): ?array
     {
         return match ($filters['order_by'] ?? 'latest') {
-
             'oldest' => ['leads.created_at', 'asc'],
-
             default => ['leads.created_at', 'desc'],
         };
     }

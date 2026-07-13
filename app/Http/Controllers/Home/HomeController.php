@@ -19,12 +19,13 @@ class HomeController extends Controller
     }
     public function index(Request $request)
     {
+
         $month = $request->input('month', now()->month);
         $year  = $request->input('year', now()->year);
         $branchName = $request->input('branch', '');
 
-        $branchId = null;
 
+        $branchId = null;
         if (!empty($branchName)) {
             $branch = BranchModel::where('name', $branchName)->first();
             $branchId = $branch ? $branch->id_branch : null;

@@ -12,7 +12,10 @@ export function cleanFilters(filters) {
                 value !== null &&
                 value !== undefined &&
                 value !== "" &&
-                value !== "all"
+                value !== 0 &&
+                value !== "undefined" &&
+                value !== "null" &&
+                value !== "0"
             );
         })
     );

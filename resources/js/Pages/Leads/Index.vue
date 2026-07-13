@@ -16,7 +16,14 @@ const props = defineProps({
     products: Array,
     role_name: String
 });
-console.log(props.leads);
+
+const getCurrentMonth = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+}
 const {
     filters,
     isLoading,
@@ -25,16 +32,16 @@ const {
     initialFilters: {
         keyword: props.filters.keyword ?? '',
         limit: props.filters.limit ?? 10,
-        status: props.filters.status ?? 'new',
-        temperature: props.filters.temperature ?? 'all',
+        status: props.filters.status ?? 'active',
+        periode: props.filters.periode ?? getCurrentMonth(),
         order_by: props.filters.order_by ?? 'latest',
         page: props.filters.page ?? 1,
     },
     watchFields: [
         'keyword',
         'limit',
+        'periode',
         'status',
-        'temperature',
         'order_by',
     ],
     only: ['leads', 'filters', 'channels', 'products'],
@@ -125,40 +132,6 @@ const keywordRef = ref(null);
 onMounted(() => {
     keywordRef.value.focus();
 })
-
-const leadActions = [
-    {
-        label: 'Jadikan Deal (Closing)',
-        action: 'deals',
-        protectedSelf: true,
-        icon: 'bi bi-bag-check-fill',
-        title: 'Jadikan Deal (Closing)',
-        class: 'btn btn-c-success opacity-75',
-        disabled: (item) => item.status !== 'CLOSED_WON',
-    },
-    {
-        label: 'Ubah Data Lead',
-        action: 'edit',
-        protectedSelf: true,
-        icon: 'bi bi-pencil-square',
-        title: 'Ubah Data Lead',
-        buttonClass: 'btn-action',
-        variant: 'edit',
-        show: (item) => item.status !== 'CLOSED_WON',
-
-    },
-    {
-        label: 'Hapus Data Lead',
-        action: 'delete',
-        protectedSelf: true,
-        icon: 'bi bi-trash',
-        buttonClass: 'btn-action',
-        variant: 'delete',
-        title: 'Hapus Data Lead',
-        disabled: (item) => item.status !== 'CLOSED_WON',
-
-    },
-];
 
 const isOverdue = (dateString, status) => {
     if (!dateString || status === 'CLOSED_WON' || status === 'CLOSED_LOST') return false;
@@ -270,6 +243,7 @@ const getRoleName = (roleName) => {
     };
     return roles[roleName] || 'bg-light text-dark border';
 };
+
 </script>
 <template>
 
@@ -304,20 +278,15 @@ const getRoleName = (roleName) => {
                                 </div>
                             </div>
                             <div class="col-xl-2 col-3 col-md-3 col-lg-3">
-                                <select-input :isValid="false" name="temperature" v-model="filters.temperature"
-                                    text="Suhu Prospek" :options="[
-                                        { label: '🌍 Semua Suhu', value: 'all' },
-                                        { label: '🔥 HOT (Siap Bayar)', value: 'hot' },
-                                        { label: '🌤️ WARM (Tanya Detail)', value: 'warm' },
-                                        { label: '❄️ COLD (Hanya Kepo)', value: 'cold' }
-                                    ]" />
+                                <input-text :isValid="false" type="month" name="periode" v-model="filters.periode" />
                             </div>
                             <div class="col-xl-2 col-3 col-md-3 col-lg-3">
                                 <select-input :isValid="false" name="status" v-model="filters.status"
                                     text="Status Prospek" :options="[
-                                        { label: '📋 Semua Status', value: 'all' },
-                                        { label: '🆕 Baru Masuk', value: 'new' },
-                                        { label: '📞 Follow Up', value: 'follow_up' },
+                                        { label: '📋 Semua Riwayat Data', value: 'all' },
+                                        { label: '🔥 Prospek Aktif (Baru Masuk & Follow Up)', value: 'active' },
+                                        { label: '🆕 Hanya Baru Masuk', value: 'new' },
+                                        { label: '📞 Hanya Follow Up', value: 'follow_up' },
                                         { label: '🎉 Closing / Terjual', value: 'closed_won' },
                                         { label: '❌ Tidak Jadi', value: 'closed_lost' }
                                     ]" />
@@ -488,9 +457,9 @@ const getRoleName = (roleName) => {
                                             :additionalQuery="{
                                                 keyword: filters.keyword,
                                                 status: filters.status,
+                                                periode: filters.periode,
                                                 limit: filters.limit,
                                                 order_by: filters.order_by,
-                                                temperature: filters.temperature
                                             }" :only="['leads', 'filters', 'channels', 'products']" />
                                     </div>
                                 </template>
