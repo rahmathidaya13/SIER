@@ -41,7 +41,8 @@ class ProductRepository extends BaseCacheRepository
             $search = $filters['keyword'];
 
             $q->where(function ($subQuery) use ($search) {
-                $subQuery->where('products.name', 'like', "%{$search}%");
+                $subQuery->where('products.name', 'like', "%{$search}%")
+                    ->orWhere('products.product_code', 'like', "%{$search}%");
             });
         });
         return $query;

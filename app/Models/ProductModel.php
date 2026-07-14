@@ -21,6 +21,7 @@ class ProductModel extends Model
         'name',
         'slug',
         'category',
+        'type_item',
         'item_condition',
         'link',
         'image_link',

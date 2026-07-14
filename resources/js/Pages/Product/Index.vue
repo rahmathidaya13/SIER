@@ -4,6 +4,7 @@ import { useFilter } from '@/Composables/useFilter';
 import { hasRole } from '@/Composables/useAuth';
 import { computed, ref } from 'vue';
 import { formatDate } from '@/Helpers/formatDate';
+import { highlight } from '@/Helpers/Highlight';
 import FormModal from './FormModal.vue';
 const props = defineProps({
     products: Object,
@@ -124,7 +125,7 @@ const getImageUrl = (item) => {
                             </div>
                         </div>
 
-                        <!-- <div class="row p-3 g-2 align-items-center">
+                        <div class="row p-3 g-2 align-items-center">
                             <div class="col-12 col-md-12 col-lg-12 col-xl-6">
                                 <div class="position-relative">
                                     <i class="bi bi-search input-icon-left"></i>
@@ -133,20 +134,7 @@ const getImageUrl = (item) => {
                                         placeholder="Cari nama...." />
                                 </div>
                             </div>
-                            <div class="col-xl-2 col-3 col-md-3 col-lg-3">
-                                <input-text :isValid="false" type="month" name="periode" v-model="filters.periode" />
-                            </div>
-                            <div class="col-xl-2 col-3 col-md-3 col-lg-3">
-                                <select-input :isValid="false" name="status" v-model="filters.status"
-                                    text="Status Prospek" :options="[
-                                        { label: '📋 Semua Riwayat Data', value: 'all' },
-                                        { label: '🔥 Prospek Aktif (Baru Masuk & Follow Up)', value: 'active' },
-                                        { label: '🆕 Hanya Baru Masuk', value: 'new' },
-                                        { label: '📞 Hanya Follow Up', value: 'follow_up' },
-                                        { label: '🎉 Closing / Terjual', value: 'closed_won' },
-                                        { label: '❌ Tidak Jadi', value: 'closed_lost' }
-                                    ]" />
-                            </div>
+
                             <div class="col-xl-1 col-3 col-md-3 col-lg-3">
                                 <select-input :isValid="false" name="limit" v-model="filters.limit"
                                     text="Pilih Batas Data" :options="[
@@ -164,7 +152,7 @@ const getImageUrl = (item) => {
                                     ]" />
                             </div>
 
-                        </div> -->
+                        </div>
 
                         <div class="card-body p-0">
                             <table-wrapper :loader="isLoading" loaderText="Sedang memuat data..." :headers="header"
@@ -196,14 +184,21 @@ const getImageUrl = (item) => {
                                     </td>
 
                                     <td>
-                                        <div class="fw-bold text-dark mb-1">{{ item.product_name }}</div>
-                                        <div class="d-flex gap-2">
-                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border">
-                                                <i class="bi bi-tag me-1"></i>{{ item.category }}
-                                            </span>
-                                            <span class="badge bg-info bg-opacity-10 text-info border text-capitalize">
-                                                {{ item.condition }}
-                                            </span>
+                                        <div class="fw-bold text-dark mb-1"
+                                            v-html="highlight(item.product_name, filters.keyword)"></div>
+                                        <div class="d-block">
+                                            <div class="gap-2 d-flex mb-1">
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border">
+                                                    <i class="bi bi-tag me-1"></i>{{ item.category }}
+                                                </span>
+                                                <span
+                                                    class="badge bg-info bg-opacity-10 text-info border text-capitalize">
+                                                    {{ item.condition }}
+                                                </span>
+                                            </div>
+                                            <a :href="item.link" class="small text-decoration-none" target="_blank">
+                                                <i class="bi bi-arrow-up-right me-1"></i>
+                                                Klik di sini untuk melihat produk</a>
                                         </div>
                                     </td>
 

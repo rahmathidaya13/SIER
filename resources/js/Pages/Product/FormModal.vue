@@ -26,6 +26,7 @@ const form = useForm({
     name: '',
     category: null,
     item_condition: 'new',
+    type_item: null,
     source: 'manual',
     link: '',
     image: null,
@@ -60,6 +61,7 @@ const fillForm = (data) => {
         name: data.name,
         category: data.category || null,
         item_condition: data.item_condition,
+        type_item: data.type_item,
         source: data.source,
         link: data.link,
         image: null,
@@ -77,6 +79,7 @@ const resetForm = () => {
         name: '',
         category: null,
         item_condition: 'new',
+        type_item: null,
         source: 'manual',
         link: '',
         image: null,
@@ -155,80 +158,144 @@ const imagePreview = ref(null);
 
                     <form-wrapper @submit.prevent="submit">
                         <div class="row g-4">
+                            <div class="col-lg-4">
+                                <h6 class="fw-bold text-dark mb-3">Foto Produk</h6>
 
-                            <div class="col-xl-7">
-                                <h6 class="fw-bold text-muted small text-uppercase mb-3">Informasi Dasar</h6>
-                                <div class="mb-3">
-                                    <label for="product_name_input" class="form-label fw-medium small">Nama Produk <span
-                                            class="text-danger">*</span></label>
-                                    <input-text v-model="form.name" name="product_name"
-                                        placeholder="Cth: Sepatu Kasual" />
-                                    <input-error :message="form.errors.name" />
-                                </div>
-                                <div class="row g-3 mb-3">
-                                    <div class="col-md-6">
-                                        <label for="category_input" class="form-label fw-medium small">Kategori <span
-                                                class="text-danger">*</span></label>
-                                        <select-input text="Pilih Kategori Produk" name="category"
-                                            v-model="form.category" :options="categoryOptions" />
+                                <div class="image-upload-box position-relative rounded-4 border border-2 border-dashed bg-light text-center transition-all"
+                                    :class="{ 'border-primary': imagePreview, 'border-secondary': !imagePreview }">
+
+                                    <input type="file" @change="handleImageUpload"
+                                        class="position-absolute top-0 start-0 w-100 h-100 opacity-0"
+                                        style="cursor: pointer;" accept="image/*">
+
+                                    <div v-if="imagePreview" class="w-100 h-100 position-relative p-2">
+                                        <img :src="imagePreview"
+                                            class="img-fluid rounded-3 object-fit-cover w-100 h-100"
+                                            style="min-height: 250px;">
+                                        <div class="position-absolute bottom-0 start-50 translate-middle-x mb-3">
+                                            <span
+                                                class="badge bg-dark bg-opacity-75 px-3 py-2 rounded-pill shadow-sm">Klik
+                                                untuk ganti foto</span>
+                                        </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-medium small">Kondisi Barang</label>
-                                        <select v-model="form.item_condition" class="form-select">
-                                            <option value="new">Baru (New)</option>
-                                            <option value="used">Bekas (Used)</option>
-                                            <option value="refurbished">Refurbished</option>
-                                            <option value="damaged">Rusak (Damaged)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="row g-3 mb-4">
-                                    <div class="col-md-8">
-                                        <label class="form-label fw-medium small">Link/URL Referensi</label>
-                                        <input type="url" v-model="form.link" class="form-control"
-                                            :disabled="form.source === 'manual'" placeholder="Wajib jika Scrape">
+
+                                    <div v-else
+                                        class="py-5 px-4 d-flex flex-column align-items-center justify-content-center"
+                                        style="min-height: 250px;">
+                                        <div class="bg-white p-3 rounded-circle shadow-sm mb-3 text-primary">
+                                            <i class="bi bi-camera fs-2"></i>
+                                        </div>
+                                        <span class="fw-bold text-dark">Upload Gambar</span>
+                                        <small class="text-muted mt-1">Klik atau drag & drop file<br>Maksimal ukuran
+                                            2MB.</small>
                                     </div>
                                 </div>
+                                <div v-if="form.errors.image" class="text-danger small mt-2 fw-medium text-center">{{
+                                    form.errors.image }}</div>
                             </div>
 
-                            <div class="col-lg-5 border-start">
-                                <h6 class="fw-bold text-muted small text-uppercase mb-3">Media Foto</h6>
-                                <div class="mb-4">
-                                    <div v-if="isEdit && (product?.image_path || product?.image_link)"
-                                        class="mb-2 text-center bg-light p-2 rounded border">
-                                        <img :src="product.image_link || `/storage/${product.image_path}`"
-                                            class="img-fluid rounded" style="max-height: 120px; object-fit: cover;">
+                            <div class="col-xl-8">
+                                <h6 class="fw-bold text-muted small text-uppercase mb-3">Informasi Dasar</h6>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12">
+                                        <input-label for="product_name_input" labelClass="fw-medium text-secondary small mb-2"
+                                            value="Nama Produk" />
+                                        <input-text v-model="form.name" name="product_name" :error="form.errors.name"
+                                            placeholder="Cth:Mesin cetak mie mks-200" />
+                                        <input-error :message="form.errors.name" />
                                     </div>
-
-                                    <label class="form-label fw-medium small">Upload File</label>
-                                    <input type="file" @input="form.image = $event.target.files[0]"
-                                        class="form-control form-control-sm" accept="image/*">
-                                    <small class="text-muted" style="font-size: 11px;">Maksimal 2MB. Biarkan kosong jika
-                                        tidak diubah.</small>
+                                    <div class="col-md-6">
+                                        <input-label for="category_input" labelClass="fw-medium text-secondary small mb-2"
+                                            value="Kategori" />
+                                        <select-input text="Pilih Kategori Produk" name="category"
+                                            :error="form.errors.category" v-model="form.category"
+                                            :options="categoryOptions" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input-label for="condition_input" labelClass="fw-medium text-secondary small mb-2"
+                                            value="Kondisi Barang" />
+                                        <select-input v-model="form.item_condition" name="condition"
+                                            :error="form.errors.item_condition" :options="[
+                                                { value: 'new', label: 'Baru (New)' },
+                                                { value: 'used', label: 'Bekas (Used)' },
+                                                { value: 'refurbished', label: 'Refurbished' },
+                                                { value: 'damaged', label: 'Rusak (Damaged)' },
+                                                { value: 'discontinued', label: 'Discontinued' },
+                                            ]" />
+                                        <input-error :message="form.errors.item_condition" />
+                                    </div>
+                                    <div class="col-12">
+                                        <input-label for="type_item_input" labelClass="fw-medium text-secondary small mb-2"
+                                            value="Tipe Produk" />
+                                        <select-input text="Pilih tipe produk" v-model="form.type_item"
+                                            name="type_item" :error="form.errors.type_item" :options="[
+                                                { value: 'machine', label: 'Mesin' },
+                                                { value: 'sparepart', label: 'Sparepart' },
+                                                { value: 'accessories', label: 'Aksesoris' },
+                                                { value: 'other', label: 'Lainnya' },
+                                            ]" />
+                                        <input-error :message="form.errors.type_item" />
+                                    </div>
+                                    <div class="col-12">
+                                        <input-label for="link_input" labelClass="fw-medium text-secondary small mb-2"
+                                            value="Link/URL Referensi (Opsional)" />
+                                        <input-text v-model="form.link" name="link" :error="form.link"
+                                            placeholder="https://" />
+                                        <input-error :message="form.errors.link" />
+                                    </div>
                                 </div>
 
-                                <h6 class="fw-bold text-muted small text-uppercase mt-4 mb-3 pt-3 border-top">Masa
-                                    Berlaku Harga</h6>
-                                <div class="row g-2 mb-4">
-                                    <div class="col-6">
-                                        <label class="form-label fw-medium small mb-1">Mulai</label>
-                                        <input type="date" v-model="form.valid_from"
-                                            class="form-control form-control-sm">
+                                <h6 class="fw-bold text-muted small text-uppercase mt-2">Penetapan Harga</h6>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-8 col-12">
+                                        <input-label for="base_price_input"
+                                            labelClass="fw-medium text-secondary small mb-2" value="Harga Dasar" />
+                                        <input-currency v-model="form.base_price" name="base_price" :decimals="0"
+                                            :error="form.errors.base_price" />
+                                        <input-error :message="form.errors.base_price" />
                                     </div>
-                                    <div class="col-6">
-                                        <label class="form-label fw-medium small mb-1">Sampai (Opsional)</label>
-                                        <input type="date" v-model="form.valid_until"
-                                            class="form-control form-control-sm">
+
+                                    <div class="col-md-4 col-12">
+                                        <input-label for="discount_percentage_input"
+                                            labelClass="fw-bold text-danger small mb-2" value="Diskon (%)" />
+                                        <input-number placeholdeer="0" :maxChar="5" v-model="form.discount_percentage"
+                                            inputClass="text-danger" name="discount_percentage"
+                                            :error="form.errors.discount_percentage" />
+                                        <input-error :message="form.errors.discount_percentage" />
+                                    </div>
+                                    <div class="col-12">
+                                        <input-label labelClass="fw-bold text-success small mb-2" value="Harga Akhir" />
+                                        <input-number :maxChar="5" v-model="form.discount_price"
+                                            inputClass="text-success" name="discount_price"
+                                            :error="form.errors.discount_price" />
+                                        <input-error :message="form.errors.discount_price" />
                                     </div>
                                 </div>
 
-                                <h6 class="fw-bold text-muted small text-uppercase mt-4 mb-3 pt-3 border-top">Publikasi
-                                </h6>
-                                <div>
-                                    <select v-model="form.status" class="form-select form-select-lg fs-6">
-                                        <option value="published">✅ Aktif (Published)</option>
-                                        <option value="draft">📁 Draf (Draft)</option>
-                                    </select>
+                                <div class="row g-3 bg-light rounded-4 border mt-3 pb-4 px-2">
+                                    <div class="col-md-6 col-12">
+                                        <input-label for="status_select"
+                                            labelClass="fw-medium text-secondary small mb-2" value="Status
+                                            Publikasi" />
+                                        <select-input v-model="form.status" name="status" :error="form.errors.status"
+                                            :selectClass="form.status === 'published' ? 'text-success border-success' : 'text-secondary'"
+                                            :options="[{ value: 'published', label: '✅ Published' }, { value: 'draft', label: '📁 Draft' }]" />
+                                        <input-error :message="form.errors.status" />
+                                    </div>
+                                    <div class="col-md-6 col-12">
+                                        <input-label for="valid_from_input"
+                                            labelClass="fw-medium text-secondary small mb-2" value="Berlaku Mulai" />
+                                        <input-text type="date" v-model="form.valid_from" name="valid_from"
+                                            :error="form.errors.valid_from" />
+                                        <input-error :message="form.errors.valid_from" />
+                                    </div>
+                                    <div class="col-12">
+                                        <input-label for="valid_until_input"
+                                            labelClass="fw-medium text-secondary small mb-2"
+                                            value="Berlaku Sampai(Optional)" />
+                                        <input-text type="date" v-model="form.valid_until" name="valid_until"
+                                            :error="form.errors.valid_until" />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -237,7 +304,7 @@ const imagePreview = ref(null);
                 </template>
 
                 <template #footer>
-                    <!-- <div class="d-flex justify-content-end gap-2 p-2 bg-transparent">
+                    <div class="d-flex justify-content-end gap-2 p-2 bg-transparent">
                         <button type="button" class="btn btn-c-slate border-0 fw-medium px-4"
                             @click.prevent="close">Batal</button>
                         <button @click.prevent="submit" type="button" :disabled="form.processing"
@@ -246,7 +313,7 @@ const imagePreview = ref(null);
                             <i v-else :class="isEdit ? 'bi bi-check-circle me-1' : 'bi bi-save me-1'"></i>
                             {{ submitTextButton }}
                         </button>
-                    </div> -->
+                    </div>
                 </template>
 
             </modal>
