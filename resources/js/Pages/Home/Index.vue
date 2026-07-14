@@ -127,7 +127,6 @@ const branchOptions = computed(() => [
         value: data.name,
     }))
 ])
-console.log((Math.max(props.stats.total_leads, 1)));
 </script>
 <template>
 

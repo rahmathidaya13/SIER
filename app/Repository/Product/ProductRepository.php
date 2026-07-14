@@ -13,11 +13,13 @@ class ProductRepository extends BaseCacheRepository
     {
         $query = ProductModel::query()
             ->leftJoin('users', 'products.created_by', '=', 'users.id')
-            ->leftJoin('prices', 'products.id_product', '=', 'prices.id_product')
+            ->leftJoin('product_price', 'products.id_product', '=', 'product_price.id_product')
             ->select([
                 'products.id_product',
                 'products.name as product_name',
                 'products.created_by as id_user',
+                'products.product_code as code',
+                'products.source',
                 'products.category',
                 'products.slug',
                 'products.item_condition as condition',
@@ -27,13 +29,13 @@ class ProductRepository extends BaseCacheRepository
                 'products.created_at',
                 'products.updated_at',
                 'users.name as creator_name',
-                'prices.status',
-                'prices.valid_from',
-                'prices.valid_until',
-                'prices.base_price',
-                'prices.discount_percentage',
-                'prices.discount_price',
-                'prices.price_type',
+                'product_price.status',
+                'product_price.valid_from',
+                'product_price.valid_until',
+                'product_price.base_price',
+                'product_price.discount_percentage',
+                'product_price.discount_price',
+                'product_price.price_type',
             ]);
         $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
             $search = $filters['keyword'];

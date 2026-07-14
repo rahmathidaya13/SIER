@@ -101,7 +101,6 @@ const bestChannel = computed(() => {
     const maxRate = Math.max(...activeChannels.map((ch) => Number(ch.conversion_rate)));
     if (maxRate === 0) return null;
     const topChannels = activeChannels.filter((c) => Number(c.conversion_rate) === maxRate);
-    console.log(topChannels);
     return {
         names: topChannels.map((c) => c.name).join(" , "),
         rate: maxRate,

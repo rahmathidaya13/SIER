@@ -33,3 +33,9 @@
     color: var(--c-dark);
     border: 1px solid #cbd5e1;
 }
+
+.badge-soft-slate {
+    background-color: var(--c-slate-subtle);
+    color: var(--c-slate);
+    border: 1px solid #e2e8f0;
+}

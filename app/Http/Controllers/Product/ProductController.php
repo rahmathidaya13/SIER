@@ -2,15 +2,47 @@
 
 namespace App\Http\Controllers\Product;
 
-use App\Http\Controllers\Controller;
+use App\Traits\UserScope;
 use App\Models\ProductModel;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Repository\Product\ProductRepository;
+use App\Services\Authorization\ScopeResolverService;
 
 class ProductController extends Controller
 {
-    public function index(Request $request) {}
+    use UserScope;
+    protected $repository;
+    protected $scopeResolverService;
 
-    public function show(ProductModel $product) {}
+    public function __construct(ProductRepository $repository)
+    {
+        $this->repository = $repository;
+        $this->scopeResolverService = new ScopeResolverService();
+    }
+    public function index(Request $request)
+    {
+        $filters = $request->only([
+            'keyword',
+            'limit',
+            'order_by',
+            'page',
+        ]);
+        $filters = $this->scopeResolverService->filters($filters);
+        $products = $this->repository->getCached($this->scopeId(auth()->user()), $filters);
+        $category = ProductModel::select('category')->distinct()->get();
+        return inertia('Product/Index', [
+            'products' => $products,
+            'category' => $category,
+            'filters' => $filters
+        ]);
+    }
+
+    public function show(ProductModel $product)
+    {
+        $product->load(['prices', 'creator']);
+        return response()->json($product);
+    }
 
     public function store(Request $request) {}
 

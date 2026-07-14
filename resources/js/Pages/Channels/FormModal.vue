@@ -101,20 +101,20 @@ const submitTextButton = computed(() => {
 
 
 const presetIcons = [
-    'bi-whatsapp text-success',
-    'bi-instagram text-danger',
-    'bi-tiktok text-dark',
-    'bi-facebook text-primary',
-    'bi-twitter-x text-dark',
-    'bi-youtube text-danger',
-    'bi-telegram text-primary',
-    'bi-shop text-success',
-    'bi-bag-fill text-warning',
-    'bi-globe text-info',
-    'bi-megaphone text-warning',
-    'bi-envelope text-danger',
-    'bi-telephone text-success',
-    'bi-people-fill text-info',
+    { icons: 'bi-whatsapp text-success', title: 'WhatsApp' },
+    { icons: 'bi-instagram text-danger', title: 'Instagram' },
+    { icons: 'bi-tiktok text-dark', title: 'Tiktok' },
+    { icons: 'bi-facebook text-primary', title: 'Facebook' },
+    { icons: 'bi-twitter-x text-dark', title: 'Twitter' },
+    { icons: 'bi-youtube text-danger', title: 'Youtube' },
+    { icons: 'bi-telegram text-primary', title: 'Telegram' },
+    { icons: 'bi-shop text-success', title: 'Datang Ke Toko' },
+    { icons: 'bi-bag-fill text-warning', title: 'Shopee' },
+    { icons: 'bi-globe text-info', title: 'Website' },
+    { icons: 'bi-megaphone text-warning', title: 'Broadcast' },
+    { icons: 'bi-envelope text-danger', title: 'Email' },
+    { icons: 'bi-telephone text-success', title: 'Telepon' },
+    { icons: 'bi-people-fill text-info', title: 'Referensi Teman' },
 ];
 const selectIcon = (iconClass) => {
     form.icon = iconClass;
@@ -154,14 +154,14 @@ const selectIcon = (iconClass) => {
                         <div class="mb-4">
                             <label class="form-label fw-semibold text-muted small">Pilih Ikon Platform</label>
                             <div class="d-flex flex-wrap gap-2 bg-c-light border align-items-center rounded-3 p-3">
-                                <button v-for="icons in presetIcons" :key="icons" type="button"
-                                    @click="selectIcon(icons)"
+                                <button v-for="icn in presetIcons" :key="icn.icons" type="button" :title="icn.title"
+                                    @click="selectIcon(icn.icons)"
                                     class="btn btn-light border shadow-sm fs-3 d-flex align-items-center justify-content-center transition-all"
                                     style="width: 60px; height: 60px;" :class="[
-                                        { 'border-primary border-1 text-primary scale-up': form.icon === icons },
-                                        { 'bg-white': form.icon !== icons }
+                                        { 'border-primary border-1 text-primary scale-up': form.icon === icn.icons },
+                                        { 'bg-white': form.icon !== icn.icons }
                                     ]">
-                                    <i :class="icons"></i>
+                                    <i :class="icn.icons"></i>
                                 </button>
                             </div>
                             <input-error :message="form.errors.icon" />

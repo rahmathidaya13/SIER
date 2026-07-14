@@ -19,6 +19,13 @@ const menuItems = [
         prefixUrl: 'home*'
     },
     {
+        title: 'Produk',
+        icon: 'bi bi-bag-check-fill',
+        route: 'product.index',
+        prefixUrl: 'product*'
+
+    },
+    {
         title: 'Data Leads',
         icon: 'bi bi-person-vcard',
         route: 'leads.index',

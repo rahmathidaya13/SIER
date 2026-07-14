@@ -60,7 +60,12 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
     });
 
     Route::controller(ProductController::class)->group(function () {
+        Route::get('/product/list', 'index')->name('product.index');
+        Route::get('/product/show/{product}', 'show')->name('product.show');
         Route::get('/product/keyword', 'productSearch')->name('product.search');
+        Route::post('/product/store', 'store')->name('product.store');
+        Route::put('/product/update/{product}', 'update')->name('product.update');
+        Route::delete('/product/delete/{product}', 'destroy')->name('product.delete');
     });
 
     Route::controller(ChannelController::class)->group(function () {

@@ -31,8 +31,9 @@ class ProductModel extends Model
     {
         parent::boot();
         static::creating(function ($product) {
-            $product->product_code = self::generateUniqueCode();
-            $product->created_by = auth()->user()->id;
+            if (empty($product->product_code)) {
+                $product->product_code = self::generateUniqueCode();
+            }
         });
     }
 
