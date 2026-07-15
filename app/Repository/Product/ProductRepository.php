@@ -5,15 +5,25 @@ namespace App\Repository\Product;
 use App\Models\ProductModel;
 use App\Repository\BaseCacheRepository;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class ProductRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'product_cache_';
     public function buildBaseQuery($filters = [])
     {
-        $query = ProductModel::query()
+        $query = DB::table('products')
+            ->whereNull('products.deleted_at')
             ->leftJoin('users', 'products.created_by', '=', 'users.id')
-            ->leftJoin('product_price', 'products.id_product', '=', 'product_price.id_product')
+            ->leftJoin('product_price', function ($join) {
+                $join->on('products.id_product', '=', 'product_price.id_product')
+                    ->whereNull('product_price.deleted_at')
+                    ->where('product_price.status', '=', 'published')
+                    ->where(function ($q) {
+                        $q->whereNull('product_price.valid_until')
+                            ->orWhere('product_price.valid_until', '>=', now()->toDateString());
+                    });
+            })
             ->select([
                 'products.id_product',
                 'products.name as product_name',
@@ -39,10 +49,10 @@ class ProductRepository extends BaseCacheRepository
             ]);
         $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
             $search = $filters['keyword'];
-
             $q->where(function ($subQuery) use ($search) {
                 $subQuery->where('products.name', 'like', "%{$search}%")
-                    ->orWhere('products.product_code', 'like', "%{$search}%");
+                    ->orWhere('products.product_code', 'like', "%{$search}%")
+                    ->orWhere('products.category', 'like', "%{$search}%");
             });
         });
         return $query;
@@ -54,9 +64,9 @@ class ProductRepository extends BaseCacheRepository
         [$column, $direction] = $this->resolveSorting($filters);
         return $query
             ->orderBy($column, $direction)
-            ->paginate($filters['limit'] ?? 10)
-            ->withQueryString();
+            ->paginate($filters['limit'] ?? 10);
     }
+
 
     protected function resolveSorting(array $filters): ?array
     {

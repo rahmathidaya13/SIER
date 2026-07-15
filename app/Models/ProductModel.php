@@ -48,6 +48,21 @@ class ProductModel extends Model
         return $code;
     }
 
+    public function activePrice()
+    {
+        return $this->hasOne(ProductPriceModel::class, 'id_product', 'id_product')
+            ->where('status', 'published') // Hanya ambil yang dipublish
+            ->where(function ($query) {
+                // Pastikan belum kedaluwarsa
+                $query->whereNull('valid_until')
+                    ->orWhere('valid_until', '>=', now()->toDateString());
+            })
+            ->latest(); // Jika ada beberapa, ambil yang paling baru dibuat
+    }
+    public function prices()
+    {
+        return $this->hasMany(ProductPriceModel::class, 'id_product', 'id_product')->orderBy('created_at', 'desc');
+    }
     public function leads()
     {
         return $this->hasMany(LeadModel::class, 'id_product', 'id_product');
@@ -56,10 +71,7 @@ class ProductModel extends Model
     {
         return $this->hasMany(SalesModel::class);
     }
-    public function prices()
-    {
-        return $this->hasMany(ProductPriceModel::class, 'id_product', 'id_product');
-    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by', 'id');

@@ -37,7 +37,6 @@ class ProductPriceModel extends Model
     {
         return $this->belongsTo(ProductModel::class, 'id_product', 'id_product');
     }
-
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by', 'id');

@@ -2,23 +2,27 @@
 
 namespace App\Http\Controllers\Product;
 
+use App\Services\Product\ProductService;
 use App\Traits\UserScope;
 use App\Models\ProductModel;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Repository\Product\ProductRepository;
 use App\Services\Authorization\ScopeResolverService;
+use App\Traits\BranchMutationHelper;
+use App\Traits\ProductValidation;
 
 class ProductController extends Controller
 {
-    use UserScope;
+    use UserScope, BranchMutationHelper, ProductValidation;
     protected $repository;
     protected $scopeResolverService;
-
+    protected $services;
     public function __construct(ProductRepository $repository)
     {
         $this->repository = $repository;
         $this->scopeResolverService = new ScopeResolverService();
+        $this->services = new ProductService();
     }
     public function index(Request $request)
     {
@@ -44,16 +48,26 @@ class ProductController extends Controller
         return response()->json($product);
     }
 
-    public function store(Request $request) {}
+    public function store(Request $request)
+    {
+        $this->validateProduct($request->all());
+        $user = auth()->user();
+        $product = $this->services->store($request->all());
+        $this->invalidateCaches([ProductRepository::class], ['global', $user->id_branch]);
+        return redirect()->back()->with('message', 'Produk baru ' . $product->name . ' berhasil ditambahkan!');
+    }
 
-    public function update(Request $request, ProductModel $product) {}
+    public function update(Request $request, ProductModel $product)
+    {
+        dd($request->all());
+    }
 
     public function destroy(ProductModel $product) {}
     public function productSearch(Request $request)
     {
         $keyword = $request->input('keyword');
         $products = ProductModel::with('prices')
-            ->select('id_product', 'name', 'image_link', 'image_path')
+            ->select('id_product', 'name', 'image_link', 'image_path', 'category')
             ->when($keyword, function ($q, $search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('id_product', 'like', "%{$search}%");

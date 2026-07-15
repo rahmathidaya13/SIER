@@ -134,7 +134,6 @@ const getImageUrl = (item) => {
                                         placeholder="Cari produk dan kode produk...." />
                                 </div>
                             </div>
-
                             <div class="col-xl-2 col-6 col-md-6 col-lg-6">
                                 <select-input :isValid="false" name="limit" v-model="filters.limit"
                                     text="Pilih Batas Data" :options="[
@@ -188,15 +187,16 @@ const getImageUrl = (item) => {
                                             v-html="highlight(item.product_name, filters.keyword)"></div>
                                         <div class="d-block">
                                             <div class="gap-2 d-flex mb-1">
-                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border">
-                                                    <i class="bi bi-tag me-1"></i>{{ item.category }}
-                                                </span>
+                                                <div class="badge bg-secondary bg-opacity-10 text-secondary border">
+                                                    <i class="fas fa-tags me-1"></i>
+                                                    <span v-html="highlight(item.category, filters.keyword)"></span>
+                                                </div>
                                                 <span
                                                     class="badge bg-info bg-opacity-10 text-info border text-capitalize">
                                                     {{ item.condition }}
                                                 </span>
                                             </div>
-                                            <a :href="item.link" class="small" target="_blank">
+                                            <a v-if="item.link" :href="item.link" class="small" target="_blank">
                                                 <i class="bi bi-arrow-up-right me-1"></i>
                                                 Klik link untuk melihat produk</a>
                                         </div>
