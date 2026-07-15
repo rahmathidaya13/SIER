@@ -131,11 +131,11 @@ const getImageUrl = (item) => {
                                     <i class="bi bi-search input-icon-left"></i>
                                     <input-text ref="keywordRef" :isValid="false" v-model="filters.keyword"
                                         inputClass="input-fixed-height input-height-1 rounded-pill"
-                                        placeholder="Cari nama...." />
+                                        placeholder="Cari produk dan kode produk...." />
                                 </div>
                             </div>
 
-                            <div class="col-xl-1 col-3 col-md-3 col-lg-3">
+                            <div class="col-xl-2 col-6 col-md-6 col-lg-6">
                                 <select-input :isValid="false" name="limit" v-model="filters.limit"
                                     text="Pilih Batas Data" :options="[
                                         { label: '☰ 10 Data', value: 10 },
@@ -144,7 +144,7 @@ const getImageUrl = (item) => {
                                         { label: '☰ 100 Data', value: 100 },
                                     ]" />
                             </div>
-                            <div class="col-xl-1 col-3 col-md-3 col-lg-3">
+                            <div class="col-xl-2 col-6 col-md-6 col-lg-6">
                                 <select-input :isValid="false" name="order_by" v-model="filters.order_by"
                                     text="Pilih Urutan" :options="[
                                         { label: '🔼 Terbaru', value: 'latest' },
@@ -173,8 +173,8 @@ const getImageUrl = (item) => {
                                         {{ index + 1 + (products?.current_page - 1) * products?.per_page }}
                                     </td>
                                     <td class="text-center">
-                                        <div class="badge badge-soft-slate rounded-4">
-                                            {{ item.code }}
+                                        <div class="badge badge-soft-slate rounded-4"
+                                            v-html="highlight(item.code, filters.keyword)">
                                         </div>
                                     </td>
                                     <td class="ps-4">
@@ -196,9 +196,9 @@ const getImageUrl = (item) => {
                                                     {{ item.condition }}
                                                 </span>
                                             </div>
-                                            <a :href="item.link" class="small text-decoration-none" target="_blank">
+                                            <a :href="item.link" class="small" target="_blank">
                                                 <i class="bi bi-arrow-up-right me-1"></i>
-                                                Klik di sini untuk melihat produk</a>
+                                                Klik link untuk melihat produk</a>
                                         </div>
                                     </td>
 
@@ -250,7 +250,7 @@ const getImageUrl = (item) => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.creator_name || 'N/A'
-                                                    }}
+                                                }}
                                                 </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>

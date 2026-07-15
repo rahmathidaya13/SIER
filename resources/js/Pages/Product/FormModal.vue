@@ -18,10 +18,12 @@ const categoryOptions = computed(() => [
         value: ctg.category,
     }))
 ]);
-console.log(categoryOptions.value);
 const isEdit = computed(() => !!props.idProduct);
+const imagePreview = ref(null);
+const isDiscountActive = ref(false);
 const productImage = ref(null);
 const product = ref(null);
+
 const form = useForm({
     name: '',
     category: null,
@@ -55,8 +57,6 @@ const loadProduct = async () => {
 
 }
 const fillForm = (data) => {
-    console.log(data);
-
     form.defaults({
         name: data.name,
         category: data.category || null,
@@ -116,6 +116,15 @@ const submit = () => {
     });
 };
 
+watch([() => form.base_price, () => form.discount_percentage], ([newPrice, newPercent]) => {
+    if (newPrice > 0 && newPercent > 0) {
+        const discountAmount = (newPrice * newPercent) / 100;
+        form.discount_price = Math.round(newPrice - discountAmount);
+    } else {
+        form.discount_price = 0
+    }
+});
+
 watch(
     () => props.show,
     async (isOpen) => {
@@ -134,23 +143,35 @@ const emit = defineEmits(["update:show"]);
 const close = () => {
     emit("update:show", false);
     resetForm();
+    imagePreview.value = null
 }
 const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
     return isEdit.value ? 'Simpan Perubahan' : ' Simpan';
 });
-const imagePreview = ref(null);
+
+const handleDiscount = () => {
+    isDiscountActive.value = !isDiscountActive.value
+    form.discount_percentage = 0
+}
+const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        form.image = file;
+        imagePreview.value = URL.createObjectURL(file);
+    }
+}
 </script>
 <template>
     <div class="row" v-if="props.show">
         <div class="col-12">
-            <modal width="750px" size="modal-lg" :icon="[
+            <modal width="900px" size="modal-lg" :icon="[
                 'text-coffee-main',
                 {
                     'bi bi-pencil-square text-primary': isEdit,
                     'bi bi-plus-circle-fill text-primary': !isEdit
                 }
-            ]" :show="props.show" :title="isEdit ? 'Edit Data Produk' : 'Buat Produk Baru'" :mobileFullscreen="false"
+            ]" :show="props.show" :title="isEdit ? 'Edit Data Produk' : 'Buat Produk Baru'" :mobileFullscreen="true"
                 @closed="close">
 
                 <template #body>
@@ -169,26 +190,42 @@ const imagePreview = ref(null);
                                         style="cursor: pointer;" accept="image/*">
 
                                     <div v-if="imagePreview" class="w-100 h-100 position-relative p-2">
-                                        <img :src="imagePreview"
-                                            class="img-fluid rounded-3 object-fit-cover w-100 h-100"
-                                            style="min-height: 250px;">
+                                        <img :src="imagePreview" class="img-product img-fluid">
                                         <div class="position-absolute bottom-0 start-50 translate-middle-x mb-3">
-                                            <span
-                                                class="badge bg-dark bg-opacity-75 px-3 py-2 rounded-pill shadow-sm">Klik
+                                            <span @click="imagePreview = null"
+                                                class="badge bg-dark bg-opacity-75 px-3 py-2 rounded-pill shadow-sm cursor-pointer">Klik
                                                 untuk ganti foto</span>
                                         </div>
                                     </div>
 
-                                    <div v-else
-                                        class="py-5 px-4 d-flex flex-column align-items-center justify-content-center"
-                                        style="min-height: 250px;">
-                                        <div class="bg-white p-3 rounded-circle shadow-sm mb-3 text-primary">
-                                            <i class="bi bi-camera fs-2"></i>
+                                    <div v-else class="d-flex flex-column align-items-center justify-content-center"
+                                        style="min-height: 300px;">
+                                        <div class="bg-transparent p-3 mb-3 text-primary">
+                                            <i class="bi bi-camera fs-1"></i>
                                         </div>
                                         <span class="fw-bold text-dark">Upload Gambar</span>
                                         <small class="text-muted mt-1">Klik atau drag & drop file<br>Maksimal ukuran
                                             2MB.</small>
                                     </div>
+                                </div>
+                                <div v-if="form.progress"
+                                    class="mt-4 p-3 bg-light rounded-4 border border-primary border-opacity-25 shadow-sm">
+                                    <div
+                                        class="d-flex justify-content-between align-items-center mb-2 small fw-bold text-primary">
+                                        <span><i class="bi bi-cloud-arrow-up me-1"></i> Menyimpan produk...</span>
+
+                                        <span>{{ form.progress.percentage }}%</span>
+                                    </div>
+                                    <div class="progress rounded-pill shadow-sm"
+                                        style="height: 8px; background-color: #e9ecef;">
+
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                                            role="progressbar" :style="{ width: form.progress.percentage + '%' }">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2 text-center" style="font-size: 10px;">
+                                        Mohon jangan tutup jendela ini
+                                    </small>
                                 </div>
                                 <div v-if="form.errors.image" class="text-danger small mt-2 fw-medium text-center">{{
                                     form.errors.image }}</div>
@@ -198,22 +235,22 @@ const imagePreview = ref(null);
                                 <h6 class="fw-bold text-muted small text-uppercase mb-3">Informasi Dasar</h6>
                                 <div class="row g-3 mb-3">
                                     <div class="col-12">
-                                        <input-label for="product_name_input" labelClass="fw-medium text-secondary small mb-2"
-                                            value="Nama Produk" />
+                                        <input-label for="product_name_input"
+                                            labelClass="fw-medium text-secondary small mb-2" value="Nama Produk" />
                                         <input-text v-model="form.name" name="product_name" :error="form.errors.name"
                                             placeholder="Cth:Mesin cetak mie mks-200" />
                                         <input-error :message="form.errors.name" />
                                     </div>
                                     <div class="col-md-6">
-                                        <input-label for="category_input" labelClass="fw-medium text-secondary small mb-2"
-                                            value="Kategori" />
+                                        <input-label for="category_input"
+                                            labelClass="fw-medium text-secondary small mb-2" value="Kategori" />
                                         <select-input text="Pilih Kategori Produk" name="category"
                                             :error="form.errors.category" v-model="form.category"
                                             :options="categoryOptions" />
                                     </div>
                                     <div class="col-md-6">
-                                        <input-label for="condition_input" labelClass="fw-medium text-secondary small mb-2"
-                                            value="Kondisi Barang" />
+                                        <input-label for="condition_input"
+                                            labelClass="fw-medium text-secondary small mb-2" value="Kondisi Barang" />
                                         <select-input v-model="form.item_condition" name="condition"
                                             :error="form.errors.item_condition" :options="[
                                                 { value: 'new', label: 'Baru (New)' },
@@ -225,10 +262,10 @@ const imagePreview = ref(null);
                                         <input-error :message="form.errors.item_condition" />
                                     </div>
                                     <div class="col-12">
-                                        <input-label for="type_item_input" labelClass="fw-medium text-secondary small mb-2"
-                                            value="Tipe Produk" />
-                                        <select-input text="Pilih tipe produk" v-model="form.type_item"
-                                            name="type_item" :error="form.errors.type_item" :options="[
+                                        <input-label for="type_item_input"
+                                            labelClass="fw-medium text-secondary small mb-2" value="Tipe Produk" />
+                                        <select-input text="Pilih tipe produk" v-model="form.type_item" name="type_item"
+                                            :error="form.errors.type_item" :options="[
                                                 { value: 'machine', label: 'Mesin' },
                                                 { value: 'sparepart', label: 'Sparepart' },
                                                 { value: 'accessories', label: 'Aksesoris' },
@@ -247,7 +284,7 @@ const imagePreview = ref(null);
 
                                 <h6 class="fw-bold text-muted small text-uppercase mt-2">Penetapan Harga</h6>
                                 <div class="row g-3 mb-3">
-                                    <div class="col-md-8 col-12">
+                                    <div class="col-md-6 col-12">
                                         <input-label for="base_price_input"
                                             labelClass="fw-medium text-secondary small mb-2" value="Harga Dasar" />
                                         <input-currency v-model="form.base_price" name="base_price" :decimals="0"
@@ -255,17 +292,23 @@ const imagePreview = ref(null);
                                         <input-error :message="form.errors.base_price" />
                                     </div>
 
-                                    <div class="col-md-4 col-12">
-                                        <input-label for="discount_percentage_input"
-                                            labelClass="fw-bold text-danger small mb-2" value="Diskon (%)" />
-                                        <input-number placeholdeer="0" :maxChar="5" v-model="form.discount_percentage"
-                                            inputClass="text-danger" name="discount_percentage"
-                                            :error="form.errors.discount_percentage" />
+                                    <div class="col-md-6 col-12">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <input-label for="discount_percentage_input"
+                                                labelClass="fw-bold text-danger small" value="Diskon (%)" />
+                                            <button @click.prevent="handleDiscount" type="button"
+                                                class="btn btn-sm btn-link text-decoration-none p-0">{{
+                                                    !isDiscountActive
+                                                ? 'Aktifkan' : 'Batal' }}</button>
+                                        </div>
+                                        <input-number :disabled="!isDiscountActive" placeholdeer="0" :maxChar="3"
+                                            v-model="form.discount_percentage" inputClass="text-danger"
+                                            name="discount_percentage" :error="form.errors.discount_percentage" />
                                         <input-error :message="form.errors.discount_percentage" />
                                     </div>
                                     <div class="col-12">
                                         <input-label labelClass="fw-bold text-success small mb-2" value="Harga Akhir" />
-                                        <input-number :maxChar="5" v-model="form.discount_price"
+                                        <input-currency :decimals="0" v-model="form.discount_price"
                                             inputClass="text-success" name="discount_price"
                                             :error="form.errors.discount_price" />
                                         <input-error :message="form.errors.discount_price" />
@@ -320,3 +363,24 @@ const imagePreview = ref(null);
         </div>
     </div>
 </template>
+<style scoped>
+.border-dashed {
+    border-style: dashed !important;
+}
+
+.image-upload-box:hover {
+    background-color: #f8f9fa;
+    border-color: #0d6efd !important;
+}
+
+.transition-all {
+    transition: all 0.3s ease;
+}
+
+.img-product {
+    min-height: 300px;
+    height: 300px;
+    object-fit: fill;
+    object-position: center;
+}
+</style>
