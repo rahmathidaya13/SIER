@@ -50,9 +50,9 @@ const isSuperAdminRow = (item) => {
     return item.role_name === 'super_admin';
 };
 
+const isDeveloper = computed(() => hasRole('developer'));
 const isSuperAdmin = computed(() => hasRole('super_admin'));
 const isSupervisor = computed(() => hasRole('supervisor'));
-const isAdmin = computed(() => hasRole('admin'));
 
 
 /**
@@ -65,14 +65,29 @@ const visibleActions = computed(() => {
              * SUPER ADMIN
              * tidak boleh edit / hapus dirinya sendiri
              */
-            if (
-                isSuperAdmin.value &&
-                isCurrentLoggedUser(props.item) &&
-                action.protectedSelf
-            ) {
-                return null;
-            }
+            // if (
+            //     isSuperAdmin.value &&
+            //     isCurrentLoggedUser(props.item) &&
+            //     action.protectedSelf
+            // ) {
+            //     return null;
+            // }
 
+            /**
+            * SUPERVISOR
+            * tidak boleh edit / hapus dirinya sendiri
+            */
+
+            // if (
+            //     isSupervisor.value &&
+            //     isCurrentLoggedUser(props.item) &&
+            //     action.protectedSelf
+            // ) {
+            //     return null;
+            // }
+            if (hasRole(['developer', 'super_admin', 'supervisor']) && isCurrentLoggedUser(props.item) && action.protectedSelf) {
+                return null
+            }
             const canShow =
                 typeof action.show === 'function'
                     ? action.show(props.item)
@@ -99,18 +114,7 @@ const visibleActions = computed(() => {
                 return null;
             }
 
-            /**
-            * SUPERVISOR
-            * tidak boleh edit / hapus super admin
-            */
 
-            if (
-                isSupervisor.value &&
-                isCurrentLoggedUser(props.item) &&
-                action.protectedSelf
-            ) {
-                return null;
-            }
 
 
             return action;

@@ -15,7 +15,7 @@ class UserService
             'password' => bcrypt($data['password']),
             'id_branch' => $data['id_branch'],
             'email_verified_at' => now(),
-            'status' => $data['is_active'],
+            'is_active' => $data['is_active'],
         ]);
 
         ProfileModel::create([
@@ -26,7 +26,7 @@ class UserService
 
         return $user;
     }
-    public function update(User $user, array $data, bool $isSuperAdmin): User
+    public function update(User $user, array $data, bool $canChangeBranch): User
     {
         $user->fill([
             'name' => $data['name'],
@@ -38,14 +38,14 @@ class UserService
             $user->password = bcrypt($data['password']);
         }
 
-        if ($isSuperAdmin) {
+        if ($canChangeBranch) {
             $user->id_branch = $data['id_branch'];
         }
 
         $user->save();
-        ProfileModel::where('id_user', $user->id)->update([
+        ProfileModel::updateOrCreate([
             'id_user' => $user->id
-        ]);
+        ], []);
         $user->syncRoles([
             $data['role']
         ]);

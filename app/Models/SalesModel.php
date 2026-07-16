@@ -40,6 +40,7 @@ class SalesModel extends Model
     {
         $user = auth()->user();
         return match (true) {
+            $user->hasRole('developer') => $query,
             $user->hasRole('super_admin') => $query,
             $user->hasRole('supervisor') => $query->where('sales.id_branch', $user->id_branch)
                 ->where('sales.id_user', $user->id),

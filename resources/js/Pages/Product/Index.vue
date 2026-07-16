@@ -1,11 +1,13 @@
 <script setup>
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { useFilter } from '@/Composables/useFilter';
 import { hasRole } from '@/Composables/useAuth';
 import { computed, ref } from 'vue';
 import { formatDate } from '@/Helpers/formatDate';
 import { highlight } from '@/Helpers/Highlight';
+import { useConfirm } from "@/Composables/useConfirm"
 import FormModal from './FormModal.vue';
+const confirm = useConfirm();
 const props = defineProps({
     products: Object,
     category: Array,
@@ -90,17 +92,39 @@ const openEditModal = (data) => {
     showModal.value = true;
     selectedId.value = data.id_product;
 }
+const deleted = async (nameRoute, data) => {
+    const setConfirm = await confirm.ask({
+        title: 'Hapus',
+        message: `Yakin ingin menghapus produk ${data.product_name} ini ? Data yang sudah dihapus tidak dapat dikembalikan!`,
+        confirmText: 'Ya, Hapus',
+        variant: 'danger'
+    });
 
+    if (setConfirm) {
+        router.delete(route(nameRoute, data.id_product), {
+            preserveScroll: false,
+            replace: true,
+            preserveState: true
+        });
+    }
+}
 
 const getImageUrl = (item) => {
     if (item.source === 'scrape' && item.image_link) {
         return item.image_link; // Gambar dari URL luar
     }
-    if (item.image_path) {
+    if (item.source === 'manual' && item.image_path) {
         return `/storage/${item.image_path}`; // Gambar lokal dari storage Laravel
     }
     return '/img/placeholder.png'; // Fallback jika tidak ada gambar
 };
+const formatCategory = (category) => {
+    return category
+        .split('/')
+        .map(part => part.replace(/-/g, ' '))
+        .map(part => part.replace(/\b\w/g, char => char.toUpperCase()))
+        .join(' - ');
+}
 </script>
 <template>
 
@@ -189,7 +213,9 @@ const getImageUrl = (item) => {
                                             <div class="gap-2 d-flex mb-1">
                                                 <div class="badge bg-secondary bg-opacity-10 text-secondary border">
                                                     <i class="fas fa-tags me-1"></i>
-                                                    <span v-html="highlight(item.category, filters.keyword)"></span>
+                                                    <span>
+                                                        {{ formatCategory(item.category) }}
+                                                    </span>
                                                 </div>
                                                 <span
                                                     class="badge bg-info bg-opacity-10 text-info border text-capitalize">
@@ -198,7 +224,7 @@ const getImageUrl = (item) => {
                                             </div>
                                             <a v-if="item.link" :href="item.link" class="small" target="_blank">
                                                 <i class="bi bi-arrow-up-right me-1"></i>
-                                                Klik link untuk melihat produk</a>
+                                                Klik link untuk melihat detail produk</a>
                                         </div>
                                     </td>
 
@@ -266,11 +292,17 @@ const getImageUrl = (item) => {
                                         </div>
                                     </td>
 
-                                    <td class="pe-4 text-end">
-                                        <button @click.prevent="openEditModal(item)" type="button"
-                                            class="btn btn-c-slate" title="Edit Produk">
-                                            <i class="bi bi-pencil-square"></i>
-                                        </button>
+                                    <td class="pe-4">
+                                        <div class="d-flex gap-1">
+                                            <button @click.prevent="openEditModal(item)" type="button"
+                                                class="btn btn-c-slate" title="Edit Produk">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button @click.prevent="deleted('product.delete', item)" type="button"
+                                                class="btn btn-c-danger" title="Hapus Produk">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
                                     </td>
 
                                 </template>

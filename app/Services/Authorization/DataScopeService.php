@@ -10,6 +10,9 @@ class DataScopeService
     public function apply(Builder $query, User $user): Builder
     {
         return match (true) {
+            $user->hasRole('developer')
+            => $query,
+
             $user->hasRole('super_admin')
             => $query,
 

@@ -16,6 +16,7 @@ class UserRepository extends BaseCacheRepository
         $user = auth()->user();
 
         $query = User::query()
+            ->allowedForUser()
             ->leftJoin('model_has_roles', function ($join) {
                 $join->on('model_has_roles.model_id', '=', 'users.id')
                     ->where('model_has_roles.model_type', '=', User::class); // Wajib filter tipe modelnya
@@ -28,9 +29,9 @@ class UserRepository extends BaseCacheRepository
                 'roles.name as role_name'
             ]);
 
-        if ($branchId !== 'global') {
-            $query->where('users.id_branch', $user->id_branch);
-        }
+        // if ($branchId !== 'global') {
+        //     $query->where('users.id_branch', $user->id_branch);
+        // }
 
         $status = $this->resolveStatus($filters);
         $query->when(

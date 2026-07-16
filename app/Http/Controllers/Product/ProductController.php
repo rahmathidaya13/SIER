@@ -50,6 +50,8 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', ProductModel::class);
+
         $this->validateProduct($request->all());
         $user = auth()->user();
         $product = $this->services->store($request->all());
@@ -59,10 +61,23 @@ class ProductController extends Controller
 
     public function update(Request $request, ProductModel $product)
     {
-        dd($request->all());
+        $user = auth()->user();
+        $this->validateProduct($request->all());
+        $this->services->update($product, $request->all());
+        $this->invalidateCaches([ProductRepository::class], ['global', $user->id_branch]);
+        return redirect()->back()->with('message', 'Perubahan data dari produk ' . $product->name . ' berhasil diperbarui!');
     }
 
-    public function destroy(ProductModel $product) {}
+    public function destroy(ProductModel $product)
+    {
+        $user = auth()->user();
+
+
+
+        $this->services->delete($product);
+        $this->invalidateCaches([ProductRepository::class], ['global', $user->id_branch]);
+        return redirect()->back()->with('message', 'Data produk ' . $product->name . ' berhasil dihapus');
+    }
     public function productSearch(Request $request)
     {
         $keyword = $request->input('keyword');

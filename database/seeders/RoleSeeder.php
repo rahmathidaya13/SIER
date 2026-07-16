@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class RoleSeeder extends Seeder
@@ -15,15 +16,58 @@ class RoleSeeder extends Seeder
     {
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
+        // create roles
         $defaults = [
+            ['name' => 'developer', 'guard_name' => 'web'],
             ['name' => 'super_admin', 'guard_name' => 'web'],
             ['name' => 'supervisor', 'guard_name' => 'web'],
             ['name' => 'admin', 'guard_name' => 'web'],
             ['name' => 'sales', 'guard_name' => 'web'],
             ['name' => 'teknisi', 'guard_name' => 'web'],
         ];
+
+        $permissions = [
+            // Modul Produk
+            'product-view',
+            'product-create',
+            'product-edit',
+            'product-delete',
+
+            // Modul Leads
+            'lead-view',
+            'lead-create',
+            'lead-edit',
+            'lead-delete',
+
+            // Modul Closing/Terjual
+            'closing-view',
+            'closing-create',
+            'closing-edit',
+            'closing-delete',
+
+            // Modul Channel
+            'channel-view',
+            'channel-create',
+            'channel-edit',
+            'channel-delete',
+
+            // Modul User
+            'users-view',
+            'users-create',
+            'users-edit',
+            'users-delete',
+
+            // Aksi Khusus
+            'approve-documents',
+            'export-data',
+        ];
+
         foreach ($defaults as $data) {
             Role::firstOrCreate(['name' => $data['name']], $data);
+        }
+
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission]);
         }
     }
 }

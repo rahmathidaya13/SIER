@@ -50,6 +50,23 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
     protected $dates    = ["deleted_at"];
+
+    public function scopeAllowedForUser($query)
+    {
+        $user = auth()->user();
+        return match (true) {
+            // 1. Developer (Pencipta): Bisa melihat semua isi tabel users
+            $user->hasRole('developer') => $query,
+            // 2. Super Admin: Bisa melihat semua, TAPI DILARANG melihat akun developer
+            $user->hasRole('super_admin') => $query->whereDoesntHave('roles', function ($q) {
+                $q->where('name', 'developer');
+            }),
+            // 3. Supervisor: Hanya bisa melihat user yang berada di cabangnya sendiri
+            $user->hasRole('supervisor') => $query->where('users.id_branch', $user->id_branch),
+            // 4. Default (Misal: Sales/Admin biasa): Hanya bisa melihat dirinya sendiri
+            default => $query->where('users.id', $user->id),
+        };
+    }
     public function branch()
     {
         return $this->belongsTo(BranchModel::class, 'id_branch', 'id_branch');

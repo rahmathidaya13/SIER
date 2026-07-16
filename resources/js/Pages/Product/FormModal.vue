@@ -64,9 +64,9 @@ const fillForm = (data) => {
         base_price: data.prices[0]?.base_price || 0,
         discount_percentage: data.prices[0]?.discount_percentage || 0,
         discount_price: data.prices[0]?.discount_price || 0,
-        status: data.status || 'published',
-        valid_from: data.valid_from,
-        valid_until: data.valid_until,
+        status: data.prices[0]?.status || 'published',
+        valid_from: data.prices[0]?.valid_from,
+        valid_until: data.prices[0]?.valid_until,
     });
 
     isDiscountActive.value = data.prices[0]?.discount_percentage > 0

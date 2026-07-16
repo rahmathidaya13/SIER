@@ -12,7 +12,9 @@ const props = defineProps({
 const page = usePage();
 const currentUser = computed(() => page.props.auth.user);
 
+const isDeveloper = hasRole('developer');
 const isSuperadmin = hasRole('super_admin');
+
 const isEdit = computed(() => !!props.data?.id);
 
 const form = useForm({
@@ -21,7 +23,7 @@ const form = useForm({
     password: '',
     password_confirmation: '',
     role: null, // Default
-    id_branch: isSuperadmin ? null : currentUser.value.id_branch,
+    id_branch: isDeveloper ? null : currentUser.value.id_branch,
     is_active: 'active',
 });
 
@@ -32,6 +34,15 @@ const branchOptions = computed(() => [
     }))
 ]);
 const availableRoles = computed(() => {
+    if (isDeveloper) {
+        return [
+            { label: 'Super Admin', value: 'super_admin' },
+            { label: 'Supervisor', value: 'supervisor' },
+            { label: 'Admin', value: 'admin' },
+            { label: 'Sales', value: 'sales' },
+            { label: 'Teknisi', value: 'teknisi' },
+        ]
+    }
     if (isSuperadmin) {
         return [
             { label: 'Supervisor', value: 'supervisor' },

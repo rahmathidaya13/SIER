@@ -163,7 +163,7 @@ const channelChartData = computed(() => {
         <template #content>
             <div class="row g-3 view-section">
                 <callout />
-                <div class="col-12 col-md-12 col-lg-4 col-xl-4">
+                <div class="col-12 col-md-12 col-lg-12 col-xl-12">
                     <div class="card border-0 rounded-4 overflow-hidden">
                         <div class="card-header p-4 bg-white">
                             <div
@@ -196,7 +196,8 @@ const channelChartData = computed(() => {
                         </div>
                     </div>
                 </div>
-                <div class="col-12 col-md-12 col-lg-8 col-xl-8">
+
+                <div class="col-12 col-md-12 col-lg-12 col-xl-12">
                     <div class="card border-0 rounded-4 overflow-hidden">
                         <div class="card-header p-4 bg-white">
                             <div
@@ -301,6 +302,7 @@ const channelChartData = computed(() => {
                         </div>
                     </div>
                 </div>
+
             </div>
             <FormModal :idChannel="selectedData" :show="showModal" @update:show="showModal = $event" />
         </template>

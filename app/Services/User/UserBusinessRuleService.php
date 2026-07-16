@@ -18,9 +18,7 @@ class UserBusinessRuleService
             ->whereKeyNot($targetUser->id)
             ->where('id_branch', $branchId)
             ->where('is_active', 'active')
-            ->whereHas('roles', function ($q) use ($role) {
-                $q->where('name', $role);
-            })
+            ->role('supervisor')
             ->exists();
 
 

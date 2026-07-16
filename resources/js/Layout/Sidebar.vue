@@ -51,7 +51,7 @@ const menuItems = [
         icon: 'bi bi-person-fill',
         route: 'employee.index',
         prefixUrl: 'employee*',
-        roles: ['super_admin', 'supervisor']
+        roles: ['developer', 'super_admin', 'supervisor']
     },
     {
         title: 'Keluar',
@@ -81,6 +81,10 @@ const menus = computed(() => {
 });
 const rolesName = (role) => {
     const roles = {
+        'developer': {
+            label: 'DEVELOPER',
+            color: 'bg-dark text-white'
+        },
         'super_admin': {
             label: 'HEAD OFFICE',
             color: 'bg-dark text-white'

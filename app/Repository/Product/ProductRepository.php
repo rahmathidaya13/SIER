@@ -47,24 +47,27 @@ class ProductRepository extends BaseCacheRepository
                 'product_price.discount_price',
                 'product_price.price_type',
             ]);
+
         $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
             $search = $filters['keyword'];
             $q->where(function ($subQuery) use ($search) {
                 $subQuery->where('products.name', 'like', "%{$search}%")
-                    ->orWhere('products.product_code', 'like', "%{$search}%")
-                    ->orWhere('products.category', 'like', "%{$search}%");
+                    ->orWhere('products.product_code', 'like', "%{$search}%");
             });
         });
+
         return $query;
     }
 
     protected function getData(string|int|null $branchId, array $filters = []): LengthAwarePaginator
     {
         $query = $this->buildBaseQuery($filters);
+
         [$column, $direction] = $this->resolveSorting($filters);
-        return $query
-            ->orderBy($column, $direction)
-            ->paginate($filters['limit'] ?? 10);
+
+        return $query->orderBy($column, $direction)
+            ->paginate($filters['limit'] ?? 10)
+            ->withQueryString();
     }
 
 

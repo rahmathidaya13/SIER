@@ -6,6 +6,7 @@ use Goutte\Client;
 use App\Models\BranchModel;
 use Illuminate\Support\Str;
 use App\Models\ProductModel;
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpClient\HttpClient;
@@ -145,10 +146,11 @@ class ScrapeProduct extends Command
                     // ✔ Gunakan updateOrCreate agar tidak ganda
                     try {
                         $existing = ProductModel::where('link', $link)->first();
-
+                        $createdById = User::role('super_admin')->value('id');
                         if (!$existing) {
 
                             $product = ProductModel::create([
+                                'created_by' => $createdById,
                                 'source' => 'scrape',
                                 'link' => $link,
                                 'name' => $nama,
@@ -169,6 +171,7 @@ class ScrapeProduct extends Command
                             }
 
                             $product->prices()->create([
+                                'created_by' => $createdById,
                                 'product_id' => $product->product_id,
                                 'base_price' =>  $basePrice,
                                 'discount_percentage' => $discountPercentage,
@@ -186,6 +189,7 @@ class ScrapeProduct extends Command
                         $changes = [];
 
                         $fields = [
+                            'created_by' => $createdById,
                             'source' => 'scrape',
                             'name' => $nama,
                             'image_link' => $img,
@@ -225,6 +229,7 @@ class ScrapeProduct extends Command
                         $this->error("Gagal simpan ($nama): " . $e->getMessage());
                     }
                     $results[] = [
+                        'created_by' => $createdById,
                         'source' => 'scrape',
                         'name' => $nama,
                         'image_link' => $img,

@@ -26,6 +26,10 @@ const openEditModal = (data) => {
 }
 const getRoleBadgeClass = (roleName) => {
     const roles = {
+        'developer': {
+            label: 'Developer',
+            color: 'bg-dark text-white'
+        },
         'super_admin': {
             label: 'Head Office',
             color: 'bg-dark text-white'
@@ -137,7 +141,7 @@ const employeeActions = [
         action: 'edit',
         protectedSelf: true,
         icon: 'bi bi-pencil-square',
-        role: ['super_admin', 'supervisor'],
+        role: ['developer', 'super_admin', 'supervisor'],
         title: 'Ubah Pegawai',
         buttonClass: 'btn-action',
         variant: 'edit',
@@ -150,7 +154,7 @@ const employeeActions = [
         buttonClass: 'btn-action',
         variant: 'delete',
         title: 'Hapus Produk',
-        role: ['super_admin', 'supervisor'],
+        role: ['developer', 'super_admin', 'supervisor'],
 
     },
 ];
