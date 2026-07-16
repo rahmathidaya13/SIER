@@ -13,8 +13,6 @@ class UserRepository extends BaseCacheRepository
 
     protected function getData(string|int|null $branchId, array $filters = []): LengthAwarePaginator
     {
-        $user = auth()->user();
-
         $query = User::query()
             ->allowedForUser()
             ->leftJoin('model_has_roles', function ($join) {
@@ -24,14 +22,16 @@ class UserRepository extends BaseCacheRepository
             ->leftJoin('roles', 'roles.id',  '=',  'model_has_roles.role_id')
             ->leftJoin('branches', 'branches.id_branch',  '=',  'users.id_branch')
             ->select([
-                'users.*',
+                'users.id',
+                'users.id_branch',
+                'users.name',
+                'users.email',
+                'users.is_active',
+                'users.created_at',
+                'users.updated_at',
                 'branches.name as branch_name',
                 'roles.name as role_name'
             ]);
-
-        // if ($branchId !== 'global') {
-        //     $query->where('users.id_branch', $user->id_branch);
-        // }
 
         $status = $this->resolveStatus($filters);
         $query->when(
@@ -40,24 +40,26 @@ class UserRepository extends BaseCacheRepository
         );
 
         $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
-            $search = $filters['keyword'];
+            $search = addcslashes($filters['keyword'], '%_');
 
             $q->where(function ($subQuery) use ($search) {
                 $subQuery->where('users.name', 'like', "%{$search}%");
             });
         });
 
-
+        $limit = min((int) ($filters['limit'] ?? 10), 100);
         [$column, $direction] = $this->resolveSorting($filters);
         return $query
             ->orderBy($column, $direction)
-            ->paginate($filters['limit'] ?? 10);
+            ->paginate($limit)
+            ->withQueryString();
     }
-    protected function resolveStatus(array $filters): ?bool
+    protected function resolveStatus(array $filters): string|null
     {
         return match ($filters['status'] ?? 'all') {
-            'active' => true,
-            'inactive' => false,
+            'active' => 'active',
+            'inactive' => 'inactive',
+            'all' => null,
             default => null,
         };
     }

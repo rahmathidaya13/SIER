@@ -109,13 +109,6 @@ class UserAuthorizationService
             $user->hasRole('supervisor')  => ['admin', 'sales', 'teknisi'],
             default                                 => []
         };
-
-        if (empty($allowedRoles)) {
-            throw ValidationException::withMessages([
-                'role' => 'Anda tidak memiliki wewenang untuk menambah atau mengubah user.'
-            ]);
-        }
-
         return $allowedRoles;
     }
 }

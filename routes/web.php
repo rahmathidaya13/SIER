@@ -55,6 +55,7 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
     Route::controller(UserController::class)->group(function () {
         Route::get('/employee/list', 'index')->name('employee.index');
         Route::post('/employee/store', 'store')->name('employee.store');
+        Route::get('/employee/show/{id}', 'show')->name('employee.show');
         Route::put('/employee/update/{id}', 'update')->name('employee.update');
         Route::delete('/employee/delete/{id}', 'destroy')->name('employee.delete');
     });

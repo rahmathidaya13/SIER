@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\User;
 use App\Models\ProductModel;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Auth\Access\Response;
 
 class ProductPolicy
 {
@@ -15,6 +16,7 @@ class ProductPolicy
         if ($user->hasRole('developer')) {
             return true;
         }
+        return null;
     }
 
     /**
@@ -39,11 +41,13 @@ class ProductPolicy
     {
         // A. Wajib memiliki permission create
         if (!$user->hasPermissionTo('product-create')) {
-            return false;
+            return Response::deny('Anda tidak memiliki wewenang untuk menambah atau membuat produk.');
         }
 
         // B. Wajib berasal dari Kantor Pusat
-        return $this->isFromHeadquarters($user);
+        return $this->isFromHeadquarters($user)
+            ? Response::allow()
+            : Response::deny('Akses ditolak: Hanya pegawai Kantor Pusat yang berhak menambah produk.');
     }
 
 
@@ -54,11 +58,13 @@ class ProductPolicy
     {
         // A. Wajib memiliki permission edit
         if (!$user->hasPermissionTo('product-edit')) {
-            return false;
+            return Response::deny('Anda tidak memiliki wewenang untuk mengubah produk.');
         }
 
         // B. Wajib berasal dari Kantor Pusat
-        return $this->isFromHeadquarters($user);
+        return $this->isFromHeadquarters($user)
+            ? Response::allow()
+            : Response::deny('Akses ditolak: Hanya pegawai Kantor Pusat yang berhak mengubah produk.');
     }
 
     /**
@@ -68,10 +74,12 @@ class ProductPolicy
     {
         // A. Wajib memiliki permission delete
         if (!$user->hasPermissionTo('product-delete')) {
-            return false;
+            return Response::deny('Anda tidak memiliki wewenang untuk menghapus produk.');
         }
 
         // B. Wajib berasal dari Kantor Pusat
-        return $this->isFromHeadquarters($user);
+        return $this->isFromHeadquarters($user)
+            ? Response::allow()
+            : Response::deny('Akses ditolak: Hanya pegawai Kantor Pusat yang berhak menghapus produk.');
     }
 }

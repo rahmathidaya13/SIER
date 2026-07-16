@@ -14,15 +14,14 @@ const props = defineProps({
 })
 
 const showModal = ref(false);
-const selectedData = ref(null);
-const loadDataById = ref(null);
+const selectedByIdUser = ref(null);
 const openCreateModal = () => {
     showModal.value = true;
-    selectedData.value = {};
+    selectedByIdUser.value = null;
 }
 const openEditModal = (data) => {
     showModal.value = true;
-    selectedData.value = data;
+    selectedByIdUser.value = data.id;
 }
 const getRoleBadgeClass = (roleName) => {
     const roles = {
@@ -154,12 +153,11 @@ const employeeActions = [
         buttonClass: 'btn-action',
         variant: 'delete',
         title: 'Hapus Produk',
-        role: ['developer', 'super_admin', 'supervisor'],
+        role: ['developer', 'super_admin'],
 
     },
 ];
 const deleted = async (nameRoute, data) => {
-    loadDataById.value = data.id;
     const setConfirm = await confirm.ask({
         title: 'Hapus',
         message: `Kamu ingin menghapus Data Pegawai ${data.name} ?`,
@@ -188,7 +186,7 @@ onMounted(() => {
         <template #content>
             <div class="row g-3 view-section">
                 <div class="col-12">
-                    <callout />
+                    <callout :duration="0" />
                     <div class="card border-0 rounded-4 overflow-hidden">
 
                         <div class="card-header p-4 bg-white">
@@ -243,7 +241,7 @@ onMounted(() => {
                         <div class="card-body p-0">
                             <table-wrapper :loader="isLoading" loaderText="Sedang memuat data..." :headers="header"
                                 :items="employee?.data" row-key="product_id"
-                                @update:selected="(val) => selectedData = val">
+                                @update:selected="(val) => selectedByIdUser = val">
 
                                 <template #empty>
                                     <i class="bi bi-person-circle fa-3x text-muted opacity-25 mb-3"></i>
@@ -326,7 +324,7 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
-            <FormModal :data="selectedData" :branches="props.branches" :show="showModal"
+            <FormModal :idUser="selectedByIdUser" :branches="props.branches" :show="showModal"
                 @update:show="showModal = $event" />
         </template>
     </app-layout>

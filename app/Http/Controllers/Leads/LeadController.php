@@ -37,7 +37,6 @@ class LeadController extends Controller
     }
     public function index(Request $request)
     {
-        $user = auth()->user();
         $filters = $request->only([
             'keyword',
             'limit',
@@ -49,7 +48,7 @@ class LeadController extends Controller
         ]);
         $filters = app(ScopeResolverService::class)->filters($filters);
 
-        $leads = $this->repository->getCached($this->scopeId($user), $filters);
+        $leads = $this->repository->getCached($filters['scope'], $filters);
         $channels = ChannelModel::select('id_channel', 'name', 'icon')->get();
         $products = ProductModel::select('id_product', 'name', 'image_link', 'image_path')->get();
         return inertia(
@@ -66,7 +65,6 @@ class LeadController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        // dd($request->all());
         $this->validateLeads($request->all());
 
         if ($request['status'] === 'CLOSED_WON' && $request['payment_status'] === 'DP') {
@@ -80,7 +78,10 @@ class LeadController extends Controller
 
         $this->leadServices->store($request->all(), $user);
 
-        $this->invalidateCaches([LeadsRepository::class, SaleRepository::class, ChannelRepository::class], ['global', $user->id_branch]);
+        $this->invalidateCaches(
+            [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
+            ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+        );
         return redirect()->back()->with([
             'message' => 'Lead dari ' . strtoupper($request['name']) . ' berhasil ditambahkan',
         ]);
@@ -91,13 +92,16 @@ class LeadController extends Controller
         $user = auth()->user();
         $this->validateLeads($request->all(), $id);
         $lead = $this->leadServices->update($id, $request->all(), $user);
-        $this->invalidateCaches([LeadsRepository::class, SaleRepository::class, ChannelRepository::class], ['global', $user->id_branch]);
+        $this->invalidateCaches(
+            [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
+            ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+        );
         return redirect()->back()->with('message', 'Lead ' . $lead->name . ' berhasil diperbarui!');
     }
 
     public function show(string $id)
     {
-        $leads = LeadModel::allowedForUser(auth()->user())
+        $leads = LeadModel::allowedForUser()
             ->with([
                 'user:id,name as creator_name',
                 'channel:id_channel,name as channel_name,icon',
@@ -111,8 +115,12 @@ class LeadController extends Controller
     }
     public function destroy(LeadModel $leads)
     {
+        $user = auth()->user();
         $this->leadServices->delete($leads);
-        $this->invalidateCaches([LeadsRepository::class, SaleRepository::class, ChannelRepository::class], ['global', $leads->id_branch]);
+        $this->invalidateCaches(
+            [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
+            ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+        );
         return redirect()->back()->with('message', 'Lead ' . $leads->name . ' berhasil dihapus');
     }
 }

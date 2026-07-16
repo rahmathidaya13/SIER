@@ -35,7 +35,13 @@ class UserController extends Controller
     }
     public function index(Request $request)
     {
-        $user = auth()->user();
+        $request->validate([
+            'keyword' => 'nullable|string|max:255',
+            'limit' => 'nullable|integer|min:1|max:100',
+            'sort_order' => 'nullable|string|in:oldest,latest',
+            'status' => 'nullable|string|in:all,active,inactive',
+            'page' => 'nullable|integer|min:1',
+        ]);
         $filters = $request->only([
             'keyword',
             'limit',
@@ -55,11 +61,36 @@ class UserController extends Controller
         ]);
     }
 
+    public function show(string $id)
+    {
+        $user = User::with('branch', 'roles:id,name')
+            ->findOrFail($id);
+        return response()->json($user);
+    }
+
+    private function allowedRoles(User $user): array|null|string|bool
+    {
+        $allowedRoles = match (true) {
+            $user->hasRole('developer')   => ['super_admin', 'supervisor', 'admin', 'sales', 'teknisi'],
+            $user->hasRole('super_admin') => ['supervisor', 'admin', 'sales', 'teknisi'],
+            $user->hasRole('supervisor')  => ['admin', 'sales', 'teknisi'],
+            default                                 => []
+        };
+        return $allowedRoles;
+    }
+
     public function store(Request $request)
     {
         $user = auth()->user();
 
-        $allowedRoles = $this->authorization->allowedRoles($user);
+        $response = Gate::inspect('create', $user);
+        if ($response->denied()) {
+            throw ValidationException::withMessages([
+                'unauthorized_action' => $response->message() // Mengambil pesan dari Policy
+            ]);
+        }
+
+        $allowedRoles = $this->allowedRoles($user);
         $this->validationText($request->all(), $allowedRoles, $user, null, 'create');
 
         $data = $request->all();
@@ -77,15 +108,25 @@ class UserController extends Controller
     public function update(Request $request, string $id)
     {
         $currentUser = auth()->user();
-
         $user = User::find($id);
         $oldBranchId = $user->id_branch;
 
-        // 1. Cek Hierarki (Apakah boleh mengedit?)
-        $this->authorization->ensureCanUpdate($currentUser, $user);
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'error' => 'Data pegawai tidak ditemukan.'
+            ]);
+        }
+
+        // 🛡️ 1. Pengecekan Policy
+        $response = Gate::inspect('update', $user);
+        if ($response->denied()) {
+            throw ValidationException::withMessages([
+                'unauthorized_action' => $response->message() // Mengambil pesan dari Policy
+            ]);
+        }
 
         // 2. Ambil daftar role yang boleh dimanipulasi oleh user yang sedang login
-        $allowedRoles = $this->authorization->allowedRoles($currentUser);
+        $allowedRoles = $this->allowedRoles($currentUser);
 
         $this->validationText($request->all(), $allowedRoles, $currentUser, $user, 'edit');
 
@@ -112,10 +153,10 @@ class UserController extends Controller
         }
 
         // 🛡️ 1. Pengecekan Policy
-        $response = Gate::inspect('delete', $user);
+        $response = Gate::inspect('deleted', $user);
         if ($response->denied()) {
             throw ValidationException::withMessages([
-                'unauthorized_action' => $response->message() // Mengambil pesan dari Policy
+                'error' => $response->message() // Mengambil pesan dari Policy
             ]);
         }
 
@@ -123,6 +164,7 @@ class UserController extends Controller
         $name = $user->name;
         $user->delete();
 
+        // cek apakah user sudah dihapus atau belum
         if (!$user->trashed()) {
             throw ValidationException::withMessages([
                 'error' => "Sistem gagal menghapus data {$name} secara aman."

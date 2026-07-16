@@ -5,6 +5,7 @@ namespace App\Exceptions;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Throwable;
 
 class Handler extends ExceptionHandler

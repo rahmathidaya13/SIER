@@ -32,7 +32,7 @@ class LeadConversionController extends Controller
         try {
             $services->convertLeadToSales($leads, $request->all());
             $user = auth()->user();
-            $this->invalidateCaches([LeadsRepository::class, SaleRepository::class, ChannelRepository::class], ['global', $user->id_branch]);
+            $this->invalidateCaches([LeadsRepository::class, SaleRepository::class, ChannelRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
             return redirect()->back()->with('success', 'Transaksi atas nama ' . $leads->name . ' sudah berhasil closing.');
         } catch (ValidationException $error) {
             throw $error;

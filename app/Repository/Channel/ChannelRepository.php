@@ -62,9 +62,7 @@ class ChannelRepository extends BaseCacheRepository
     protected function resolveSorting(array $filters): ?array
     {
         return match ($filters['order_by'] ?? 'latest') {
-
             'oldest' => ['created_at', 'asc'],
-
             default => ['created_at', 'desc'],
         };
     }

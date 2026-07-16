@@ -2,20 +2,19 @@
 import { computed, ref, watch } from "vue";
 import { router, useForm, usePage } from "@inertiajs/vue3";
 import { hasRole } from '@/Composables/useAuth';
+import axios from "axios";
 const props = defineProps({
-    data: Object,
+    idUser: String,
     show: Boolean,
     isLoading: Boolean,
     branches: Array,
 });
 
-const page = usePage();
-const currentUser = computed(() => page.props.auth.user);
 
 const isDeveloper = hasRole('developer');
 const isSuperadmin = hasRole('super_admin');
-
-const isEdit = computed(() => !!props.data?.id);
+const isEdit = computed(() => !!props.idUser);
+const isLoading = ref(false);
 
 const form = useForm({
     name: '',
@@ -23,9 +22,51 @@ const form = useForm({
     password: '',
     password_confirmation: '',
     role: null, // Default
-    id_branch: isDeveloper ? null : currentUser.value.id_branch,
+    id_branch: null,
     is_active: 'active',
 });
+
+const fillForm = (data) => {
+    form.defaults({
+        name: data.name,
+        email: data.email,
+        role: data.roles[0]?.name,
+        id_branch: data.id_branch,
+        is_active: data.is_active,
+    });
+    form.reset();
+    form.clearErrors();
+}
+
+const resetForm = () => {
+    form.defaults({
+        name: '',
+        email: '',
+        password: '',
+        password_confirmation: '',
+        role: null,
+        id_branch: null,
+        is_active: 'active',
+    });
+    form.reset();
+    form.clearErrors();
+}
+const loadUser = async () => {
+    if (!props.idUser) {
+        resetForm();
+        return
+    }
+    isLoading.value = true
+    try {
+        const { data } = await axios.get(`/employee/show/${props.idUser}`);
+        fillForm(data);
+    } catch (error) {
+        console.error("Gagal mengambil data:", error);
+        alert("Terjadi kesalahan saat memuat data.");
+    } finally {
+        isLoading.value = false
+    }
+}
 
 const branchOptions = computed(() => [
     ...props.branches.map(data => ({
@@ -59,7 +100,7 @@ const availableRoles = computed(() => {
 });
 const submit = () => {
     const url = isEdit.value
-        ? route('employee.update', props.data?.id)
+        ? route('employee.update', props.idUser)
         : route('employee.store');
 
     // Jika Edit, Laravel butuh trik method spoofing (_method: put) untuk upload file
@@ -74,7 +115,7 @@ const submit = () => {
 
         onSuccess: () => {
             close();
-            form.reset();
+            resetForm();
         },
         onError: () => {
             form.password = '';
@@ -83,27 +124,22 @@ const submit = () => {
 };
 watch(
     () => props.show,
-    (isOpen) => {
-        if (isOpen) {
-            // Modal sedang DIBUKA
-            if (isEdit.value) {
-                form.name = props.data.name;
-                form.email = props.data.email;
-                form.role = props.data.role_name;
-                form.id_branch = props.data.id_branch;
-                form.is_active = props.data.is_active;
-            } else {
-                form.reset();
-                form.clearErrors();
-            }
+    async (isOpen) => {
+        if (!isOpen) return;
+        if (props.idUser) {
+            await loadUser();
+        } else {
+            resetForm();
         }
-    }
+
+    }, {
+    immediate: true
+}
 );
 const emit = defineEmits(["update:show"]);
 const close = () => {
     emit("update:show", false);
-    form.clearErrors();
-    form.reset();
+    resetForm()
 }
 const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
@@ -135,81 +171,89 @@ const togglePasswordVisibilty = () => {
                 <template #body>
                     <alert-error-all :errors="form.errors" @close="form.clearErrors()" />
 
-                    <form-wrapper @submit.prevent="submit">
-
-                        <div class="mb-3">
-                            <input-label labelClass="mb-1" for="name_input" value="Nama Lengkap" />
-                            <input-text :error="form.errors.name" v-model="form.name" name="name"
-                                placeholder="Cth: Dimas Anggara" />
-                            <input-error :message="form.errors.name" />
+                    <div v-if="isLoading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
                         </div>
+                        <p class="text-muted mt-3 small fw-medium">Sedang mengambil data...</p>
+                    </div>
+                    <div v-else>
+                        <form-wrapper @submit.prevent="submit">
 
-                        <div class="mb-3">
-                            <input-label labelClass="mb-1" for="email_input" value="Email" />
-                            <input-text :disabled="isEdit" name="email" :error="form.errors.email" v-model="form.email"
-                                type="email" placeholder="dimas@perusahaan.com" />
-                            <small class="text-muted" style="font-size:12px;">*Email yang digunakan harus yang
-                                aktif</small>
-                            <input-error :message="form.errors.email" />
-                        </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <input-label labelClass="mb-1" for="roles_select" value="Posisi / Jabatan" />
-                                <select-input name="roles" :error="form.errors.role" v-model="form.role"
-                                    text="-- Pilih Jabatan --" :options="availableRoles" />
-                                <input-error :message="form.errors.role" />
+                            <div class="mb-3">
+                                <input-label labelClass="mb-1" for="name_input" value="Nama Lengkap" />
+                                <input-text :error="form.errors.name" v-model="form.name" name="name"
+                                    placeholder="Cth: Dimas Anggara" />
+                                <input-error :message="form.errors.name" />
                             </div>
 
-                            <div class="col-6">
-                                <input-label labelClass="mb-1" for="branch_select" value="Penempatan Cabang" />
-                                <select-input :error="form.errors.id_branch" v-model="form.id_branch"
-                                    text="-- Pilih Cabang --" name="branch" :options="branchOptions" />
-                                <input-error :message="form.errors.id_branch" />
+                            <div class="mb-3">
+                                <input-label labelClass="mb-1" for="email_input" value="Email" />
+                                <input-text :disabled="isEdit" name="email" :error="form.errors.email"
+                                    v-model="form.email" type="email" placeholder="dimas@perusahaan.com" />
+                                <small class="text-muted" style="font-size:12px;">*Email yang digunakan harus yang
+                                    aktif</small>
+                                <input-error :message="form.errors.email" />
                             </div>
-                        </div>
-                        <div class="mb-3 bg-light p-3 rounded-3 border">
-                            <input-label labelClass="mb-2" for="is_active" value="Status Pegawai" />
-                            <div class="d-flex gap-5">
-                                <radio-button name="is_active" v-model:checked="form.is_active" value="active"
-                                    label="Aktif (Pegawai dapat login)" />
-                                <radio-button name="is_active" v-model:checked="form.is_active" value="inactive"
-                                    label="Tidak Aktif (Pegawai tidak dapat login)" />
-                            </div>
-                            <input-error :message="form.errors.phone" />
-                        </div>
 
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <input-label for="password_input" labelClass="mb-1" value="Kata Sandi Akses" />
-                                <button v-if="!isEdit" type="button" @click="generateRandomPassword"
-                                    class="btn btn-sm btn-link text-decoration-none py-0 small">
-                                    <i class="bi bi-magic me-1"></i>Buat Otomatis
-                                </button>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <input-label labelClass="mb-1" for="roles_select" value="Posisi / Jabatan" />
+                                    <select-input name="roles" :error="form.errors.role" v-model="form.role"
+                                        text="-- Pilih Jabatan --" :options="availableRoles" />
+                                    <input-error :message="form.errors.role" />
+                                </div>
+
+                                <div class="col-6">
+                                    <input-label labelClass="mb-1" for="branch_select" value="Penempatan Cabang" />
+                                    <select-input :error="form.errors.id_branch" v-model="form.id_branch"
+                                        text="-- Pilih Cabang --" name="branch" :options="branchOptions" />
+                                    <input-error :message="form.errors.id_branch" />
+                                </div>
                             </div>
-                            <div class="position-relative">
-                                <input-text name="password" :disabled="isEdit"
-                                    inputClass="input-fixed-height has-icon-right input-icon-left-none"
-                                    :error="form.errors.password" v-model="form.password"
-                                    :type="showPassword ? 'text' : 'password'" placeholder="••••••••" />
-                                <i @click="togglePasswordVisibilty" :class="[
-                                    'input-icon-right',
-                                    'cursor-pointer',
-                                    showPassword
-                                        ? 'bi bi-eye-slash-fill'
-                                        : 'bi bi-eye-fill',
-                                ]"></i>
+                            <div class="mb-3 bg-light p-3 rounded-3 border">
+                                <input-label labelClass="mb-2" for="is_active" value="Status Pegawai" />
+                                <div class="d-flex gap-5">
+                                    <radio-button name="is_active" v-model:checked="form.is_active" value="active"
+                                        label="Aktif (Pegawai dapat login)" />
+                                    <radio-button name="is_active" v-model:checked="form.is_active" value="inactive"
+                                        label="Tidak Aktif (Pegawai tidak dapat login)" />
+                                </div>
+                                <input-error :message="form.errors.phone" />
                             </div>
-                            <small class="text-muted" style="font-size:12px;">*Gunakan minimal 8 karakter. Pegawai
-                                dapat menggantinya nanti.</small>
-                            <input-error :message="form.errors.password" />
-                        </div>
-                    </form-wrapper>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <input-label for="password_input" labelClass="mb-1" value="Kata Sandi Akses" />
+                                    <button v-if="!isEdit" type="button" @click="generateRandomPassword"
+                                        class="btn btn-sm btn-link text-decoration-none py-0 small">
+                                        <i class="bi bi-magic me-1"></i>Buat Otomatis
+                                    </button>
+                                </div>
+                                <div class="position-relative">
+                                    <input-text name="password" :disabled="isEdit"
+                                        inputClass="input-fixed-height has-icon-right input-icon-left-none"
+                                        :error="form.errors.password" v-model="form.password"
+                                        :type="showPassword ? 'text' : 'password'" placeholder="••••••••" />
+                                    <i @click="togglePasswordVisibilty" :class="[
+                                        'input-icon-right',
+                                        'cursor-pointer',
+                                        showPassword
+                                            ? 'bi bi-eye-slash-fill'
+                                            : 'bi bi-eye-fill',
+                                    ]"></i>
+                                </div>
+                                <small class="text-muted" style="font-size:12px;">*Gunakan minimal 8 karakter. Pegawai
+                                    dapat menggantinya nanti.</small>
+                                <input-error :message="form.errors.password" />
+                            </div>
+                        </form-wrapper>
+                    </div>
 
                 </template>
 
                 <template #footer>
-                    <div class="d-flex justify-content-end gap-2 p-2 bg-transparent">
+                    <div v-if="!isLoading" class="d-flex justify-content-end gap-2 p-2 bg-transparent">
                         <button type="button" class="btn btn-c-slate border-0 fw-medium px-4"
                             @click.prevent="close">Batal</button>
                         <button @click.prevent="submit" type="button" :disabled="form.processing"

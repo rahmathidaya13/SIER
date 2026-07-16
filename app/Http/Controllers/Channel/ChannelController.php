@@ -22,7 +22,6 @@ class ChannelController extends Controller
     }
     public function index(Request $request)
     {
-        $user = auth()->user();
         $filters = $request->only([
             'keyword',
             'limit',
@@ -32,7 +31,7 @@ class ChannelController extends Controller
         ]);
 
         $filters = app(ScopeResolverService::class)->filters($filters);
-        $channels = $this->repository->getCached($this->scopeId($user), $filters);
+        $channels = $this->repository->getCached($filters['scope'], $filters);
         return inertia('Channels/Index', [
             'channels' => $channels,
             'filters' => $filters
@@ -59,7 +58,7 @@ class ChannelController extends Controller
             'code' => strtoupper($request['code']),
             'icon' => $request['icon'],
         ]);
-        $this->invalidateCaches([ChannelRepository::class], ['global', $user->id_branch]);
+        $this->invalidateCaches([ChannelRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
         return redirect()->back()->with('message', 'Channel ' . $request['name'] . ' berhasil ditambahkan!');
     }
 
@@ -92,7 +91,7 @@ class ChannelController extends Controller
             'code' => strtoupper($request['code']),
             'icon' => $request['icon'],
         ]);
-        $this->invalidateCaches([ChannelRepository::class], ['global', $user->id_branch]);
+        $this->invalidateCaches([ChannelRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
         return redirect()->back()->with('message', 'Channel ' . $channel->name . ' berhasil diperbarui!');
     }
 
@@ -108,7 +107,7 @@ class ChannelController extends Controller
         }
 
         $channel->delete();
-        $this->invalidateCaches([ChannelRepository::class], ['global', $user->id_branch]);
+        $this->invalidateCaches([ChannelRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
         return redirect()->back()->with('message', 'Channel ' . $channel->name . ' berhasil dihapus!');
     }
 }

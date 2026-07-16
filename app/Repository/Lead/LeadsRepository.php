@@ -86,18 +86,16 @@ class LeadsRepository extends BaseCacheRepository
             ->paginate($filters['limit'] ?? 10)
             ->withQueryString();
     }
-
-
-    protected function resolveStatus(array $filters): string|array|null
+    protected function resolveStatus(array $filters): ?array
     {
         return match ($filters['status'] ?? 'active') {
-            'new' => 'NEW',
-            'follow_up' => 'FOLLOW_UP',
-            'closed_won' => 'CLOSED_WON',
-            'closed_lost' => 'CLOSED_LOST',
-            'active' => ['NEW', 'FOLLOW_UP'],
-            'all' => null,
-            default => null,
+            'new'         => ['NEW'],
+            'follow_up'   => ['FOLLOW_UP'],
+            'closed_won'  => ['CLOSED_WON'],
+            'closed_lost' => ['CLOSED_LOST'],
+            'active'      => ['NEW', 'FOLLOW_UP'],
+            'all'         => null,
+            default       => null,
         };
     }
     protected function resolveSorting(array $filters): ?array
