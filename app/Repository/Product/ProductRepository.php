@@ -50,9 +50,10 @@ class ProductRepository extends BaseCacheRepository
 
         $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
             $search = $filters['keyword'];
-            $q->where(function ($subQuery) use ($search) {
-                $subQuery->where('products.name', 'like', "%{$search}%")
-                    ->orWhere('products.product_code', 'like', "%{$search}%");
+            $cleanSearch = addcslashes($search, '%_');
+            $q->where(function ($subQuery) use ($cleanSearch) {
+                $subQuery->where('products.name', 'like', "%{$cleanSearch}%")
+                    ->orWhere('products.product_code', 'like', "%{$cleanSearch}%");
             });
         });
 
@@ -63,10 +64,11 @@ class ProductRepository extends BaseCacheRepository
     {
         $query = $this->buildBaseQuery($filters);
 
+        $limit = min((int)($filters['limit'] ?? 10), 100);
         [$column, $direction] = $this->resolveSorting($filters);
 
         return $query->orderBy($column, $direction)
-            ->paginate($filters['limit'] ?? 10)
+            ->paginate($limit)
             ->withQueryString();
     }
 

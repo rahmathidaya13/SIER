@@ -28,6 +28,13 @@ class ProductController extends Controller
     }
     public function index(Request $request)
     {
+        $request->validate([
+            'keyword' => 'nullable|string|max:255',
+            'limit' => 'nullable|integer|min:1|max:100',
+            'order_by' => 'nullable|string|in:oldest,latest',
+            'page' => 'nullable|integer|min:1',
+        ]);
+
         $filters = $request->only([
             'keyword',
             'limit',
@@ -98,8 +105,9 @@ class ProductController extends Controller
         $products = ProductModel::with('prices')
             ->select('id_product', 'name', 'image_link', 'image_path', 'category')
             ->when($keyword, function ($q, $search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('id_product', 'like', "%{$search}%");
+                $cleanSearch = addcslashes($search, '%_');
+                $q->where('name', 'like', "%{$cleanSearch}%")
+                    ->orWhere('id_product', 'like', "%{$cleanSearch}%");
             })
             ->limit(10) // HANYA AMBIL 10 TERATAS!
             ->get();

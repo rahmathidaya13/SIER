@@ -1,7 +1,7 @@
 <script setup>
 import { Head, router } from '@inertiajs/vue3';
 import { useFilter } from '@/Composables/useFilter';
-import { hasRole } from '@/Composables/useAuth';
+import { hasRole, hasPermission } from '@/Composables/useAuth';
 import { computed, ref } from 'vue';
 import { formatDate } from '@/Helpers/formatDate';
 import { highlight } from '@/Helpers/Highlight';
@@ -77,6 +77,7 @@ const header = [
     {
         label: "Aksi",
         key: "actions",
+        visible: hasRole('super_admin', 'developer'),
         attrs: {
             class: 'text-center'
         },
@@ -125,6 +126,9 @@ const formatCategory = (category) => {
         .map(part => part.replace(/\b\w/g, char => char.toUpperCase()))
         .join(' - ');
 }
+const visibleWithAction = (permission, role) => {
+    if (hasRole(role) && hasPermission(permission)) return true;
+}
 </script>
 <template>
 
@@ -143,7 +147,8 @@ const formatCategory = (category) => {
                                     <h5 class="fw-bold mb-1">Manajemen Produk</h5>
                                     <small class="text-muted">Buat Produk Baru atau Ubah data Produk</small>
                                 </div>
-                                <button @click.prevent="openCreateModal" class="btn btn-c-primary px-4 py-2">
+                                <button v-if="visibleWithAction('product-create', ['super_admin', 'developer'])"
+                                    @click.prevent="openCreateModal" class="btn btn-c-primary px-4 py-2">
                                     <i class="bi bi-plus-circle me-1"></i> Produk Baru
                                 </button>
                             </div>
@@ -292,13 +297,17 @@ const formatCategory = (category) => {
                                         </div>
                                     </td>
 
-                                    <td class="pe-4">
-                                        <div class="d-flex gap-1">
-                                            <button @click.prevent="openEditModal(item)" type="button"
+                                    <td class="pe-4" v-if="hasRole('super_admin', 'developer')">
+                                        <div class=" d-flex gap-1">
+                                            <button
+                                                v-if="visibleWithAction('product-edit', ['super_admin', 'developer'])"
+                                                @click.prevent="openEditModal(item)" type="button"
                                                 class="btn btn-c-slate" title="Edit Produk">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
-                                            <button @click.prevent="deleted('product.delete', item)" type="button"
+                                            <button
+                                                v-if="visibleWithAction('product-delete', ['super_admin', 'developer'])"
+                                                @click.prevent="deleted('product.delete', item)" type="button"
                                                 class="btn btn-c-danger" title="Hapus Produk">
                                                 <i class="bi bi-trash"></i>
                                             </button>
