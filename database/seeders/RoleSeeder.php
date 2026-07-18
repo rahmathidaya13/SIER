@@ -58,7 +58,6 @@ class RoleSeeder extends Seeder
             'users-delete',
 
             // Aksi Khusus
-            'approve-documents',
             'export-data',
         ];
 

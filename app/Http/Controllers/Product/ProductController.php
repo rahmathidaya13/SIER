@@ -18,16 +18,15 @@ class ProductController extends Controller
 {
     use UserScope, BranchMutationHelper, ProductValidation;
     protected $repository;
-    protected $scopeResolverService;
     protected $services;
     public function __construct(ProductRepository $repository)
     {
         $this->repository = $repository;
-        $this->scopeResolverService = new ScopeResolverService();
         $this->services = new ProductService();
     }
     public function index(Request $request)
     {
+        $this->authorize('view', ProductModel::class);
         $request->validate([
             'keyword' => 'nullable|string|max:255',
             'limit' => 'nullable|integer|min:1|max:100',
@@ -41,7 +40,7 @@ class ProductController extends Controller
             'order_by',
             'page',
         ]);
-        $filters = $this->scopeResolverService->filters($filters);
+        $filters = app(ScopeResolverService::class)->filters($filters);
         $products = $this->repository->getCached($filters['scope'], $filters);
         $category = ProductModel::select('category')->distinct()->get();
         return inertia('Product/Index', [
@@ -72,8 +71,9 @@ class ProductController extends Controller
         return redirect()->back()->with('message', 'Produk baru ' . $product->name . ' berhasil ditambahkan!');
     }
 
-    public function update(Request $request, ProductModel $product)
+    public function update(Request $request, string $id)
     {
+        $product = ProductModel::find($id);
         if (!$product) {
             throw ValidationException::withMessages([
                 'error' => 'Data produk tidak ditemukan atau sudah dihapus.'
@@ -92,10 +92,30 @@ class ProductController extends Controller
         return redirect()->back()->with('message', 'Perubahan data dari produk ' . $product->name . ' berhasil diperbarui!');
     }
 
-    public function destroy(ProductModel $product)
+    public function destroy(string $id)
     {
+        $product = ProductModel::find($id);
+        if (!$product) {
+            throw ValidationException::withMessages([
+                'error' => 'Data produk tidak ditemukan atau sudah dihapus.'
+            ]);
+        }
+
+        $response = Gate::inspect('deleted', $product);
+        if ($response->denied()) {
+            throw ValidationException::withMessages([
+                'error' => $response->message()
+            ]);
+        }
+
         $user = auth()->user();
         $this->services->delete($product);
+
+        if (!$product->trashed()) {
+            throw ValidationException::withMessages([
+                'error' => "Sistem gagal menghapus data {$product->name} secara aman."
+            ]);
+        }
         $this->invalidateCaches([ProductRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
         return redirect()->back()->with('message', 'Data produk ' . $product->name . ' berhasil dihapus');
     }

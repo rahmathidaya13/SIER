@@ -49,9 +49,9 @@ class LoginController extends Controller
             'password'
         ]);
 
-        $remember = $request->boolean('remember');
+        // $remember = $request->boolean('remember');
 
-        if (!Auth::attempt($credentials, $remember)) {
+        if (!Auth::attempt($credentials, true)) {
             RateLimiter::hit($this->throttleKey($request));
             throw ValidationException::withMessages([
                 'error' => 'Email atau password salah.',

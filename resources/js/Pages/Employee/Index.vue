@@ -1,6 +1,6 @@
 <script setup>
 import { Head, router } from '@inertiajs/vue3';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useFilter } from '@/Composables/useFilter';
 import { highlight } from "@/Helpers/Highlight";
 import { useConfirm } from "@/Composables/useConfirm"
@@ -10,9 +10,9 @@ const confirm = useConfirm();
 const props = defineProps({
     employee: Object,
     branches: Array,
+    permissions: Array,
     filters: Object,
 })
-
 const showModal = ref(false);
 const selectedByIdUser = ref(null);
 const openCreateModal = () => {
@@ -174,6 +174,7 @@ const deleted = async (nameRoute, data) => {
         });
     }
 }
+
 const keywordRef = ref(null);
 onMounted(() => {
     keywordRef.value.focus();
@@ -324,8 +325,8 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
-            <FormModal :idUser="selectedByIdUser" :branches="props.branches" :show="showModal"
-                @update:show="showModal = $event" />
+            <FormModal :permissions="props.permissions" :idUser="selectedByIdUser" :branches="props.branches"
+                :show="showModal" @update:show="showModal = $event" />
         </template>
     </app-layout>
 </template>

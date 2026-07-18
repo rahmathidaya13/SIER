@@ -9,7 +9,7 @@ import { formatDate } from '@/Helpers/formatDate';
 import { currencyFormat } from '@/Helpers/currencyFormat';
 import PaymentModal from './PaymentModal.vue';
 import ActivityTimelineModal from './ActivityTimelineModal.vue';
-import { hasRole } from '@/Composables/useAuth';
+import { hasRole, hasPermission } from '@/Composables/useAuth';
 
 const props = defineProps({
     sales: Object,
@@ -50,6 +50,11 @@ const openActivityModal = (data) => {
     selectedIdSale.value = data.id_sales;
     showActivityModal.value = true;
 }
+const cancelClosing = (data) => {
+    selectedIdSale.value = data.id_sales;
+    showPaymentModal.value = true;
+
+}
 const header = [
     {
         label: "No",
@@ -75,7 +80,7 @@ const header = [
             style: {
                 width: '25%'
             },
-            class: 'text-center',
+            class: 'text-start',
         },
     },
     {
@@ -123,6 +128,14 @@ const payActions = [
         icon: 'bi bi-clock-history',
         title: 'Lihat history aktivitas',
         class: 'btn btn-c-slate',
+    },
+    {
+        label: 'Batal pembayaran',
+        action: 'cancelClosing',
+        protectedSelf: true,
+        icon: 'bi bi-x-circle-fill',
+        title: 'Batal pembayaran',
+        class: 'btn btn-c-danger',
     },
 
     {
@@ -234,7 +247,7 @@ onMounted(() => {
                                     <small class="text-muted">Manajemen transaksi masuk dan pelunasan tagihan
                                         pelanggan.</small>
                                 </div>
-                                <div class="dropdown">
+                                <div class="dropdown" v-if="hasPermission('export-data')">
                                     <button data-bs-toggle="dropdown" class="btn btn-c-slate dropdown-toggle"
                                         type="button">
                                         <i class="bi bi-download me-2 "></i>
@@ -372,7 +385,7 @@ onMounted(() => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.sales_name || 'Sistem'
-                                                }} {{ `(${getRoleName(item.role_name).label ?? 'Unknown'})` }}
+                                                    }} {{ `(${getRoleName(item.role_name).label ?? 'Unknown'})` }}
                                                 </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>
@@ -389,7 +402,8 @@ onMounted(() => {
                                     </td>
 
                                     <td class="text-center">
-                                        <action-button :item="item" :actions="payActions" @pay="openPaymentModal(item)"
+                                        <action-button @cancelClosing="cancelClosing(item)" :item="item"
+                                            :actions="payActions" @pay="openPaymentModal(item)"
                                             @history="openActivityModal(item)" />
                                     </td>
 

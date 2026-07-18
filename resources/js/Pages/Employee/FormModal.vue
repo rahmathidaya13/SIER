@@ -8,6 +8,7 @@ const props = defineProps({
     show: Boolean,
     isLoading: Boolean,
     branches: Array,
+    permissions: Array
 });
 
 
@@ -24,15 +25,18 @@ const form = useForm({
     role: null, // Default
     id_branch: null,
     is_active: 'active',
+    permissions: []
 });
 
 const fillForm = (data) => {
+    console.log(data);
     form.defaults({
         name: data.name,
         email: data.email,
         role: data.roles[0]?.name,
         id_branch: data.id_branch,
         is_active: data.is_active,
+        permissions: data.permissions ? data.permissions.map(p => p.id) : [],
     });
     form.reset();
     form.clearErrors();
@@ -47,6 +51,7 @@ const resetForm = () => {
         role: null,
         id_branch: null,
         is_active: 'active',
+        permissions: [],
     });
     form.reset();
     form.clearErrors();
@@ -74,6 +79,14 @@ const branchOptions = computed(() => [
         value: data.id_branch,
     }))
 ]);
+
+const permissionOptions = computed(() => [
+    ...props.permissions.map(data => ({
+        label: data.name,
+        value: data.id,
+    }))
+]);
+console.log(permissionOptions.value);
 const availableRoles = computed(() => {
     if (isDeveloper) {
         return [
@@ -154,6 +167,45 @@ const showPassword = ref(false);
 const togglePasswordVisibilty = () => {
     showPassword.value = !showPassword.value;
 };
+
+const moduleTranslations = {
+    'product': 'Katalog Produk',
+    'lead': 'Data Prospek (Lead)',
+    'closing': 'Rekap Closing',
+    'channel': 'Trafik Channel',
+    'users': 'Manajemen Pegawai',
+    'export': 'Laporan & Rekap'
+    // Silakan tambah/ubah modul lain sesuai kebutuhan aplikasi Anda di sini
+};
+// Mengelompokkan permissions menjadi format Matrix (Baris = Modul, Kolom = Aksi)
+const permissionMatrix = computed(() => {
+    const matrix = {};
+
+    props.permissions.forEach(perm => {
+        // Memecah "product-create" menjadi module="product" dan action="create"
+        // Jika nama permission Anda menggunakan underscore, ganti split('-') menjadi split('_')
+        const [module, ...actionParts] = perm.name.split('-');
+        const action = actionParts.join('-');
+
+        if (!matrix[module]) {
+            matrix[module] = {
+                name: moduleTranslations[module] || module.replace(/-/g, ' '),
+                view: null,
+                create: null,
+                edit: null,
+                delete: null,
+                data: null // ini digunakan untuk export-data
+            };
+        }
+
+        // Klasifikasikan ke dalam kolom yang tepat
+        if (['view', 'create', 'edit', 'delete', 'data'].includes(action)) {
+            matrix[module][action] = perm;
+        }
+    });
+
+    return Object.values(matrix);
+});
 </script>
 <template>
     <div class="row" v-if="props.show">
@@ -215,11 +267,100 @@ const togglePasswordVisibilty = () => {
                                 <input-label labelClass="mb-2" for="is_active" value="Status Pegawai" />
                                 <div class="d-flex gap-5">
                                     <radio-button name="is_active" v-model:checked="form.is_active" value="active"
-                                        label="Aktif (Pegawai dapat login)" />
+                                        label="Aktif (Akses diberikan)" />
                                     <radio-button name="is_active" v-model:checked="form.is_active" value="inactive"
-                                        label="Tidak Aktif (Pegawai tidak dapat login)" />
+                                        label="Tidak Aktif (Akses ditangguhkan)" />
                                 </div>
                                 <input-error :message="form.errors.phone" />
+                            </div>
+
+                            <div class="mb-3">
+                                <input-label labelClass="mb-1" value="Hak Akses Khusus (Permissions)" />
+                                <p class="text-muted mb-2" style="font-size: 12.5px;">
+                                    *Pilih hak akses
+                                    <span v-if="!form.role" class="text-warning"><i
+                                            class="bi bi-info-circle me-1"></i>Pilih jabatan terlebih dahulu untuk
+                                        melihat akses dasarnya.</span>
+                                </p>
+                                <div class="table-responsive border rounded-3 mt-1 custom-scrollbar"
+                                    style="max-height: 380px;">
+                                    <table class="table table-sm table-hover mb-0 align-middle"
+                                        style="font-size: 13.5px;">
+                                        <thead class="table-light text-center sticky-top ">
+                                            <tr>
+                                                <th scope="col" class="text-start">Modul Sistem</th>
+                                                <th scope="col" class="py-2">Lihat (View)</th>
+                                                <th scope="col" class="py-2">Tambah (Create)</th>
+                                                <th scope="col" class="py-2">Ubah (Edit)</th>
+                                                <th scope="col" class="py-2">Hapus (Delete)</th>
+                                                <th scope="col" class="py-2">Export Data</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Looping per modul -->
+                                            <tr v-for="row in permissionMatrix" :key="row.name">
+                                                <!-- Nama Modul -->
+                                                <td class="text-capitalize fw-semibold text-start ps-3 bg-light">
+                                                    {{ row.name }}
+                                                </td>
+
+                                                <!-- Kolom View -->
+                                                <td class="text-center">
+                                                    <div class="form-check form-switch d-flex justify-content-center">
+                                                        <input v-if="row.view" type="checkbox"
+                                                            class="form-check-input cursor-pointer" role="switch"
+                                                            :value="row.view.id" v-model="form.permissions"
+                                                            style="transform: scale(1.4);">
+                                                        <span v-else class="text-muted small">-</span>
+                                                    </div>
+                                                </td>
+
+                                                <!-- Kolom Create -->
+                                                <td class="text-center">
+                                                    <div class="form-check form-switch d-flex justify-content-center">
+                                                        <input v-if="row.create" type="checkbox" role="switch"
+                                                            class="form-check-input cursor-pointer"
+                                                            :value="row.create.id" v-model="form.permissions"
+                                                            style="transform: scale(1.4);">
+                                                        <span v-else class="text-muted small">-</span>
+                                                    </div>
+                                                </td>
+
+                                                <!-- Kolom Edit -->
+                                                <td class="text-center">
+                                                    <div class="form-check form-switch d-flex justify-content-center">
+                                                        <input v-if="row.edit" type="checkbox" role="switch"
+                                                            class="form-check-input cursor-pointer" :value="row.edit.id"
+                                                            v-model="form.permissions" style="transform: scale(1.4);">
+                                                        <span v-else class="text-muted small">-</span>
+                                                    </div>
+                                                </td>
+
+                                                <!-- Kolom Delete -->
+                                                <td class="text-center">
+                                                    <div class="form-check form-switch d-flex justify-content-center">
+                                                        <input v-if="row.delete" type="checkbox" role="switch"
+                                                            class="form-check-input cursor-pointer"
+                                                            :value="row.delete.id" v-model="form.permissions"
+                                                            style="transform: scale(1.4);">
+                                                        <span v-else class="text-muted small">-</span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <div class="form-check form-switch d-flex justify-content-center">
+                                                        <input v-if="row.data" type="checkbox" role="switch"
+                                                            class="form-check-input cursor-pointer" :value="row.data.id"
+                                                            v-model="form.permissions" style="transform: scale(1.4);">
+                                                        <span v-else class="text-muted small">-</span>
+                                                    </div>
+                                                </td>
+
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <input-error :message="form.errors.permissions" class="mt-1" />
+
                             </div>
 
                             <div class="mb-3">
@@ -269,3 +410,33 @@ const togglePasswordVisibilty = () => {
         </div>
     </div>
 </template>
+<style scoped>
+/* Agar scrollbar terlihat modern di Windows/Chrome */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: var(--c-success);
+    border-color: var(--c-success-subtle);
+}
+</style>

@@ -175,7 +175,7 @@ const getImageUrl = (item) => {
     if (item.image_path) {
         return `/storage/${item.image_path}`; // Gambar lokal dari storage Laravel
     }
-    return '/img/placeholder.png'; // Fallback jika tidak ada gambar
+    return '/storage/no_image/no-image.png'; // Fallback jika tidak ada gambar
 };
 
 </script>

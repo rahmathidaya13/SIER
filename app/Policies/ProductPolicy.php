@@ -19,6 +19,11 @@ class ProductPolicy
         return null;
     }
 
+    public function view(User $user)
+    {
+        return $user->hasPermissionTo('product-view');
+    }
+
     /**
      * Helper: Memeriksa apakah User berasal dari Kantor Pusat (Official Branch)
      */
@@ -70,7 +75,7 @@ class ProductPolicy
     /**
      * 4. LOGIKA DELETE (Hanya Orang Pusat)
      */
-    public function delete(User $user, ProductModel $product)
+    public function deleted(User $user, ProductModel $product)
     {
         // A. Wajib memiliki permission delete
         if (!$user->hasPermissionTo('product-delete')) {

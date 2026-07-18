@@ -65,8 +65,8 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
         Route::get('/product/show/{product}', 'show')->name('product.show');
         Route::get('/product/keyword', 'productSearch')->name('product.search');
         Route::post('/product/store', 'store')->name('product.store');
-        Route::put('/product/update/{product}', 'update')->name('product.update');
-        Route::delete('/product/delete/{product}', 'destroy')->name('product.delete');
+        Route::put('/product/update/{id}', 'update')->name('product.update');
+        Route::delete('/product/delete/{id}', 'destroy')->name('product.delete');
     });
 
     Route::controller(ChannelController::class)->group(function () {
@@ -79,8 +79,8 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
 
     Route::controller(SaleController::class)->group(function () {
         Route::get('/sales/list', 'index')->name('sales.index');
-        Route::get('/sales/show/{sales}', 'show')->name('sales.show');
-        Route::post('/sales/pay/{sales}', 'payRemaining')->name('sales.pay');
+        Route::get('/sales/show/{id}', 'show')->name('sales.show');
+        Route::post('/sales/pay/{id}', 'payRemaining')->name('sales.pay');
     });
 });
 

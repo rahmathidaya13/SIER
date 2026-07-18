@@ -75,10 +75,9 @@ class LeadServices
         });
     }
 
-    public function update(string $id, array $data, $user): LeadModel
+    public function update(LeadModel $leads, array $data, $user): LeadModel
     {
-        return DB::transaction(function () use ($id, $data, $user) {
-            $leads = LeadModel::findOrFail($id);
+        return DB::transaction(function () use ($leads, $data, $user) {
 
             // Validasi untuk memastikan bahwa status dan temperature tidak diubah jika sudah memiliki nilai tertentu
             $this->__validate($leads, $data, [
@@ -117,15 +116,6 @@ class LeadServices
             return $leads;
         });
     }
-    public function delete(LeadModel $leads)
-    {
-        $user = auth()->user();
-
-        $this->authorization->ensureCanDelete($user, $leads);
-
-        $leads->delete();
-    }
-
     private function convertLeadToSales(LeadModel $leads, array $validated)
     {
         return DB::transaction(function () use ($leads, $validated) {

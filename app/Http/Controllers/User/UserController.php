@@ -16,6 +16,7 @@ use App\Services\User\UserBusinessRuleService;
 use Illuminate\Validation\ValidationException;
 use App\Services\User\UserAuthorizationService;
 use App\Services\Authorization\ScopeResolverService;
+use Spatie\Permission\Models\Permission;
 
 class UserController extends Controller
 {
@@ -54,16 +55,18 @@ class UserController extends Controller
         $branches = BranchModel::query()
             ->select('id_branch', 'name')
             ->get();
+        $permission = Permission::select('id', 'name')->get();
         return inertia('Employee/Index', [
             'branches' => $branches,
             'employee' => $employee,
+            'permissions' => $permission,
             'filters'  => $filters
         ]);
     }
 
     public function show(string $id)
     {
-        $user = User::with('branch', 'roles:id,name')
+        $user = User::with('branch', 'roles:id,name', 'permissions:id,name')
             ->findOrFail($id);
         return response()->json($user);
     }

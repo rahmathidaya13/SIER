@@ -50,11 +50,11 @@ class SaleRepository extends BaseCacheRepository
 
         $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
             $search = $filters['keyword'];
-
-            $q->where(function ($subQuery) use ($search) {
-                $subQuery->where('leads.name', 'like', "%{$search}%")
-                    ->orWhere('leads.phone', 'like', "%{$search}%")
-                    ->orWhere('sales.invoice', 'like', "%{$search}%");
+            $cleanSearch = addcslashes($search, '%_');
+            $q->where(function ($subQuery) use ($cleanSearch) {
+                $subQuery->where('leads.name', 'like', "%{$cleanSearch}%")
+                    ->orWhere('leads.phone', 'like', "%{$cleanSearch}%")
+                    ->orWhere('sales.invoice', 'like', "%{$cleanSearch}%");
             });
         });
 
@@ -65,10 +65,10 @@ class SaleRepository extends BaseCacheRepository
 
         $query = $this->buildBaseQuery($branchId, $filters);
         [$column, $direction] = $this->resolveSorting($filters);
-
+        $limit = min((int) ($filters['limit'] ?? 10), 100);
         return $query
             ->orderBy($column, $direction)
-            ->paginate($filters['limit'] ?? 10)
+            ->paginate($limit)
             ->withQueryString();
     }
     protected function resolveSorting(array $filters): ?array

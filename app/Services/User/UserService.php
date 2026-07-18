@@ -22,7 +22,12 @@ class UserService
             'id_user' => $user->id,
         ]);
 
-        $user->assignRole($data['role']);
+        if (request()->filled('role')) {
+            $user->assignRole($data['role']);
+        }
+        if (request()->has('permissions')) {
+            $user->syncPermissions($data['permissions']);
+        }
 
         return $user;
     }
@@ -43,12 +48,20 @@ class UserService
         }
 
         $user->save();
+
         ProfileModel::updateOrCreate([
             'id_user' => $user->id
         ], []);
-        $user->syncRoles([
-            $data['role']
-        ]);
+
+        if (request()->filled('role')) {
+            $user->syncRoles([
+                $data['role']
+            ]);
+        }
+
+        if (request()->has('permissions')) {
+            $user->syncPermissions($data['permissions']);
+        }
 
         return $user;
     }

@@ -11,6 +11,7 @@ use App\Traits\LeadsValidation;
 use App\Services\Lead\LeadServices;
 use App\Http\Controllers\Controller;
 use App\Traits\BranchMutationHelper;
+use Illuminate\Support\Facades\Gate;
 use App\Repository\Lead\LeadsRepository;
 use App\Traits\ActivityMessageFormatter;
 use App\Repository\Channel\ChannelRepository;
@@ -37,6 +38,17 @@ class LeadController extends Controller
     }
     public function index(Request $request)
     {
+        $this->authorize('viewAny', LeadModel::class);
+
+        $request->validate([
+            'keyword' => 'nullable|string|max:255',
+            'limit' => 'nullable|integer|min:1|max:100',
+            'periode' => 'nullable|date|date_format:Y-m',
+            'status' => 'nullable|string|in:all,active,new,follow_up,closed_won,closed_lost',
+            'order_by' => 'nullable|string|in:oldest,latest',
+            'page' => 'nullable|integer|min:1',
+        ]);
+
         $filters = $request->only([
             'keyword',
             'limit',
@@ -64,6 +76,13 @@ class LeadController extends Controller
 
     public function store(Request $request)
     {
+        $response = Gate::inspect('create', LeadModel::class);
+        if ($response->denied()) {
+            throw ValidationException::withMessages([
+                'unauthorized_action' => $response->message()
+            ]);
+        }
+
         $user = auth()->user();
         $this->validateLeads($request->all());
 
@@ -91,32 +110,63 @@ class LeadController extends Controller
     {
         $user = auth()->user();
         $this->validateLeads($request->all(), $id);
-        $lead = $this->leadServices->update($id, $request->all(), $user);
+
+        $leads = LeadModel::find($id);
+
+        if (!$leads) {
+            throw ValidationException::withMessages([
+                'error' => 'Data lead tidak ditemukan atau sudah dihapus.'
+            ]);
+        }
+
+        $response = Gate::inspect('update', $leads);
+        if ($response->denied()) {
+            throw ValidationException::withMessages([
+                'unauthorized_action' => $response->message()
+            ]);
+        }
+
+        $this->leadServices->update($leads, $request->all(), $user);
+
         $this->invalidateCaches(
             [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
             ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
         );
-        return redirect()->back()->with('message', 'Lead ' . $lead->name . ' berhasil diperbarui!');
+        return redirect()->back()->with('message', 'Lead ' . $leads->name . ' berhasil diperbarui!');
     }
 
     public function show(string $id)
     {
-        $leads = LeadModel::allowedForUser()
-            ->with([
-                'user:id,name as creator_name',
-                'channel:id_channel,name as channel_name,icon',
-                'product:id_product,name as product_name,image_link,image_path',
-                'activity.user:id,name as activity_creator_name',
-                'activity.user.roles:id,name',
-                'activity.userUpdate.roles:id,name as updated_by_name',
-            ])
-            ->findOrFail($id);
+        $leads = LeadModel::with([
+            'user:id,name as creator_name',
+            'channel:id_channel,name as channel_name,icon',
+            'product:id_product,name as product_name,image_link,image_path',
+            'activity.user:id,name as activity_creator_name',
+            'activity.user.roles:id,name',
+            'activity.userUpdate.roles:id,name as updated_by_name',
+        ])->findOrFail($id);
         return response()->json($leads);
     }
-    public function destroy(LeadModel $leads)
+    public function destroy(string $id)
     {
         $user = auth()->user();
-        $this->leadServices->delete($leads);
+        $leads = LeadModel::find($id);
+
+        if (!$leads) {
+            throw ValidationException::withMessages([
+                'error' => 'Data lead tidak ditemukan atau sudah dihapus.'
+            ]);
+        }
+
+        $response = Gate::inspect('delete', $leads);
+        if ($response->denied()) {
+            throw ValidationException::withMessages([
+                'error' => $response->message()
+            ]);
+        }
+
+        $leads->delete();
+
         $this->invalidateCaches(
             [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
             ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]

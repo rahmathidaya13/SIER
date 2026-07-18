@@ -44,6 +44,9 @@ trait UserValidation
                     ? ['required', 'exists:branches,id_branch']
                     : ['nullable'],
                 'is_active' => ['required', 'in:active,inactive'],
+
+                'permissions'   => 'required|array',
+                'permissions.*' => 'required|exists:permissions,id',
             ],
             [
                 'name.required'      => 'Nama tidak boleh kosong.',
@@ -64,6 +67,9 @@ trait UserValidation
 
                 'is_active.required' => 'Status wajib dipilih.',
                 'is_active.in'  => 'Status tidak valid.',
+
+                'permissions.required' => 'Hak Akses wajib dipilih',
+                'permissions.*.exists' => 'Permission tidak sesuai.',
             ]
         )->validate();
     }

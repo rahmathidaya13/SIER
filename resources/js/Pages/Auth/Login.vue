@@ -28,7 +28,7 @@ onMounted(() => {
     <Head title="Masuk" />
     <div class="container-fluid vh-100 overflow-hidden">
         <div class="row vh-100 justify-content-center align-items-center">
-            <div class="col-12 col-xl-4 col-md-8 col-lg-4">
+            <div class="col-12 col-xl-4 col-md-6 col-lg-6">
                 <callout />
                 <div class="card p-5">
                     <div class="text-center mb-0">

@@ -5,6 +5,7 @@ import { useFilter } from '@/Composables/useFilter';
 import { useConfirm } from "@/Composables/useConfirm"
 import { highlight } from "@/Helpers/Highlight";
 import { formatDate } from '@/Helpers/formatDate';
+import { hasRole, hasPermission } from "@/Composables/useAuth";
 import FormModal from './FormModal.vue';
 import ConvertLeadModal from './ConvertLeadModal.vue';
 import ActivityTimelineModal from './ActivityTimelineModal.vue';
@@ -199,14 +200,14 @@ const rowClasses = (item) => ({
 const deleted = async (nameRoute, data) => {
     const setConfirm = await confirm.ask({
         title: 'Hapus',
-        message: `Kamu ingin menghapus Data Lead ini ${data.name} ?`,
+        message: `Kamu ingin menghapus Data Lead dari ${data.name} ? Data yang sudah dihapus tidak dapat dikembalikan!`,
         confirmText: 'Ya, Hapus',
         variant: 'danger'
     });
 
     if (setConfirm) {
         router.delete(route(nameRoute, data.id_lead), {
-            preserveScroll: false,
+            preserveScroll: true,
             replace: true,
             preserveState: true
         });
@@ -243,7 +244,9 @@ const getRoleName = (roleName) => {
     };
     return roles[roleName] || 'bg-light text-dark border';
 };
-
+const canAccess = (permission, role = []) => {
+    return hasRole(role) || hasPermission(permission);
+}
 </script>
 <template>
 
@@ -262,7 +265,8 @@ const getRoleName = (roleName) => {
                                     <h5 class="fw-bold mb-1">Data Prospek (Leads)</h5>
                                     <small class="text-muted">Prospek yang belum melakukan pembayaran deal</small>
                                 </div>
-                                <button @click.prevent="openCreateModal" class="btn btn-c-primary px-4 py-2">
+                                <button v-if="hasPermission('lead-create')" @click.prevent="openCreateModal"
+                                    class="btn btn-c-primary px-4 py-2">
                                     <i class="bi bi-plus-circle me-1"></i> Lead Baru
                                 </button>
                             </div>
@@ -334,7 +338,7 @@ const getRoleName = (roleName) => {
                                             v-html="highlight(item.name, filters.keyword)"></div>
                                         <div v-if="item.email" class="text-muted small mb-2">
                                             <a :href="getEmail(item.email)" class="text-decoration-none">{{ item.email
-                                            }}</a>
+                                                }}</a>
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
                                             <a :href="getWaLink(item.phone)" target="_blank"
@@ -392,7 +396,7 @@ const getRoleName = (roleName) => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.creator_name || 'Sistem'
-                                                    }} {{ `(${getRoleName(item.role_name).label})` }}
+                                                }} {{ `(${getRoleName(item.role_name).label})` }}
                                                 </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>
@@ -417,12 +421,13 @@ const getRoleName = (roleName) => {
                                             </button>
 
 
-                                            <button :disabled="item.status === 'CLOSED_WON'"
+                                            <button v-if="hasPermission('lead-edit') && item.status !== 'CLOSED_WON'"
                                                 @click="openEditModal(item)"
                                                 :class="`btn btn-c-success ${item.status === 'CLOSED_WON' ? 'disabled' : ''}`"
                                                 title="Edit Data">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
+
                                             <template v-if="item.status !== 'CLOSED_WON'">
                                                 <button @click="openConvertModal(item)" class="btn btn-c-info"
                                                     title="Sahkan Closing">
@@ -437,6 +442,12 @@ const getRoleName = (roleName) => {
                                                     <i class="bi bi-receipt"></i>
                                                 </Link>
                                             </template>
+
+                                            <button v-if="hasPermission('lead-delete') && item.status !== 'CLOSED_WON'"
+                                                @click="deleted('leads.delete', item)" class="btn btn-c-primary"
+                                                title="Hapus Lead">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
 
                                         </div>
                                     </td>
