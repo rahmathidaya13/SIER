@@ -31,6 +31,7 @@ const form = useForm({
     id_channel: null,
     id_product: '',
     temperature: null,
+    customer_type: null,
     status: null,
     follow_up_date: '',
     notes: '',
@@ -60,17 +61,32 @@ watch(
     }
 );
 
-// Auto-Pindah Tab jika Sales ubah Status & Suhu
+// Mengawasi perubahan Status & Suhu secara bersamaan
 watch(
     () => [form.status, form.temperature],
-    ([newStatus, newTemp]) => {
+    ([newStatus, newTemp], [oldStatus, oldTemp]) => {
+        // A. Jika Status diubah jadi Closing -> Suhu paksa jadi HOT
+        if (newStatus === 'CLOSED_WON' && oldStatus !== 'CLOSED_WON') {
+            form.temperature = 'HOT';
+        }
+        // B. Jika Suhu diubah jadi HOT -> Status paksa jadi Closing
+        else if (newTemp === 'HOT' && oldTemp !== 'HOT') {
+            form.status = 'CLOSED_WON';
+        }
+        // C. Jika batal/Closing -> Turunkan suhu ke WARM agar konsisten
+        else if (oldStatus === 'CLOSED_WON' && newStatus !== 'CLOSED_WON' && newTemp === 'HOT') {
+            form.temperature = 'WARM';
+        }
+        // D. Jika suhu diturunkan dari HOT -> Batalkan status Closing
+        else if (oldTemp === 'HOT' && newTemp !== 'HOT' && newStatus === 'CLOSED_WON') {
+            form.status = 'NEW';
+        }
 
-        // Jika Sales ubah status jadi Closing & Suhu HOT, paksa pindah ke Tab Uang!
-        if (newStatus === 'CLOSED_WON' && newTemp === 'HOT') {
+        if (form.status === 'CLOSED_WON' && form.temperature === 'HOT') {
             activeTab.value = 'convert_lead';
         }
-        // Jika Sales batalin closing (kembali ke Follow Up), sembunyikan tab uang
         else if (activeTab.value === 'convert_lead') {
+            // Sembunyikan tab uang jika batal closing
             activeTab.value = 'prospect';
         }
     }
@@ -83,6 +99,8 @@ const fillForm = (data) => {
         id_channel: data.id_channel,
         id_product: data.product?.id_product || '',
         temperature: data.temperature,
+        customer_type: data.customer_type,
+
         status: data.status,
         follow_up_date: data.follow_up_date || '',
         notes: data.notes,
@@ -99,7 +117,6 @@ const fillForm = (data) => {
         bank_name: '',
         notes_sales: ''
     });
-    console.log(data);
     if (data.product?.id_product) {
         selectedProductObj.value = {
             id_product: data.product?.id_product,
@@ -123,6 +140,7 @@ const resetForm = () => {
         id_channel: null,
         id_product: '',
         temperature: null,
+        customer_type: null,
         status: null,
         follow_up_date: '',
         notes: '',
@@ -375,7 +393,7 @@ const isLocked = computed(() => {
 const prospectOptions = computed(() => {
     let options = [
         { label: '⭐ Baru Masuk', value: 'NEW' },
-        { label: '💬 Sedang Follow Up', value: 'FOLLOW_UP' },
+        { label: '💬 Follow Up', value: 'FOLLOW_UP' },
         { label: '❌ Lost / Batal', value: 'CLOSED_LOST' },
         { label: '✔️ Closing (Terjual)', value: 'CLOSED_WON' },
     ];
@@ -383,7 +401,7 @@ const prospectOptions = computed(() => {
         options =
             [
                 { label: '⭐ Baru Masuk', value: 'NEW' },
-                { label: '💬 Sedang Follow Up', value: 'FOLLOW_UP' },
+                { label: '💬 Follow Up', value: 'FOLLOW_UP' },
                 { label: '❌ Lost / Batal', value: 'CLOSED_LOST' },
             ]
     }
@@ -454,6 +472,13 @@ const imageSource = (product) => {
 
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(product?.product_name)}`
 };
+const dpAmount = computed(() => {
+    if (!form.deal_price) return 0
+    if (form.payment_status === 'DP') {
+        return Number(form.deal_price * 0.5)
+    }
+    return form.deal_price
+})
 </script>
 <template>
     <div class="row" v-if="props.show">
@@ -481,122 +506,192 @@ const imageSource = (product) => {
                     </div>
 
                     <form-wrapper @submit.prevent="submit">
-                        <div v-show="activeTab === 'prospect'" class="row g-2 animate-fade-in">
-                            <div class="col-md-6 mb-2">
-                                <label for="name_input" class="form-label small fw-bold text-muted">NAMA PROSPEK
-                                    *</label>
-                                <input-text :error="form.errors.name" v-model="form.name" name="name"
-                                    placeholder="Cth: Budi Santoso" />
-                                <input-error :message="form.errors.name" />
-                            </div>
 
-                            <div class="col-md-6 mb-2">
-                                <label for="phone_input" class="form-label small fw-bold text-muted">NO. HANDPHONE / WA
-                                    *</label>
-                                <input-number :maxChar="15" :error="form.errors.phone" v-model="form.phone" name="phone"
-                                    placeholder="081233445566" />
-                                <input-error :message="form.errors.phone" />
-                            </div>
+                        <div v-show="activeTab === 'prospect'" class="row g-3 animate-fade-in">
 
-                            <div class="col-md-6 mb-2">
-                                <label for="email_input" class="form-label small fw-bold text-muted">EMAIL
-                                    PELANGGAN (Opsional)</label>
-                                <input-text :error="form.errors.email" v-model="form.email" name="email"
-                                    placeholder="Cth: dimas@perusahaan.com" />
-                                <input-error :message="form.errors.email" />
-                            </div>
-
-                            <div class="col-md-6 mb-2">
-                                <label for="channels_select" class="form-label small fw-bold text-muted">SUMBER
-                                    TRAFIK
-                                    (CHANNEL) *</label>
-
-                                <multi-select :searchable="false" :show-labels="false" :class="{ 'is-invalid': form.errors.id_channel }"
-                                    v-model="selectedChannel" :options="channels" track-by="id_channel" label="name"
-                                    placeholder="Pilih Channel">
-                                    <template #singleLabel="{ option }">
-                                        <div class="multiselect-single">
-                                            <i :class="option.icon"></i>
-                                            <span>{{ option.name }}</span>
-                                        </div>
-                                    </template>
-
-                                    <template #option="{ option }">
-                                        <div class="multiselect-option">
-                                            <i :class="option.icon"></i>
-                                            <span>{{ option.name }}</span>
-                                        </div>
-                                    </template>
-                                </multi-select>
-                                <input-error :message="form.errors.id_channel" />
-                            </div>
-
-                            <div class="col-md-12 mb-2">
-                                <label for="product_select" class="form-label small fw-bold text-muted">Pilih
-                                    Produk*</label>
-                                <multi-select :class="{ 'is-invalid': form.errors.id_product }"
-                                    placeholder="Ketik minimal 2 huruf..." v-model="selectedProductObj"
-                                    :options="productOptions" :loading="loadingProduct" track-by="id_product"
-                                    label="name" :internal-search="false" :clear-on-select="false" :searchable="true"
-                                    @search-change="searchProduct" @select="onSelectProduct" @remove="onRemoveProduct"
-                                    :show-labels="false" open-direction="bottom">
-                                    <template #option="{ option }">
-
-                                        <div class="d-flex align-items-center">
-                                            <img :src="imageSource(option)" width="45" height="45" class="rounded me-2"
-                                                style="object-fit:cover">
-
-                                            <div class="fw-semibold mb-2">
-                                                {{ option.name }}
-                                            </div>
+                            <div class="col-12">
+                                <div class="p-3 border rounded-3 bg-white shadow-sm position-relative">
+                                    <h6 class="form-label fw-bold text-primary mb-3 border-bottom pb-2"
+                                        style="font-size: 13px;">
+                                        <i class="bi bi-person-badge me-1"></i> 1. IDENTITAS PELANGGAN
+                                    </h6>
+                                    <div class="row g-2">
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label small fw-bold text-muted">NAMA PROSPEK *</label>
+                                            <input-text :error="form.errors.name" v-model="form.name" name="name"
+                                                placeholder="Cth: Budi Santoso" />
+                                            <input-error :message="form.errors.name" />
                                         </div>
 
-                                    </template>
-                                    <template #singleLabel="{ option }">
-
-                                        <div class="d-flex align-items-center">
-                                            <img :src="imageSource(option)" width="35" height="35" class="rounded me-2"
-                                                style="object-fit:cover">
-
-                                            {{ option.name }}
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label small fw-bold text-muted">NO. HANDPHONE / WA
+                                                *</label>
+                                            <input-number :maxChar="15" :error="form.errors.phone" v-model="form.phone"
+                                                name="phone" placeholder="081233445566" />
+                                            <input-error :message="form.errors.phone" />
                                         </div>
 
-                                    </template>
-                                </multi-select>
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label small fw-bold text-muted">EMAIL PELANGGAN
+                                                (Opsional)</label>
+                                            <input-text :error="form.errors.email" v-model="form.email" name="email"
+                                                placeholder="Cth: dimas@perusahaan.com" />
+                                            <input-error :message="form.errors.email" />
+                                        </div>
 
-                                <input-error :message="form.errors.id_product" />
-                            </div>
-
-                            <div class="col-md-4 mb-2">
-                                <label for="temp_select" class="form-label small fw-bold text-muted">SUHU
-                                    KETERTARIKAN</label>
-                                <select-input :disabled="isLocked" text="-- Pilih Suhu --" name="temp"
-                                    v-model="form.temperature" :error="form.errors.temperature"
-                                    :selectClass="{ 'text-danger': form.temperature === 'COLD', 'text-warning': form.temperature === 'WARM', 'text-success': form.temperature === 'HOT' }"
-                                    :options="tempOptions" />
-                                <input-error :message="form.errors.temperature" />
-                            </div>
-
-                            <div class="col-md-4 mb-2">
-                                <label for="status_select" class="form-label small fw-bold text-muted">STATUS
-                                    PROSPEK</label>
-                                <select-input :disabled="isLocked" text="-- Pilih Status --" v-model="form.status"
-                                    name="status" :error="form.errors.status" :options="prospectOptions" />
-                                <input-error :message="form.errors.status" />
-                            </div>
-
-                            <div class="col-md-4 mb-2">
-                                <label for="follow_up_date_input" class="form-label small fw-bold text-muted">JADWAL
-                                    FOLLOW UP (Opsional)</label>
-                                <input-text name="follow_up_date" v-model="form.follow_up_date" type="date" />
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label small fw-bold text-muted">TIPE PELANGGAN *</label>
+                                            <select-input text="--Pilih Tipe Pelanggan--"
+                                                :error="form.errors.customer_type" name="customer_type"
+                                                v-model="form.customer_type" :options="[
+                                                    { value: 'NEW_CUSTOMER', label: '🌱 Pelanggan Baru' },
+                                                    { value: 'REPEAT_ORDER', label: '🔁 Pelanggan Lama / Beli Ulang' },
+                                                    { value: 'WIN_BACK', label: '♻️ Reaktivasi / Pernah Cancel' },
+                                                ]" />
+                                            <input-error :message="form.errors.customer_type" />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="col-12">
-                                <label for="notes_input" class="form-label small fw-bold text-muted">INFORMASI /
-                                    STICKY NOTE (Opsional)</label>
-                                <text-area :error="form.errors.notes" name="notes" v-model="form.notes" :rows="3"
-                                    placeholder="Tuliskan catatan opsional disini..." />
-                                <input-error :message="form.errors.notes" />
+                                <div class="p-3 border rounded-3 bg-light position-relative">
+                                    <h6 class="form-label fw-bold text-primary mb-3 border-bottom pb-2"
+                                        style="font-size: 13px;">
+                                        <i class="bi bi-box-seam me-1"></i> 2. MINAT & SUMBER TRAFIK
+                                    </h6>
+                                    <div class="row g-2">
+                                        <div class="col-12 mb-2">
+                                            <label class="form-label small fw-bold text-muted">SUMBER TRAFIK (CHANNEL)
+                                                *</label>
+                                            <multi-select :searchable="false" :show-labels="false"
+                                                :class="{ 'is-invalid': form.errors.id_channel }"
+                                                v-model="selectedChannel" :options="channels" track-by="id_channel"
+                                                label="name" placeholder="Pilih Channel">
+                                                <template #singleLabel="{ option }">
+                                                    <div class="multiselect-single">
+                                                        <i :class="option.icon"></i>
+                                                        <span>{{ option.name }}</span>
+                                                    </div>
+                                                </template>
+
+                                                <template #option="{ option }">
+                                                    <div class="multiselect-option">
+                                                        <i :class="option.icon"></i>
+                                                        <span>{{ option.name }}</span>
+                                                    </div>
+                                                </template>
+                                            </multi-select>
+                                            <input-error :message="form.errors.id_channel" />
+                                        </div>
+
+                                        <div class="col-12 mb-2">
+                                            <label class="form-label small fw-bold text-muted">PRODUK YANG DIMINATI
+                                                *</label>
+                                            <multi-select :class="{ 'is-invalid': form.errors.id_product }"
+                                                placeholder="Ketik minimal 2 huruf..." v-model="selectedProductObj"
+                                                :options="productOptions" :loading="loadingProduct"
+                                                track-by="id_product" label="name" :internal-search="false"
+                                                :clear-on-select="false" :searchable="true"
+                                                @search-change="searchProduct" @select="onSelectProduct"
+                                                @remove="onRemoveProduct" :show-labels="false" open-direction="bottom">
+                                                <template #option="{ option }">
+
+                                                    <div class="d-flex align-items-center">
+                                                        <img :src="imageSource(option)" width="45" height="45"
+                                                            class="rounded me-2" style="object-fit:cover">
+
+                                                        <div class="fw-semibold mb-2">
+                                                            {{ option.name }}
+                                                        </div>
+                                                    </div>
+
+                                                </template>
+                                                <template #singleLabel="{ option }">
+
+                                                    <div class="d-flex align-items-center">
+                                                        <img :src="imageSource(option)" width="35" height="35"
+                                                            class="rounded me-2" style="object-fit:cover">
+
+                                                        {{ option.name }}
+                                                    </div>
+
+                                                </template>
+                                            </multi-select>
+                                            <input-error :message="form.errors.id_product" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="p-3 border rounded-3 bg-white shadow-sm position-relative">
+
+                                    <h6 class="form-label fw-bold text-primary mb-3 border-bottom pb-2"
+                                        style="font-size: 13px;">
+                                        <i class="bi bi-funnel-fill me-1"></i> 3. STATUS PENJUALAN
+                                    </h6>
+
+                                    <div class="row g-2">
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label small fw-bold text-muted">SUHU KETERTARIKAN
+                                                *</label>
+                                            <select-input :disabled="isLocked" text="-- Pilih Suhu --" name="temp"
+                                                v-model="form.temperature" :error="form.errors.temperature"
+                                                :selectClass="{ 'text-danger fw-bold': form.temperature === 'COLD', 'text-warning fw-bold': form.temperature === 'WARM', 'text-success fw-bold': form.temperature === 'HOT' }"
+                                                :options="tempOptions" />
+                                            <input-error :message="form.errors.temperature" />
+
+                                            <small class="text-muted d-block mt-1"
+                                                style="font-size: 11px; line-height: 1.2;">
+                                                <span v-if="form.temperature === 'HOT'"
+                                                    class="text-success fw-medium">Fokus! Prospek ini siap bayar
+                                                    / minta rekening.</span>
+                                                <span v-else-if="form.temperature === 'WARM'"
+                                                    class="text-warning fw-medium">Prospek mulai bertanya
+                                                    detail/harga.</span>
+                                                <span v-else-if="form.temperature === 'COLD'"
+                                                    class="text-danger fw-medium">Hanya read/cuek atau
+                                                    baru tanya awal.</span>
+                                                <span v-else>Seberapa besar peluang dia beli?</span>
+                                            </small>
+                                        </div>
+
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label small fw-bold text-muted">STATUS PROSPEK *</label>
+                                            <select-input :disabled="isLocked" text="-- Pilih Status --"
+                                                v-model="form.status" name="status" :error="form.errors.status"
+                                                :options="prospectOptions" :selectClass="{ 'fw-bold': true }" />
+                                            <small class="text-muted d-block mt-1"
+                                                style="font-size: 11px; line-height: 1.2;">
+                                                <span
+                                                    v-if="form.status === 'CLOSED_WON' || form.status === 'CLOSED_LOST'"
+                                                    class="text-danger">
+                                                    Tidak perlu dijadwalkan lagi.
+                                                </span>
+                                                <span v-else>Kapan alarm pengingat berbunyi?</span>
+                                            </small>
+                                            <input-error :message="form.errors.status" />
+                                        </div>
+
+                                        <div class="col-12 mb-2">
+                                            <label class="form-label small fw-bold text-muted">JADWAL FOLLOW UP</label>
+                                            <input-text
+                                                :disabled="isLocked || form.status === 'CLOSED_WON' || form.status === 'CLOSED_LOST'"
+                                                name="follow_up_date" v-model="form.follow_up_date"
+                                                type="datetime-local" />
+                                        </div>
+
+                                        <div class="col-12 mt-2">
+                                            <label class="form-label small fw-bold text-muted">STICKY NOTE / CATATAN
+                                                KHUSUS (Opsional)</label>
+                                            <text-area :error="form.errors.notes" name="notes" v-model="form.notes"
+                                                :rows="2"
+                                                placeholder="Contoh: Pelanggan minta dihubungi di atas jam 5 sore..." />
+                                            <input-error :message="form.errors.notes" />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -632,7 +727,7 @@ const imageSource = (product) => {
                                 <input-error :message="form.errors.paid_amount" />
                                 <small v-if="form.deal_price - form.paid_amount > 0"
                                     class="text-danger mt-1 d-block fw-medium" style="font-size: 11px;">
-                                    Sisa Tagihan: {{ currencyFormat(form.deal_price - form.paid_amount) }}
+                                    Sisa Tagihan: {{ currencyFormat(dpAmount) }}
                                 </small>
                             </div>
                             <div class="col-md-4">
@@ -840,6 +935,23 @@ const imageSource = (product) => {
     </div>
 </template>
 <style scoped>
+/* EFEK MUNCUL HALUS UNTUK KONTEN TAB */
+.animate-fade-in {
+    animation: fadeInSlideUp 0.35s ease-out forwards;
+}
+
+@keyframes fadeInSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(-15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .timeline-line {
     position: absolute;
     left: 16px;

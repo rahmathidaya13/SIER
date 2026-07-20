@@ -64,8 +64,8 @@ class ProductRepository extends BaseCacheRepository
     {
         $query = $this->buildBaseQuery($filters);
 
-        $limit = min((int)($filters['limit'] ?? 10), 100);
         [$column, $direction] = $this->resolveSorting($filters);
+        $limit = min((int)($filters['limit'] ?? 10), 100);
 
         return $query->orderBy($column, $direction)
             ->paginate($limit)

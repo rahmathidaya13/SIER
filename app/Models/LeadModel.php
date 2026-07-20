@@ -24,11 +24,17 @@ class LeadModel extends Model
         'phone',
         'email',
         'temperature',
+        'customer_type',
         'status',
         'follow_up_date',
         'notes',
     ];
     protected $dates    = ["deleted_at"];
+    protected $casts = [
+        'follow_up_date' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 
     public function scopeAllowedForUser($query)
     {

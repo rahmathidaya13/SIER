@@ -122,12 +122,13 @@ const header = [
 
 const payActions = [
     {
-        label: 'Lihat history aktivitas',
-        action: 'history',
+        label: 'Lakukan pembayaran',
+        action: 'pay',
         protectedSelf: true,
-        icon: 'bi bi-clock-history',
-        title: 'Lihat history aktivitas',
-        class: 'btn btn-c-slate',
+        icon: 'bi bi-wallet2',
+        title: 'Lakukan pembayaran',
+        class: 'btn btn-c-success',
+        show: (item) => item.payment_status !== 'LUNAS',
     },
     {
         label: 'Batal pembayaran',
@@ -136,16 +137,6 @@ const payActions = [
         icon: 'bi bi-x-circle-fill',
         title: 'Batal pembayaran',
         class: 'btn btn-c-danger',
-    },
-
-    {
-        label: 'Lakukan pembayaran',
-        action: 'pay',
-        protectedSelf: true,
-        icon: 'bi bi-wallet2',
-        title: 'Lakukan pembayaran',
-        class: 'btn btn-c-success',
-        show: (item) => item.payment_status !== 'LUNAS',
     },
 ];
 const branchOptions = computed(() => [
@@ -327,8 +318,11 @@ onMounted(() => {
                                                 <i class="bi bi-person-fill"></i>
                                             </div>
                                             <div class="text-capitalize">
-                                                <span class="fw-bold text-dark mb-0" v-html="highlight(item.lead_customer_name ||
-                                                    'Unknown', filters.keyword)"></span>
+                                                <span @click.prevent="openActivityModal(item)"
+                                                    class="fw-bold text-decoration-underline text-primary mb-0 cursor-pointer"
+                                                    v-html="highlight(item.lead_customer_name ||
+                                                        'Unknown', filters.keyword)"></span>
+
                                                 <div class="d-block mb-0 small fw-medium">
                                                     <i class="bi bi-whatsapp me-1"></i>
                                                     <span v-html="highlight(item.lead_customer_phone ||
@@ -403,8 +397,7 @@ onMounted(() => {
 
                                     <td class="text-center">
                                         <action-button @cancelClosing="cancelClosing(item)" :item="item"
-                                            :actions="payActions" @pay="openPaymentModal(item)"
-                                            @history="openActivityModal(item)" />
+                                            :actions="payActions" @pay="openPaymentModal(item)" />
                                     </td>
 
                                 </template>

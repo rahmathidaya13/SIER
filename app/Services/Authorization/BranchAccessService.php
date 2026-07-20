@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Services\Authorization\BranchAccessService;
+namespace App\Services\Authorization;
 
 use App\Models\User;
 
 class BranchAccessService
 {
+
     public function canAccess(User $user, ?string $branchId): bool
     {
         if ($user->hasRole('super_admin')) {

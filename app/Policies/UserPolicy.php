@@ -7,6 +7,13 @@ use Illuminate\Auth\Access\Response;
 
 class UserPolicy
 {
+    public function before(User $user, $ability)
+    {
+        if ($user->hasRole('developer')) {
+            return true;
+        }
+        return null;
+    }
     public function viewAny(User $user)
     {
         return $user->hasAnyRole(['developer', 'super_admin', 'supervisor']);

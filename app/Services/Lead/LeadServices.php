@@ -35,6 +35,7 @@ class LeadServices
                 'phone' => $validated['phone'],
                 'status' => $validated['status'],
                 'temperature' => $validated['temperature'],
+                'customer_type' => $validated['customer_type'],
                 'follow_up_date' => $validated['follow_up_date'],
                 'notes' => $validated['notes'],
             ]);
@@ -99,6 +100,7 @@ class LeadServices
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'phone' => $data['phone'],
+                'customer_type' => $data['customer_type'],
                 'status' => $data['status'],
                 'follow_up_date' => $data['follow_up_date'],
                 'temperature' => $data['temperature'],

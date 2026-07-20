@@ -38,18 +38,19 @@ class RoleSeeder extends Seeder
             'lead-create',
             'lead-edit',
             'lead-delete',
+            'lead-convert',
 
             // Modul Closing/Terjual
             'closing-view',
-            'closing-create',
-            'closing-edit',
-            'closing-delete',
+            'closing-remaining',
+            'closing-payment_cancel',
 
             // Modul Channel
             'channel-view',
             'channel-create',
             'channel-edit',
             'channel-delete',
+
 
             // Modul User
             'users-view',
@@ -58,7 +59,7 @@ class RoleSeeder extends Seeder
             'users-delete',
 
             // Aksi Khusus
-            'export-data',
+            'data-export',
         ];
 
         foreach ($defaults as $data) {

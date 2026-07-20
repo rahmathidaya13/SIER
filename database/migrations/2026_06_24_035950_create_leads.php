@@ -24,10 +24,11 @@ return new class extends Migration
             // Suhu Ketertarikan
             $table->enum('temperature', ['HOT', 'WARM', 'COLD'])->default('WARM');
 
+            $table->enum('customer_type', ['NEW_CUSTOMER', 'REPEAT_ORDER', 'WIN_BACK'])->default('NEW_CUSTOMER');
             // Status Hidup Prospek
             $table->enum('status', ['NEW', 'FOLLOW_UP', 'CLOSED_WON', 'CLOSED_LOST'])->default('NEW');
 
-            $table->date('follow_up_date')->nullable();
+            $table->timestamp('follow_up_date')->nullable();
             $table->text('notes')->nullable();
 
             $table->softDeletes();

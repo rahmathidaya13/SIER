@@ -14,6 +14,8 @@ const props = defineProps({
 
 const isDeveloper = hasRole('developer');
 const isSuperadmin = hasRole('super_admin');
+const isSupervisor = hasRole('supervisor');
+
 const isEdit = computed(() => !!props.idUser);
 const isLoading = ref(false);
 
@@ -168,57 +170,121 @@ const togglePasswordVisibilty = () => {
     showPassword.value = !showPassword.value;
 };
 
-const moduleTranslations = {
-    'product': 'Katalog Produk',
-    'lead': 'Data Prospek (Lead)',
+const allowedForSuperAdmin = [
+    'product-view', 'product-create', 'product-edit', 'product-delete',
+    'lead-view', 'lead-create', 'lead-edit', 'lead-delete',
+    'closing-view', 'closing-create', 'closing-edit', 'closing-delete',
+    'users-view', 'users-create', 'users-edit'
+]
+
+const allowedForSpv = [
+    'lead-view', 'lead-create', 'lead-edit',
+    'closing-view', 'closing-create', 'closing-edit',
+]
+const filteredPermissions = computed(() => {
+    if (isDeveloper) return props.permissions;
+    if (isSuperadmin) {
+        return props.permissions.filter(perm => allowedForSuperAdmin.includes(perm.name));
+    }
+    if (isSupervisor) {
+        return props.permissions.filter(perm => allowedForSpv.includes(perm.name));
+    }
+
+    return [];
+})
+const categoryTranslations = {
+    'channel': 'Sumber Trafik (Channel)',
+    'product': 'Data Produk',
+    'lead': 'Data Prospek (Leads)',
     'closing': 'Rekap Closing',
-    'channel': 'Trafik Channel',
-    'users': 'Manajemen Pegawai',
-    'export': 'Laporan & Rekap'
-    // Silakan tambah/ubah modul lain sesuai kebutuhan aplikasi Anda di sini
+    'users': 'Manajemen Pengguna',
+    'data': 'Ekspor Data',
 };
-// Mengelompokkan permissions menjadi format Matrix (Baris = Modul, Kolom = Aksi)
-const permissionMatrix = computed(() => {
-    const matrix = {};
+const permissionTranslations = {
+    // Channel
+    'channel-view': 'Diizinkan melihat daftar channel',
+    'channel-create': 'Diizinkan menambah channel baru',
+    'channel-edit': 'Diizinkan mengubah data channel',
+    'channel-delete': 'Diizinkan menghapus channel',
+    // Produk
+    'product-view': 'Diizinkan melihat daftar produk',
+    'product-create': 'Diizinkan menambah produk baru',
+    'product-edit': 'Diizinkan mengubah data produk',
+    'product-delete': 'Diizinkan menghapus produk',
+    // Lead
+    'lead-view': 'Diizinkan melihat data prospek',
+    'lead-create': 'Diizinkan membuat prospek baru',
+    'lead-edit': 'Diizinkan mengubah data prospek',
+    'lead-delete': 'Diizinkan menghapus data prospek',
+    // Rekap Closing
+    'closing-view': 'Diizinkan melihat data Closing',
+    'closing-create': 'Diizinkan membuat Closing',
+    'closing-edit': 'Diizinkan mengubah Closing',
+    'closing-delete': 'Diizinkan menghapus Closing',
 
-    props.permissions.forEach(perm => {
-        // Memecah "product-create" menjadi module="product" dan action="create"
-        // Jika nama permission Anda menggunakan underscore, ganti split('-') menjadi split('_')
-        const [module, ...actionParts] = perm.name.split('-');
-        const action = actionParts.join('-');
+    'data-export': 'Diizinkan ekspor data',
 
-        if (!matrix[module]) {
-            matrix[module] = {
-                name: moduleTranslations[module] || module.replace(/-/g, ' '),
-                view: null,
-                create: null,
-                edit: null,
-                delete: null,
-                data: null // ini digunakan untuk export-data
-            };
+    'users-view': 'Diizinkan melihat daftar pengguna',
+    'users-create': 'Diizinkan menambah pengguna baru',
+    'users-edit': 'Diizinkan mengubah data pengguna',
+    'users-delete': 'Diizinkan menghapus pengguna',
+
+};
+const groupedPermissions = computed(() => {
+    const groups = {};
+
+    filteredPermissions.value.forEach(perm => {
+        // Ambil kata pertama (contoh: "product" dari "product-create")
+        const categoryKey = perm.name.split('-')[0];
+
+        if (!groups[categoryKey]) {
+            groups[categoryKey] = [];
         }
 
-        // Klasifikasikan ke dalam kolom yang tepat
-        if (['view', 'create', 'edit', 'delete', 'data'].includes(action)) {
-            matrix[module][action] = perm;
-        }
+        groups[categoryKey].push({
+            originalName: perm.name,
+            label: permissionTranslations[perm.name] || perm.name,
+            value: perm.id
+        });
     });
+    return Object.keys(groups).map(key => {
 
-    return Object.values(matrix);
+        const actionOrder = ['view', 'create', 'edit', 'delete', 'export'];
+
+        const sortedPerms = groups[key].sort((a, b) => {
+            const actionA = a.originalName.replace(`${key}-`, '');
+            const actionB = b.originalName.replace(`${key}-`, '');
+
+            let indexA = actionOrder.indexOf(actionA);
+            let indexB = actionOrder.indexOf(actionB);
+
+            if (indexA === -1) indexA = 99;
+            if (indexB === -1) indexB = 99;
+
+            return indexA - indexB;
+        });
+
+        return {
+            key: key,
+            title: categoryTranslations[key] || key,
+            permissions: sortedPerms
+        };
+    });
 });
+
+console.log(groupedPermissions.value);
 </script>
 <template>
     <div class="row" v-if="props.show">
         <div class="col-12">
-            <modal width="750px" size="modal-lg" :icon="[
+            <modal width="850px" size="modal-lg" :icon="[
                 'text-coffee-main',
                 {
                     'bi bi-pencil-square text-primary': isEdit,
                     'bi bi-plus-circle-fill text-primary': !isEdit
                 }
             ]" :show="props.show" :title="isEdit ? 'Ubah Data Pegawai' : 'Tambah Data Pegawai'"
-                :subTitle="isEdit ? 'Perbarui informasi pegawai' : 'Tambahkan informasi pegawai baru'"
-                :mobileFullscreen="false" @closed="close">
+                :mobileFullscreen="true" @closed="close">
 
                 <template #body>
                     <alert-error-all :errors="form.errors" @close="form.clearErrors()" />
@@ -275,92 +341,44 @@ const permissionMatrix = computed(() => {
                             </div>
 
                             <div class="mb-3">
-                                <input-label labelClass="mb-1" value="Hak Akses Khusus (Permissions)" />
+                                <input-label labelClass="mb-1" value="Hak Akses (Permissions)" />
                                 <p class="text-muted mb-2" style="font-size: 12.5px;">
-                                    *Pilih hak akses
                                     <span v-if="!form.role" class="text-warning"><i
                                             class="bi bi-info-circle me-1"></i>Pilih jabatan terlebih dahulu untuk
                                         melihat akses dasarnya.</span>
                                 </p>
-                                <div class="table-responsive border rounded-3 mt-1 custom-scrollbar"
-                                    style="max-height: 380px;">
-                                    <table class="table table-sm table-hover mb-0 align-middle"
-                                        style="font-size: 13.5px;">
-                                        <thead class="table-light text-center sticky-top ">
-                                            <tr>
-                                                <th scope="col" class="text-start">Modul Sistem</th>
-                                                <th scope="col" class="py-2">Lihat (View)</th>
-                                                <th scope="col" class="py-2">Tambah (Create)</th>
-                                                <th scope="col" class="py-2">Ubah (Edit)</th>
-                                                <th scope="col" class="py-2">Hapus (Delete)</th>
-                                                <th scope="col" class="py-2">Export Data</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <!-- Looping per modul -->
-                                            <tr v-for="row in permissionMatrix" :key="row.name">
-                                                <!-- Nama Modul -->
-                                                <td class="text-capitalize fw-semibold text-start ps-3 bg-light">
-                                                    {{ row.name }}
-                                                </td>
 
-                                                <!-- Kolom View -->
-                                                <td class="text-center">
-                                                    <div class="form-check form-switch d-flex justify-content-center">
-                                                        <input v-if="row.view" type="checkbox"
-                                                            class="form-check-input cursor-pointer" role="switch"
-                                                            :value="row.view.id" v-model="form.permissions"
-                                                            style="transform: scale(1.4);">
-                                                        <span v-else class="text-muted small">-</span>
-                                                    </div>
-                                                </td>
+                                <div class="border rounded-3 p-3 bg-light custom-scrollbar"
+                                    style="max-height: 450px; overflow-y: auto;">
+                                    <div v-for="group in groupedPermissions" :key="group.key" class="mb-4">
 
-                                                <!-- Kolom Create -->
-                                                <td class="text-center">
-                                                    <div class="form-check form-switch d-flex justify-content-center">
-                                                        <input v-if="row.create" type="checkbox" role="switch"
-                                                            class="form-check-input cursor-pointer"
-                                                            :value="row.create.id" v-model="form.permissions"
-                                                            style="transform: scale(1.4);">
-                                                        <span v-else class="text-muted small">-</span>
-                                                    </div>
-                                                </td>
+                                        <h6 class="text-capitalize text-muted mb-3 border-bottom pb-2"
+                                            style="font-size: 13.5px; font-weight: 600;">
+                                            {{ group.title }}
+                                        </h6>
 
-                                                <!-- Kolom Edit -->
-                                                <td class="text-center">
-                                                    <div class="form-check form-switch d-flex justify-content-center">
-                                                        <input v-if="row.edit" type="checkbox" role="switch"
-                                                            class="form-check-input cursor-pointer" :value="row.edit.id"
-                                                            v-model="form.permissions" style="transform: scale(1.4);">
-                                                        <span v-else class="text-muted small">-</span>
-                                                    </div>
-                                                </td>
+                                        <div class="row g-2">
+                                            <div class="col-12 col-lg-6 col-xl-6" v-for="perm in group.permissions"
+                                                :key="perm.value">
+                                                <div class="form-check form-switch d-flex align-items-start mb-0">
+                                                    <input class="form-check-input cursor-pointer me-3 flex-shrink-0"
+                                                        :class="{ 'is-invalid': form.errors.permissions, 'is-valid': !form.errors.permissions && form.permissions.includes(perm.value) }"
+                                                        type="checkbox" :id="'perm_' + perm.value" :value="perm.value"
+                                                        v-model="form.permissions"
+                                                        style="transform: scale(1.3); margin-top: 0;">
 
-                                                <!-- Kolom Delete -->
-                                                <td class="text-center">
-                                                    <div class="form-check form-switch d-flex justify-content-center">
-                                                        <input v-if="row.delete" type="checkbox" role="switch"
-                                                            class="form-check-input cursor-pointer"
-                                                            :value="row.delete.id" v-model="form.permissions"
-                                                            style="transform: scale(1.4);">
-                                                        <span v-else class="text-muted small">-</span>
-                                                    </div>
-                                                </td>
-                                                <td class="text-center">
-                                                    <div class="form-check form-switch d-flex justify-content-center">
-                                                        <input v-if="row.data" type="checkbox" role="switch"
-                                                            class="form-check-input cursor-pointer" :value="row.data.id"
-                                                            v-model="form.permissions" style="transform: scale(1.4);">
-                                                        <span v-else class="text-muted small">-</span>
-                                                    </div>
-                                                </td>
+                                                    <label class="form-check-label cursor-pointer fw-medium"
+                                                        :for="'perm_' + perm.value"
+                                                        style="font-size: 13.5px; line-height: 1.4;">
+                                                        {{ perm.label }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                    </div>
                                 </div>
                                 <input-error :message="form.errors.permissions" class="mt-1" />
-
                             </div>
 
                             <div class="mb-3">

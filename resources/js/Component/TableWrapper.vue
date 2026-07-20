@@ -88,7 +88,7 @@ const visibleHeaders = computed(() => props.headers.filter(col => col.visible !=
         <slot name="filter-action" />
         <div class="table-responsive custom-scroll">
             <table class="table table-hover align-middle">
-                <thead>
+                <thead class="sticky-top" >
                     <tr>
                         <th v-if="markAll" class="text-center" style="width: 50px;">
                             <div class="form-check d-flex justify-content-center">

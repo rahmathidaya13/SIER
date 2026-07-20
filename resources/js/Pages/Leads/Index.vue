@@ -334,11 +334,12 @@ const canAccess = (permission, role = []) => {
                                     </td>
 
                                     <td>
-                                        <div class="fw-bold text-dark mb-1"
+                                        <div @click.prevent="openHistoryModal(item)"
+                                            class="fw-bold text-primary mb-1 text-decoration-underline cursor-pointer"
                                             v-html="highlight(item.name, filters.keyword)"></div>
                                         <div v-if="item.email" class="text-muted small mb-2">
                                             <a :href="getEmail(item.email)" class="text-decoration-none">{{ item.email
-                                                }}</a>
+                                            }}</a>
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
                                             <a :href="getWaLink(item.phone)" target="_blank"
@@ -396,7 +397,7 @@ const canAccess = (permission, role = []) => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.creator_name || 'Sistem'
-                                                }} {{ `(${getRoleName(item.role_name).label})` }}
+                                                    }} {{ `(${getRoleName(item.role_name).label})` }}
                                                 </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>
@@ -414,13 +415,6 @@ const canAccess = (permission, role = []) => {
 
                                     <td class="text-center">
                                         <div class="d-flex justify-content-center gap-1">
-
-                                            <button @click="openHistoryModal(item)" class="btn btn-c-slate"
-                                                title="Lihat Riwayat Aktivitas">
-                                                <i class="bi bi-clock-history"></i>
-                                            </button>
-
-
                                             <button v-if="hasPermission('lead-edit') && item.status !== 'CLOSED_WON'"
                                                 @click="openEditModal(item)"
                                                 :class="`btn btn-c-success ${item.status === 'CLOSED_WON' ? 'disabled' : ''}`"
