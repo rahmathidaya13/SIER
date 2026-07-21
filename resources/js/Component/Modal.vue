@@ -212,8 +212,8 @@ watch(() => props.show, async (v) => {
     position: absolute;
     inset: 0;
     z-index: 999;
-    background: rgba(0, 0, 0, 0.205);
-    backdrop-filter: blur(5px);
+    background: rgba(0, 0, 0, 0.11);
+    backdrop-filter: blur(3px);
     display: flex;
     justify-content: center;
     align-items: center;

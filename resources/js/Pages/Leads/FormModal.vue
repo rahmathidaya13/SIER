@@ -5,6 +5,7 @@ import { hasRole } from '@/Composables/useAuth';
 import { useRowAlert } from '@/Composables/useAlert';
 import { currencyFormat } from "@/Helpers/currencyFormat";
 import { formatDate } from "@/Helpers/formatDate";
+import { formatForDatetimeLocal } from "@/Helpers/formatForDatetimeLocal";
 import { debounce } from "lodash";
 const { show, __alert, hide } = useRowAlert();
 import axios from "axios";
@@ -33,7 +34,7 @@ const form = useForm({
     temperature: null,
     customer_type: null,
     status: null,
-    follow_up_date: '',
+    follow_up_date: null,
     notes: '',
     product_name: '',
     new_activity: '',
@@ -102,7 +103,7 @@ const fillForm = (data) => {
         customer_type: data.customer_type,
 
         status: data.status,
-        follow_up_date: data.follow_up_date || '',
+        follow_up_date: formatForDatetimeLocal(data.follow_up_date) || '',
         notes: data.notes,
         product_name: data.product?.product_name || '',
         new_activity: '',
@@ -142,7 +143,7 @@ const resetForm = () => {
         temperature: null,
         customer_type: null,
         status: null,
-        follow_up_date: '',
+        follow_up_date: null,
         notes: '',
         product_name: '',
         new_activity: '',
@@ -387,27 +388,20 @@ const updateActivity = () => {
 
 // kunci field status dan temperature jika sudah pernah disahkan menjadi prospek HOT & CLOSING
 const isLocked = computed(() => {
-    return isEdit.value && dataLead.value?.status === 'CLOSED_WON' && dataLead.value?.temperature === 'HOT';
+    if (isEdit.value && dataLead.value?.status === 'CLOSED_WON') {
+        return true
+    }
+    else if (isEdit.value && dataLead.value?.status === 'CLOSED_LOST') {
+        return true
+    } else if (isEdit.value && dataLead.value?.status === 'FOLLOW_UP') {
+        return true
+    }
+    else {
+        return false
+    }
 });
 
-const prospectOptions = computed(() => {
-    let options = [
-        { label: '⭐ Baru Masuk', value: 'NEW' },
-        { label: '💬 Follow Up', value: 'FOLLOW_UP' },
-        { label: '❌ Lost / Batal', value: 'CLOSED_LOST' },
-        { label: '✔️ Closing (Terjual)', value: 'CLOSED_WON' },
-    ];
-    if (isEdit.value) {
-        options =
-            [
-                { label: '⭐ Baru Masuk', value: 'NEW' },
-                { label: '💬 Follow Up', value: 'FOLLOW_UP' },
-                { label: '❌ Lost / Batal', value: 'CLOSED_LOST' },
-            ]
-    }
 
-    return options
-})
 const tempOptions = computed(() => {
     let options = [
         { label: '🔥 HOT (Siap Bayar)', value: 'HOT' },
@@ -422,6 +416,33 @@ const tempOptions = computed(() => {
             ]
     }
     return options;
+});
+
+const prospectOptions = computed(() => {
+    let options = [
+        { label: '⭐ Baru Masuk', value: 'NEW' },
+        { label: '✔️ Closing (Terjual)', value: 'CLOSED_WON' },
+    ];
+    if (isEdit.value) {
+        options =
+            [
+                { label: '⭐ Baru Masuk', value: 'NEW' },
+            ]
+    }
+    if (form.status === 'FOLLOW_UP') {
+        options =
+            [
+                { label: '💬 Sedang di Follow Up', value: 'FOLLOW_UP' },
+            ]
+    }
+    if (form.status === 'CLOSED_LOST') {
+        options =
+            [
+                { label: '❌ Transaksi dibatalkan', value: 'CLOSED_LOST' }
+            ]
+    }
+
+    return options
 })
 const selectedChannel = computed({
     get() {
@@ -479,6 +500,7 @@ const dpAmount = computed(() => {
     }
     return form.deal_price
 })
+
 </script>
 <template>
     <div class="row" v-if="props.show">
@@ -636,51 +658,31 @@ const dpAmount = computed(() => {
                                         <div class="col-md-6 mb-2">
                                             <label class="form-label small fw-bold text-muted">SUHU KETERTARIKAN
                                                 *</label>
-                                            <select-input :disabled="isLocked" text="-- Pilih Suhu --" name="temp"
-                                                v-model="form.temperature" :error="form.errors.temperature"
+                                            <select-input text="-- Pilih Suhu --" name="temp" v-model="form.temperature"
+                                                :error="form.errors.temperature"
                                                 :selectClass="{ 'text-danger fw-bold': form.temperature === 'COLD', 'text-warning fw-bold': form.temperature === 'WARM', 'text-success fw-bold': form.temperature === 'HOT' }"
                                                 :options="tempOptions" />
                                             <input-error :message="form.errors.temperature" />
 
-                                            <small class="text-muted d-block mt-1"
-                                                style="font-size: 11px; line-height: 1.2;">
-                                                <span v-if="form.temperature === 'HOT'"
-                                                    class="text-success fw-medium">Fokus! Prospek ini siap bayar
-                                                    / minta rekening.</span>
-                                                <span v-else-if="form.temperature === 'WARM'"
-                                                    class="text-warning fw-medium">Prospek mulai bertanya
-                                                    detail/harga.</span>
-                                                <span v-else-if="form.temperature === 'COLD'"
-                                                    class="text-danger fw-medium">Hanya read/cuek atau
-                                                    baru tanya awal.</span>
-                                                <span v-else>Seberapa besar peluang dia beli?</span>
-                                            </small>
                                         </div>
 
                                         <div class="col-md-6 mb-2">
                                             <label class="form-label small fw-bold text-muted">STATUS PROSPEK *</label>
-                                            <select-input :disabled="isLocked" text="-- Pilih Status --"
-                                                v-model="form.status" name="status" :error="form.errors.status"
-                                                :options="prospectOptions" :selectClass="{ 'fw-bold': true }" />
-                                            <small class="text-muted d-block mt-1"
-                                                style="font-size: 11px; line-height: 1.2;">
-                                                <span
-                                                    v-if="form.status === 'CLOSED_WON' || form.status === 'CLOSED_LOST'"
-                                                    class="text-danger">
-                                                    Tidak perlu dijadwalkan lagi.
-                                                </span>
-                                                <span v-else>Kapan alarm pengingat berbunyi?</span>
-                                            </small>
+
+                                            <select-input text="-- Pilih Status --" v-model="form.status" name="status"
+                                                :error="form.errors.status" :options="prospectOptions" />
                                             <input-error :message="form.errors.status" />
                                         </div>
 
-                                        <div class="col-12 mb-2">
-                                            <label class="form-label small fw-bold text-muted">JADWAL FOLLOW UP</label>
-                                            <input-text
-                                                :disabled="isLocked || form.status === 'CLOSED_WON' || form.status === 'CLOSED_LOST'"
+                                        <!-- <div class="col-12 mb-2">
+                                            <div class="d-flex justify-content-between">
+                                                <label class="form-label small fw-bold text-muted">JADWALKAN FOLLOW
+                                                    UP</label>
+                                            </div>
+                                            <input-text :disabled="form.status == 'NEW' || form.status == 'CLOSED_WON'"
                                                 name="follow_up_date" v-model="form.follow_up_date"
                                                 type="datetime-local" />
-                                        </div>
+                                        </div> -->
 
                                         <div class="col-12 mt-2">
                                             <label class="form-label small fw-bold text-muted">STICKY NOTE / CATATAN
@@ -916,15 +918,12 @@ const dpAmount = computed(() => {
                         <button type="button" class="btn btn-c-slate border-0 fw-medium px-4"
                             @click.prevent="close">Batal</button>
 
-                        <button @click.prevent="submit" type="button"
-                            :disabled="form.processing || isLoading || isLocked" class="btn btn-height-1 fw-semibold"
+                        <button @click.prevent="submit" type="button" :disabled="form.processing || isLoading"
+                            class="btn btn-height-1 fw-semibold"
                             :class="form.status === 'CLOSED_WON' ? 'btn-c-success' : 'btn-c-primary'">
-                            <span v-if="isLocked"><i class="bi bi-lock-fill me-1"></i> Data Terkunci</span>
-                            <span v-else>
-                                <span v-if="form.processing" class="spinner-border spinner-border-sm me-2"></span>
-                                <i v-else :class="isEdit ? 'bi bi-check-circle me-1' : 'bi bi-save me-1'"></i>
-                                {{ submitTextButton }}
-                            </span>
+                            <span v-if="form.processing" class="spinner-border spinner-border-sm me-2"></span>
+                            <i v-else :class="isEdit ? 'bi bi-check-circle me-1' : 'bi bi-save me-1'"></i>
+                            {{ submitTextButton }}
                         </button>
 
                     </div>

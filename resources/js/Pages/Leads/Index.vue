@@ -9,6 +9,7 @@ import { hasRole, hasPermission } from "@/Composables/useAuth";
 import FormModal from './FormModal.vue';
 import ConvertLeadModal from './ConvertLeadModal.vue';
 import ActivityTimelineModal from './ActivityTimelineModal.vue';
+import FormActivityFollUp from './FormActivityFollUp.vue';
 const confirm = useConfirm();
 const props = defineProps({
     leads: Object,
@@ -103,8 +104,10 @@ const header = [
 ];
 
 const showModal = ref(false);
-const selectedId = ref(null);
 const showConvertModal = ref(false);
+const showFormFollUp = ref(false);
+const selectedId = ref(null);
+
 const openCreateModal = () => {
     showModal.value = true;
     selectedId.value = null;
@@ -115,6 +118,10 @@ const openConvertModal = (data) => {
 }
 const openEditModal = async (data) => {
     showModal.value = true;
+    selectedId.value = data.id_lead
+}
+const openFollowUpModal = (data) => {
+    showFormFollUp.value = true;
     selectedId.value = data.id_lead
 }
 const handleLeadSaved = (payload) => {
@@ -339,7 +346,7 @@ const canAccess = (permission, role = []) => {
                                             v-html="highlight(item.name, filters.keyword)"></div>
                                         <div v-if="item.email" class="text-muted small mb-2">
                                             <a :href="getEmail(item.email)" class="text-decoration-none">{{ item.email
-                                            }}</a>
+                                                }}</a>
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
                                             <a :href="getWaLink(item.phone)" target="_blank"
@@ -377,14 +384,31 @@ const canAccess = (permission, role = []) => {
                                     </td>
 
                                     <td class="text-center">
-                                        <div v-if="item.follow_up_date" class="small fw-medium align-items-center"
+                                        <div v-if="item.follow_up_date"
+                                            class="fw-medium align-items-center d-flex gap-2 mb-2"
                                             :class="isOverdue(item.follow_up_date, item.status) ? 'text-danger fw-bold animate-pulse' : 'text-muted fw-medium'">
-                                            <i class="bi bi-calendar-event me-2"></i>
-                                            <i v-if="isOverdue(item.follow_up_date, item.status)"
-                                                class="bi bi-exclamation-circle-fill me-1" title="Telat dihubungi!"></i>
-                                            {{ formatDate(item.follow_up_date) }}
+
+                                            <div class="d-flex align-items-center">
+                                                <i class="bi bi-calendar-event me-2"></i>
+                                                <i v-if="isOverdue(item.follow_up_date, item.status)"
+                                                    class="bi bi-exclamation-circle-fill me-1"
+                                                    title="Telat dihubungi!"></i>
+                                                {{ formatDate(item.follow_up_date) }}
+                                            </div>
+
+
                                         </div>
-                                        <span v-else class="text-muted small">-</span>
+                                        <div v-else class="text-muted small mb-2" style="font-style: italic;">
+                                            <span class="text-muted">Lanjut progress dengan follow up</span>
+                                        </div>
+                                        <div class="d-grid">
+                                            <button v-if="item.status === 'FOLLOW_UP' || item.status === 'NEW'"
+                                                @click.prevent="openFollowUpModal(item)" type="button"
+                                                class="btn btn-sm btn-c-success">
+                                                <i class="bi bi-whatsapp"></i>
+                                                Follow Up
+                                            </button>
+                                        </div>
                                     </td>
 
                                     <td class="align-middle text-start">
@@ -397,7 +421,7 @@ const canAccess = (permission, role = []) => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.creator_name || 'Sistem'
-                                                    }} {{ `(${getRoleName(item.role_name).label})` }}
+                                                }} {{ `(${getRoleName(item.role_name).label})` }}
                                                 </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>
@@ -481,6 +505,9 @@ const canAccess = (permission, role = []) => {
 
                 <ActivityTimelineModal :idLead="selectedId" :show="showHistoryModal"
                     @update:show="showHistoryModal = $event" />
+
+                <FormActivityFollUp :idLead="selectedId" :show="showFormFollUp"
+                    @update:show="showFormFollUp = $event" />
             </div>
         </template>
     </app-layout>

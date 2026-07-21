@@ -76,12 +76,12 @@ class LeadServices
         });
     }
 
-    public function update(LeadModel $leads, array $data, $user): LeadModel
+    public function update(LeadModel $leads, array $validated, $user): LeadModel
     {
-        return DB::transaction(function () use ($leads, $data, $user) {
+        return DB::transaction(function () use ($leads, $validated, $user) {
 
             // Validasi untuk memastikan bahwa status dan temperature tidak diubah jika sudah memiliki nilai tertentu
-            $this->__validate($leads, $data, [
+            $this->__validate($leads, $validated, [
                 'status' => [
                     'locked_value' => 'CLOSED_WON',
                     'message' => 'Tidak dapat mengubah status prospek yang sudah disahkan menjadi status lain.',
@@ -95,23 +95,23 @@ class LeadServices
             ]);
 
             $leads->update([
-                'id_channel' => $data['id_channel'],
-                'id_product' => $data['id_product'],
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'phone' => $data['phone'],
-                'customer_type' => $data['customer_type'],
-                'status' => $data['status'],
-                'follow_up_date' => $data['follow_up_date'],
-                'temperature' => $data['temperature'],
-                'notes' => $data['notes'],
+                'id_channel' => $validated['id_channel'],
+                'id_product' => $validated['id_product'],
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'],
+                'customer_type' => $validated['customer_type'],
+                'status' => $validated['status'],
+                'follow_up_date' => $validated['follow_up_date'],
+                'temperature' => $validated['temperature'],
+                'notes' => $validated['notes'],
             ]);
 
-            if (!empty($data['new_activity'])) {
+            if (!empty($validated['new_activity'])) {
                 $leads->activity()->create([
                     'id_user' => $user->id,
                     'id_lead'     => $leads->id_lead,
-                    'description' => $data['new_activity']
+                    'description' => $validated['new_activity']
                 ]);
                 $leads->touch();
             }

@@ -47,6 +47,7 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
         Route::delete('/leads/delete/{leads}', 'destroy')->name('leads.delete');
     });
     Route::controller(LeadActivityController::class)->group(function () {
+        Route::post('/leads/activity/store/{id}', 'store')->name('leads.activity.store');
         Route::put('/leads/activity/update/{id}', 'update')->name('leads.activity.update');
     });
     Route::controller(LeadConversionController::class)->group(function () {

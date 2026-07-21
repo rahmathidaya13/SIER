@@ -85,6 +85,10 @@ trait LeadsValidation
                     'COLD'
                 ]),
             ],
+            'customer_type' => [
+                'required',
+                'in:NEW_CUSTOMER,REPEAT_ORDER,WIN_BACK',
+            ],
 
             'status' => [
                 'required',
@@ -98,7 +102,7 @@ trait LeadsValidation
 
             'follow_up_date' => [
                 'nullable',
-                'date',
+                'date'
             ],
 
             'notes' => [
@@ -139,6 +143,9 @@ trait LeadsValidation
 
                 'temperature.required' => 'Silakan pilih suhu prospek.',
                 'temperature.in' => 'Suhu prospek tidak valid.',
+
+                'customer_type.required' => 'Silakan pilih tipe pelanggan.',
+                'customer_type.in' => 'Tipe pelanggan tidak valid.',
 
                 'status.required' => 'Status prospek wajib dipilih.',
                 'status.in' => 'Status prospek tidak valid.',
