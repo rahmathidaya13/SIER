@@ -18,6 +18,7 @@ const props = defineProps({
     products: Array,
     role_name: String
 });
+console.log(props.leads);
 
 const getCurrentMonth = () => {
     const today = new Date();
@@ -80,7 +81,7 @@ const header = [
         },
     },
     {
-        label: "JADWAL FOLL-UP",
+        label: "Aktivitas FOLL-UP",
         key: "price",
         attrs: {
             class: 'text-center',
@@ -323,8 +324,7 @@ const canAccess = (permission, role = []) => {
 
                         <div class="card-body p-0">
                             <table-wrapper :loader="isLoading" loaderText="Sedang memuat data..." :headers="header"
-                                :rowClass="rowClasses" :items="leads?.data" rowKey="id_lead"
-                                @update:selected="(val) => selectedId = val">
+                                :items="leads?.data" rowKey="id_lead" @update:selected="(val) => selectedId = val">
 
                                 <template #empty>
                                     <div class="text-center py-5">
@@ -346,7 +346,7 @@ const canAccess = (permission, role = []) => {
                                             v-html="highlight(item.name, filters.keyword)"></div>
                                         <div v-if="item.email" class="text-muted small mb-2">
                                             <a :href="getEmail(item.email)" class="text-decoration-none">{{ item.email
-                                                }}</a>
+                                            }}</a>
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
                                             <a :href="getWaLink(item.phone)" target="_blank"
@@ -383,30 +383,53 @@ const canAccess = (permission, role = []) => {
                                         </span>
                                     </td>
 
-                                    <td class="text-center">
-                                        <div v-if="item.follow_up_date"
-                                            class="fw-medium align-items-center d-flex gap-2 mb-2"
-                                            :class="isOverdue(item.follow_up_date, item.status) ? 'text-danger fw-bold animate-pulse' : 'text-muted fw-medium'">
+                                    <td class="text-start align-middle">
 
-                                            <div class="d-flex align-items-center">
-                                                <i class="bi bi-calendar-event me-2"></i>
-                                                <i v-if="isOverdue(item.follow_up_date, item.status)"
-                                                    class="bi bi-exclamation-circle-fill me-1"
-                                                    title="Telat dihubungi!"></i>
-                                                {{ formatDate(item.follow_up_date) }}
+                                        <div v-if="item.follow_up_date" class="d-flex flex-column gap-0 mb-2">
+
+                                            <!-- Informasi Kapan Pertama Kali Direson -->
+                                            <div class="d-flex align-items-center text-muted"
+                                                style="font-size: 11.5px;">
+                                                <i class="bi bi-play-circle-fill text-primary me-1"></i>
+                                                Mulai: <span class="ms-1 fw-medium">{{ formatDate(item.follow_up_date)
+                                                    }}</span>
                                             </div>
 
+                                            <!-- Informasi Kapan Terakhir Kali Dihubungi (Diambil dari Activity Terakhir) -->
+                                            <div class="d-flex align-items-center text-muted" style="font-size: 11.5px;"
+                                                v-if="item.activity && item.activity.length > 0">
+                                                <i class="bi bi-clock-history text-secondary me-1"></i>
+                                                Terakhir: <span class="ms-1 fw-bold text-dark">{{
+                                                    formatDate(item.activity[0].created_at) }}</span>
+                                            </div>
 
+                                            <!-- Indikator Total Follow Up -->
+                                            <div>
+                                                <span
+                                                    class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"
+                                                    style="font-size: 10px;">
+                                                    {{ item.activity ? item.activity.length : 0 }}x Interaksi
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div v-else class="text-muted small mb-2" style="font-style: italic;">
-                                            <span class="text-muted">Lanjut progress dengan follow up</span>
+
+                                        <!-- JIKA LEAD MASIH BARU (Belum Pernah Di-Follow Up Sama Sekali) -->
+                                        <div v-else
+                                            class="text-center mb-2 px-2 py-1 bg-warning-subtle rounded-2 border border-warning-subtle">
+                                            <span class="text-warning-emphasis fw-bold" style="font-size: 11px;">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Belum direspon!
+                                            </span>
                                         </div>
-                                        <div class="d-grid">
+
+                                        <!-- TOMBOL AKSI -->
+                                        <div class="d-grid mt-2">
                                             <button v-if="item.status === 'FOLLOW_UP' || item.status === 'NEW'"
                                                 @click.prevent="openFollowUpModal(item)" type="button"
-                                                class="btn btn-sm btn-c-success">
-                                                <i class="bi bi-whatsapp"></i>
-                                                Follow Up
+                                                class="btn btn-sm shadow-sm fw-medium d-flex justify-content-center align-items-center gap-2"
+                                                :class="item.status === 'NEW' ? 'btn-primary' : 'btn-outline-primary'">
+
+                                                <i class="bi bi-chat-dots-fill"></i>
+                                                {{ item.status === 'NEW' ? 'Mulai Follow Up' : 'Catat Aktivitas' }}
                                             </button>
                                         </div>
                                     </td>
@@ -421,7 +444,7 @@ const canAccess = (permission, role = []) => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.creator_name || 'Sistem'
-                                                }} {{ `(${getRoleName(item.role_name).label})` }}
+                                                    }} {{ `(${getRoleName(item.role_name).label})` }}
                                                 </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>

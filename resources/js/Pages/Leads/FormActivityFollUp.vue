@@ -140,6 +140,7 @@ const emit = defineEmits(["update:show", "saved"]);
 const close = () => {
     emit("update:show", false);
     resetForm();
+    usePage().props.flash.modal_message = null
 };
 
 const submitTextButton = computed(() => {
@@ -222,7 +223,7 @@ const getRoleName = (data, mode = 'create') => {
                                         <label for="activity_input"
                                             class="form-label small fw-bold text-primary mb-2 d-flex align-items-center">
                                             <i class="bi bi-chat-right-dots-fill me-2 fs-6"></i> BUAT CATATAN FOLLOW-UP
-                                            BARU
+
                                         </label>
                                         <text-area :maxChar="2500" :error="form.errors.description" name="description"
                                             v-model="form.description" :rows="5"
@@ -247,8 +248,9 @@ const getRoleName = (data, mode = 'create') => {
 
                                         <div class="position-relative mb-4" v-for="act in dataLead.activity"
                                             :key="act.id_lead_activity">
+
                                             <div class="position-absolute bg-primary rounded-circle border border-3 border-white shadow-sm"
-                                                style="width: 18px; height: 18px; left: -24px; top: 12px; z-index: 2;">
+                                                style="width: 18px; height: 18px; left: -18px; top: 5px; z-index: 2;">
                                             </div>
 
                                             <div class="card border shadow-sm rounded-4 overflow-hidden">
@@ -308,8 +310,8 @@ const getRoleName = (data, mode = 'create') => {
                                                         <text-area
                                                             :error="__alert.visible && __alert.id === act.id_lead_activity"
                                                             :maxChar="2500" name="activity"
-                                                            inputClass="bg-light border-secondary-subtle rounded-3"
-                                                            v-model="activityEdit.new_value" :rows="3" />
+                                                            inputClass="border-secondary-subtle rounded-3"
+                                                            v-model="activityEdit.new_value" :rows="5" />
                                                     </div>
 
                                                     <div class="d-flex gap-2 justify-content-end mt-3 border-top pt-2">

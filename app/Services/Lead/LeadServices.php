@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Traits\ImmutableFieldValidator;
 use App\Traits\ActivityMessageFormatter;
 use App\Services\Authorization\LeadAuthorizationService;
+use Illuminate\Support\Facades\Log;
 
 class LeadServices
 {
@@ -23,7 +24,8 @@ class LeadServices
 
     public function store(array $validated, $user): LeadModel
     {
-        return DB::transaction(function () use ($validated, $user) {
+        DB::beginTransaction();
+        try {
 
             $leads = LeadModel::create([
                 'id_user' => $user->id,
@@ -36,33 +38,23 @@ class LeadServices
                 'status' => $validated['status'],
                 'temperature' => $validated['temperature'],
                 'customer_type' => $validated['customer_type'],
-                'follow_up_date' => $validated['follow_up_date'],
                 'notes' => $validated['notes'],
             ]);
 
-            $activityDesc = $validated['new_activity'] ?? $this->msgLeadCreated($validated);
-
-            if (!empty($validated['new_activity'])) {
-                $leads->activity()->create([
-                    'id_user'     => $user->id,
-                    'id_lead'     => $leads->id_lead,
-                    'description' => $activityDesc
-                ]);
-            }
-
+            // Jika prospek langsung Deal/Closing
             if ($validated['status'] === 'CLOSED_WON' && $validated['temperature'] === 'HOT') {
 
                 $sales = $this->convertLeadToSales($leads, $validated);
 
                 $sales->paymentHistory()->create([
-                    'id_sales' => $sales->id_sales,
-                    'id_user' => $user->id,
-                    'id_lead' => $leads->id_lead,
+                    'id_sales'       => $sales->id_sales,
+                    'id_user'        => $user->id,
+                    'id_lead'        => $leads->id_lead,
                     'payment_method' => $validated['payment_method'],
-                    'bank_name' => $validated['bank_name'] ?? null,
-                    'paid_amount' => $validated['paid_amount'],
-                    'notes_payment' => 'Transaksi awal pada saat pengesahan closing / deal',
-                    'payment_at' => now()->toDateTimeString()
+                    'bank_name'      => $validated['bank_name'] ?? null,
+                    'paid_amount'    => $validated['paid_amount'],
+                    'notes_payment'  => 'Transaksi awal pada saat pengesahan closing / deal',
+                    'payment_at'     => now()->toDateTimeString()
                 ]);
 
                 $leads->activity()->create([
@@ -71,16 +63,22 @@ class LeadServices
                     'description' => $this->msgClosingDeal($validated)
                 ]);
             }
-
+            // Jika SEMUA TAHAP di atas berhasil tanpa error, sahkan datanya (Commit)
+            DB::commit();
             return $leads;
-        });
+        } catch (\Exception $error) {
+
+            DB::rollBack(); // JIKA ADA ERROR (Server mati, database putus, dll), BATALKAN SEMUA!
+            Log::error("Gagal menyimpan Lead baru: " . $error); // Catat error ke file laravel.log agar mudah di-debug
+            throw $error; // Lemparkan error kembali ke controller agar bisa ditangkap oleh sistem validasi Vue
+        }
     }
 
     public function update(LeadModel $leads, array $validated, $user): LeadModel
     {
-        return DB::transaction(function () use ($leads, $validated, $user) {
+        DB::beginTransaction();
+        try {
 
-            // Validasi untuk memastikan bahwa status dan temperature tidak diubah jika sudah memiliki nilai tertentu
             $this->__validate($leads, $validated, [
                 'status' => [
                     'locked_value' => 'CLOSED_WON',
@@ -102,21 +100,16 @@ class LeadServices
                 'phone' => $validated['phone'],
                 'customer_type' => $validated['customer_type'],
                 'status' => $validated['status'],
-                'follow_up_date' => $validated['follow_up_date'],
                 'temperature' => $validated['temperature'],
                 'notes' => $validated['notes'],
             ]);
-
-            if (!empty($validated['new_activity'])) {
-                $leads->activity()->create([
-                    'id_user' => $user->id,
-                    'id_lead'     => $leads->id_lead,
-                    'description' => $validated['new_activity']
-                ]);
-                $leads->touch();
-            }
+            DB::commit();
             return $leads;
-        });
+        } catch (\Exception $error) {
+            DB::rollBack();
+            Log::error("Gagal memperbarui Lead: " . $error);
+            throw $error;
+        }
     }
     private function convertLeadToSales(LeadModel $leads, array $validated)
     {

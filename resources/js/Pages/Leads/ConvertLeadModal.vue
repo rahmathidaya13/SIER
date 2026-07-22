@@ -77,7 +77,13 @@ const loadLead = async () => {
     }
 
 }
-
+const dpAmount = computed(() => {
+    if (!form.deal_price) return 0
+    if (form.payment_status === 'DP') {
+        return Number(form.deal_price * 0.5)
+    }
+    return form.deal_price
+})
 </script>
 
 <template>
@@ -122,14 +128,14 @@ const loadLead = async () => {
                             <input-error :message="form.errors.paid_amount" />
                             <small v-if="form.deal_price - form.paid_amount > 0"
                                 class="text-danger mt-1 d-block fw-medium" style="font-size: 11px;">
-                                Sisa Tagihan: {{ currencyFormat(form.deal_price - form.paid_amount) }}
+                                Sisa Tagihan: {{ currencyFormat(dpAmount) }}
                             </small>
                         </div>
                         <div class="col-md-4">
                             <label for="quantity_input" class="form-label small fw-bold text-muted">QUANTITY
                                 *</label>
-                            <input-number :maxChar="5" :error="form.errors.quantity"
-                                name="quantity" v-model="form.quantity" placeholder="0" />
+                            <input-number :maxChar="5" :error="form.errors.quantity" name="quantity"
+                                v-model="form.quantity" placeholder="0" />
                             <input-error :message="form.errors.quantity" />
                         </div>
 

@@ -76,6 +76,7 @@ class LeadController extends Controller
 
     public function store(Request $request)
     {
+        // policy lead
         $response = Gate::inspect('create', LeadModel::class);
         if ($response->denied()) {
             throw ValidationException::withMessages([
@@ -84,7 +85,7 @@ class LeadController extends Controller
         }
 
         $user = auth()->user();
-        $this->validateLeads($request->all());
+        $validated = $this->validateLeads($request->all());
 
         if ($request['status'] === 'CLOSED_WON' && $request['payment_status'] === 'DP') {
             $minimalDp = $request['deal_price'] * 0.5;
@@ -95,21 +96,27 @@ class LeadController extends Controller
             }
         }
 
-        $this->leadServices->store($request->all(), $user);
-
-        $this->invalidateCaches(
-            [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
-            ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
-        );
-        return redirect()->back()->with([
-            'message' => 'Lead dari ' . strtoupper($request['name']) . ' berhasil ditambahkan',
-        ]);
+        try {
+            $this->leadServices->store($validated, $user);
+            $this->invalidateCaches(
+                [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
+                ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+            );
+            return redirect()->back()->with([
+                'message' => 'Lead dari ' . strtoupper($request['name']) . ' berhasil ditambahkan',
+            ]);
+        } catch (\Exception $error) {
+            $errorMessage = config('app.debug') ? $error->getMessage() : 'Terjadi kesalahan pada server. Silakan coba lagi.';
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => $errorMessage]);
+        }
     }
 
     public function update(Request $request, string $id)
     {
         $user = auth()->user();
-        $this->validateLeads($request->all(), $id);
+        $validated = $this->validateLeads($request->all(), $id);
 
         $leads = LeadModel::find($id);
 
@@ -119,6 +126,7 @@ class LeadController extends Controller
             ]);
         }
 
+        // cek policy
         $response = Gate::inspect('update', $leads);
         if ($response->denied()) {
             throw ValidationException::withMessages([
@@ -126,13 +134,18 @@ class LeadController extends Controller
             ]);
         }
 
-        $this->leadServices->update($leads, $request->all(), $user);
-
-        $this->invalidateCaches(
-            [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
-            ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
-        );
-        return redirect()->back()->with('message', 'Lead ' . $leads->name . ' berhasil diperbarui!');
+        try {
+            $this->leadServices->update($leads, $validated, $user);
+            $this->invalidateCaches(
+                [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
+                ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+            );
+            return redirect()->back()->with('message', 'Lead ' . $leads->name . ' berhasil diperbarui!');
+        } catch (\Exception $error) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Gagal memperbarui data: ' . $error->getMessage()]);
+        }
     }
 
     public function show(string $id)

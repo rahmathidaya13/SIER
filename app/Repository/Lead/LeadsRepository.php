@@ -2,7 +2,6 @@
 
 namespace App\Repository\Lead;
 
-use App\Models\User;
 use App\Models\LeadModel;
 use App\Repository\BaseCacheRepository;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -15,6 +14,7 @@ class LeadsRepository extends BaseCacheRepository
     protected function buildBaseQuery(array $filters = [])
     {
         $query = LeadModel::query()
+            ->with('activity:id_lead,created_at')
             ->allowedForUser()
             ->joinUserRole()
             ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')

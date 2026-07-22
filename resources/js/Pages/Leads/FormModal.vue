@@ -34,11 +34,8 @@ const form = useForm({
     temperature: null,
     customer_type: null,
     status: null,
-    follow_up_date: null,
     notes: '',
     product_name: '',
-    new_activity: '',
-    role_name: '',
 
     // Field Konversi Closing
     deal_price: 0,
@@ -103,10 +100,8 @@ const fillForm = (data) => {
         customer_type: data.customer_type,
 
         status: data.status,
-        follow_up_date: formatForDatetimeLocal(data.follow_up_date) || '',
         notes: data.notes,
         product_name: data.product?.product_name || '',
-        new_activity: '',
 
         // Reset field konversi
         deal_price: 0,
@@ -143,18 +138,14 @@ const resetForm = () => {
         temperature: null,
         customer_type: null,
         status: null,
-        follow_up_date: null,
         notes: '',
         product_name: '',
-        new_activity: '',
-        role_name: '',
 
         deal_price: 0,
         paid_amount: 0,
         payment_status: 'LUNAS',
         payment_method: 'cash',
         quantity: '',
-
         bank_name: '',
         notes_sales: ''
     })
@@ -165,9 +156,7 @@ const resetForm = () => {
 const tabList = computed(() => {
     let tabs = [];
 
-    // Mode Edit: Activity ditaruh paling depan biar Sales fokus ngetik laporan
     if (isEdit.value) {
-        tabs.push({ id: 'activity', name: '💬 Aktivitas Follow-up', badge: dataLead.value?.activity?.length || 0 });
         tabs.push({ id: 'prospect', name: '📋 Data Prospek' });
     } else {
         tabs.push({ id: 'prospect', name: '📋 Data Prospek' });
@@ -177,11 +166,6 @@ const tabList = computed(() => {
     if (form.status === 'CLOSED_WON' && form.temperature === 'HOT') {
         tabs.push({ id: 'convert_lead', name: '💰 Data Konversi' });
 
-    }
-
-    // Mode Create: Activity ditaruh paling belakang
-    if (!isEdit.value) {
-        tabs.push({ id: 'activity', name: '💬 Aktivitas Follow-up' });
     }
     return tabs;
 })
@@ -197,7 +181,6 @@ const loadLead = async () => {
     try {
         const { data } = await axios.get(`/leads/show/${props.idLead}`);
         fillForm(data);
-        activeTab.value = 'activity';
     } catch (error) {
         console.error("Gagal mengambil data:", error);
         alert("Terjadi kesalahan saat memuat data.");
@@ -255,7 +238,6 @@ const submit = () => {
                 'id_product',
                 'temperature',
                 'status',
-                'follow_up_date',
                 'notes',
             ];
             const convertFields = ['deal_price', 'paid_amount', 'payment_status', 'payment_method', 'deal_at', 'notes_sales'];
@@ -270,9 +252,6 @@ const submit = () => {
             }
             else if (isErrorInProspect && activeTab.value !== 'prospect') {
                 activeTab.value = 'prospect';
-            }
-            else if (errors.new_activity && activeTab.value !== 'activity') {
-                activeTab.value = 'activity';
             }
         }
     });
@@ -305,53 +284,8 @@ const submitTextButton = computed(() => {
     if (form.status === 'CLOSED_WON' && form.temperature === 'HOT') return 'Proses Closing';
     return isEdit.value ? 'Simpan Perubahan' : 'Simpan Prospek';
 });
-const getRoleName = (data, mode = 'create') => {
-    let role;
-    if (mode === 'create') {
-        role = data.user.roles[0].name
-    }
-    if (mode === 'edit') {
-        role = data.user_update.roles[0].updated_by_name
-    }
-    // const role = data.user.roles.map(role => role.name)
-    const roles = {
-        'super_admin': {
-            label: 'Head Office',
-            color: 'bg-dark text-white'
-        },
-        'supervisor': {
-            label: 'Supervisor',
-            color: 'bg-primary text-white'
-        },
-        'admin': {
-            label: 'Admin',
-            color: 'bg-info text-dark'
-        },
-        'sales': {
-            label: 'Sales',
-            color: 'bg-success text-white'
-        },
-        'teknisi': {
-            label: 'Teknisi',
-            color: 'bg-secondary text-white'
-        }
-    };
-    return roles[role] || 'bg-light text-dark border';
-};
 
-const activityEdit = reactive({
-    id: null,
-    new_value: '',
-});
 
-const editActivity = (activities) => {
-    activityEdit.id = activities.id_lead_activity;
-    activityEdit.new_value = activities.description || '';
-}
-const cancelEditActivity = () => {
-    activityEdit.id = null;
-    activityEdit.new_value = '';
-}
 
 const updateActivity = () => {
     router.put(route('leads.activity.update', activityEdit.id),
@@ -673,17 +607,6 @@ const dpAmount = computed(() => {
                                                 :error="form.errors.status" :options="prospectOptions" />
                                             <input-error :message="form.errors.status" />
                                         </div>
-
-                                        <!-- <div class="col-12 mb-2">
-                                            <div class="d-flex justify-content-between">
-                                                <label class="form-label small fw-bold text-muted">JADWALKAN FOLLOW
-                                                    UP</label>
-                                            </div>
-                                            <input-text :disabled="form.status == 'NEW' || form.status == 'CLOSED_WON'"
-                                                name="follow_up_date" v-model="form.follow_up_date"
-                                                type="datetime-local" />
-                                        </div> -->
-
                                         <div class="col-12 mt-2">
                                             <label class="form-label small fw-bold text-muted">STICKY NOTE / CATATAN
                                                 KHUSUS (Opsional)</label>
@@ -785,128 +708,7 @@ const dpAmount = computed(() => {
 
                         </div>
 
-                        <div v-show="activeTab === 'activity'" class="row g-3 animate-fade-in">
-                            <div class="col-12">
-                                <label for="activity_input" class="form-label small fw-bold text-muted">LAPORKAN
-                                    HASIL
-                                    FOLLOW-UP HARI INI</label>
-                                <text-area :maxChar="2500" :error="form.errors.new_activity" name="activity"
-                                    v-model="form.new_activity" :rows="3"
-                                    placeholder="Tuliskan apa yang baru saja dibicarakan dengan pelanggan di sini..." />
-                                <input-error :message="form.errors.new_activity" />
-                                <small class="text-muted d-block mt-1" style="font-size: 11px;">
-                                    *Menyimpan aktivitas baru akan memperbarui tanggal kontak terakhir pelanggan
-                                    ini.
-                                </small>
-                            </div>
 
-                            <div v-if="dataLead?.activity && dataLead?.activity.length > 0"
-                                class="col-12 mt-4 pt-3 border-top">
-                                <label class="form-label small fw-bold text-muted mb-3 d-block"
-                                    style="letter-spacing: 0.5px;">
-                                    🕒 JEJAK REKAM KONSUMEN (ACTIVITY TIMELINE):
-                                </label>
-
-                                <div class="ps-1 pe-2 position-relative" style="max-height: 440px; overflow-y: auto;">
-
-                                    <div class="d-flex gap-2 mb-3 position-relative" v-for="act in dataLead.activity"
-                                        :key="act.id_lead_activity">
-
-                                        <div class="timeline-line"></div>
-
-                                        <div class="badge bg-primary-subtle text-primary rounded-circle p-0 d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
-                                            style="width: 34px; height: 34px; z-index: 2;">
-                                            <i class="bi bi-person-fill fs-6"></i>
-                                        </div>
-
-                                        <div class="d-flex flex-column flex-grow-1">
-
-                                            <div v-if="__alert.visible && __alert.id === act.id_lead_activity"
-                                                class="alert py-2 px-3 mb-2" :class="`alert-${__alert.type}`">
-                                                <i :class="{
-                                                    'bi bi-check-circle-fill': __alert.type === 'success',
-                                                    'bi bi-exclamation-triangle-fill': __alert.type === 'warning',
-                                                    'bi bi-info-circle-fill': __alert.type === 'info',
-                                                    'bi bi-x-circle-fill': __alert.type === 'danger'
-                                                }" class="me-2"></i>
-                                                <span class="small">
-                                                    {{ __alert.message }}
-                                                </span>
-                                            </div>
-
-
-                                            <div class="bg-light p-2 px-3 rounded-3 border flex-grow-1 shadow-sm">
-
-                                                <div
-                                                    class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-1">
-                                                    <div class="d-flex flex-column small">
-                                                        <div class="fw-bold  text-success text-capitalize"
-                                                            style="font-size: 14px;">
-                                                            <i class="bi bi-plus-circle"></i>
-                                                            Dibuat: {{ act.user?.activity_creator_name || 'Sistem'
-                                                            }} -
-                                                            {{ getRoleName(act, 'create').label }}
-                                                        </div>
-                                                        <div v-if="act.created_at !== act.updated_at"
-                                                            class="fw-bold mt-1 text-capitalize">
-                                                            <i class="bi bi-pencil-square text-warning"></i>
-                                                            Diubah:
-                                                            {{ act.user_update?.name }}
-                                                            -
-                                                            {{ getRoleName(act, 'edit').label }}
-                                                        </div>
-                                                    </div>
-                                                    <div class="d-flex flex-column">
-                                                        <span class="text-muted" style="font-size: 12px;">
-                                                            <i class="bi bi-plus-circle"></i>
-                                                            {{ formatDate(act.created_at) }}
-                                                        </span>
-                                                        <span v-if="act.created_at !== act.updated_at"
-                                                            class="text-muted" style="font-size: 12px;">
-                                                            <i class="bi bi-pencil-square"></i>
-                                                            {{ formatDate(act.updated_at) }}
-                                                        </span>
-
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex justify-content-between flex-column">
-                                                    <p v-if="!activityEdit.id" class="mb-3 mt-1"
-                                                        style="font-size: 14px; white-space: pre-line;">
-                                                        {{ act.description
-                                                        }}</p>
-                                                    <div class="mb-2">
-                                                        <text-area
-                                                            :error="__alert.visible && __alert.id === act.id_lead_activity"
-                                                            v-if="activityEdit.id === act.id_lead_activity"
-                                                            :maxChar="2500" name="activity" inputClass="bg-transparent"
-                                                            v-model="activityEdit.new_value" :rows="3"
-                                                            placeholder="Tuliskan apa yang baru saja dibicarakan dengan pelanggan di sini..." />
-                                                    </div>
-                                                    <div class="d-flex gap-2 align-items-center">
-                                                        <span
-                                                            @click.prevent="activityEdit.id === act.id_lead_activity ? updateActivity() : editActivity(act)"
-                                                            class="text-primary rounded-pill cursor-pointer badge badge-soft-success bg-gradient">
-                                                            {{ activityEdit.id === act.id_lead_activity ? 'Simpan' :
-                                                                'Ubah'
-                                                            }}
-                                                        </span>
-                                                        <span v-if="activityEdit.id === act.id_lead_activity"
-                                                            @click.prevent="cancelEditActivity"
-                                                            class="badge rounded-pill badge-soft-danger cursor-pointer">Batal</span>
-
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                </div>
-                            </div>
-                            <div v-else class="col-12 text-center py-4 text-muted">
-                                <i class="bi bi-chat-square-dots fs-1 opacity-25 d-block mb-1"></i>
-                                <small>Belum ada riwayat percakapan pada prospek ini.</small>
-                            </div>
-                        </div>
 
                     </form-wrapper>
 
