@@ -14,11 +14,13 @@ class LeadsRepository extends BaseCacheRepository
     protected function buildBaseQuery(array $filters = [])
     {
         $query = LeadModel::query()
-            ->with('activity:id_lead,created_at')
+            ->with([
+                'activity:id_lead,created_at',
+                'leadProduct.product:id_product,name,image_link,image_path',
+            ])
             ->allowedForUser()
             ->joinUserRole()
             ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')
-            ->leftJoin('products', 'products.id_product', '=', 'leads.id_product')
             ->leftJoin('sales', 'sales.id_lead', '=', 'leads.id_lead')
             ->select([
                 'leads.id_lead',
@@ -35,7 +37,6 @@ class LeadsRepository extends BaseCacheRepository
                 'roles.name as role_name',
                 'channels.name as channel_name',
                 'channels.icon',
-                'products.name as product_name',
                 'sales.invoice',
             ]);
 

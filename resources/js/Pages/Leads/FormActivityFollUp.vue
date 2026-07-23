@@ -54,7 +54,8 @@ const loadLead = async () => {
 
     try {
         const { data } = await axios.get(`/leads/show/${props.idLead}`);
-        fillForm(data);
+        const cleanData = data.data;
+        fillForm(cleanData);
     } catch (error) {
         console.error("Gagal mengambil data:", error);
         alert("Terjadi kesalahan saat memuat data.");
@@ -69,7 +70,6 @@ const activityEdit = reactive({
     new_value: '',
 });
 const editActivity = (activities) => {
-    console.log(activities);
     activityEdit.id = activities.id_lead_activity;
     activityEdit.new_value = activities.description || '';
 }
@@ -150,10 +150,10 @@ const submitTextButton = computed(() => {
 const getRoleName = (data, mode = 'create') => {
     let role;
     if (mode === 'create') {
-        role = data.user.roles[0].name
+        role = data.user.roles
     }
     if (mode === 'edit') {
-        role = data.user_update.roles[0].updated_by_name
+        role = data.user_update.roles
     }
     // const role = data.user.roles.map(role => role.name)
     const roles = {

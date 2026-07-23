@@ -357,13 +357,54 @@ const canAccess = (permission, role = []) => {
                                         </div>
                                     </td>
 
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2 fw-medium text-dark small">
-                                            <i class="bi fs-5" :class="item.icon || 'bi-broadcast'"></i>
-                                            {{ item.channel_name }}
-                                        </div>
-                                        <div class="text-muted" style="font-size: 14px;">
-                                            📦 {{ item.product_name || 'Belum pilih paket' }}
+                                    <td class="align-middle">
+                                        <div class="d-flex flex-column gap-2 my-1">
+
+                                            <!-- 1. BAGIAN CHANNEL (Dibuat sedikit lebih soft/muted agar tidak bersaing dengan produk) -->
+                                            <div class="d-flex align-items-center gap-1 fw-semibold"
+                                                style="font-size: 14px;">
+                                                <i :class="item.icon || 'bi-broadcast'" class="text-muted"></i>
+                                                <span>{{ item.channel_name || 'Tidak diketahui' }}</span>
+                                            </div>
+
+                                            <!-- 2. BAGIAN MULTI-PRODUCT -->
+                                            <div v-if="item.lead_product && item.lead_product.length > 0"
+                                                class="d-flex flex-wrap gap-1">
+
+                                                <!-- Render maksimal 2 produk -->
+                                                <template v-for="(lp, index) in item.lead_product.slice(0, 2)"
+                                                    :key="lp.product?.id_product || index">
+                                                    <span v-if="lp.product"
+                                                        class="badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center py-1 px-2 rounded-pill shadow-sm"
+                                                        style="font-size: 12px; max-width: 140px;" v-b-tooltip.hover
+                                                        :title="lp.product.name">
+
+                                                        <!-- Icon Box sbg ornamen (opsional, ganti tag img jika ingin gambar asli) -->
+                                                        <i class="bi bi-box-seam me-1 opacity-75"></i>
+
+                                                        <span class="text-truncate">{{ lp.product.name }}</span>
+                                                    </span>
+                                                </template>
+
+                                                <!-- Indikator Sisa Produk -->
+                                                <span v-if="item.lead_product.length > 2"
+                                                    class="badge bg-light text-secondary border py-1 px-2 rounded-pill shadow-sm"
+                                                    style="font-size: 11px; cursor: help;"
+                                                    :title="'Ada ' + (item.lead_product.length - 2) + ' produk lainnya di dalam form'">
+                                                    +{{ item.lead_product.length - 2 }}
+                                                </span>
+
+                                            </div>
+
+                                            <!-- 3. EMPTY STATE (Jika tidak ada produk) -->
+                                            <div v-else>
+                                                <span
+                                                    class="badge bg-light text-muted border border-dashed py-1 px-2 fw-normal"
+                                                    style="font-size: 10.5px;">
+                                                    <i class="bi bi-slash-circle me-1"></i> Belum ada produk
+                                                </span>
+                                            </div>
+
                                         </div>
                                     </td>
 

@@ -17,6 +17,7 @@ use App\Traits\ActivityMessageFormatter;
 use App\Repository\Channel\ChannelRepository;
 use App\Services\Lead\LeadConversionServices;
 use App\Http\Controllers\Sales\SaleRepository;
+use App\Http\Resources\LeadResource;
 use Illuminate\Validation\ValidationException;
 use App\Services\Authorization\ScopeResolverService;
 
@@ -150,15 +151,36 @@ class LeadController extends Controller
 
     public function show(string $id)
     {
-        $leads = LeadModel::with([
-            'user:id,name as creator_name',
-            'channel:id_channel,name as channel_name,icon',
-            'product:id_product,name as product_name,image_link,image_path',
-            'activity.user:id,name as activity_creator_name',
+        $leads = LeadModel::select([
+            'id_lead',
+            'id_user',
+            'id_channel',
+            'name',
+            'phone',
+            'email',
+            'status',
+            'temperature',
+            'customer_type',
+            'notes',
+            'follow_up_date'
+        ])->with([
+            'user:id,name',
+            'leadProduct.product:id_product,name,image_link,image_path',
+            'channel:id_channel,name,icon',
+
+            // Batasi aktivitas maksimal 10 agar memori server tidak meledak
+            'activity' => function ($query) {
+                $query->select('id_lead_activity', 'id_lead', 'id_user', 'updated_by', 'description', 'created_at', 'updated_at')
+                    ->latest()
+                    ->limit(10);
+            },
+            'activity.user:id,name',
             'activity.user.roles:id,name',
-            'activity.userUpdate.roles:id,name as updated_by_name',
+            'activity.userUpdate:id,name',
+            'activity.userUpdate.roles:id,name',
         ])->findOrFail($id);
-        return response()->json($leads);
+        
+        return new LeadResource($leads);
     }
     public function destroy(string $id)
     {

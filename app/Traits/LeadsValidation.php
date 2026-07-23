@@ -74,8 +74,10 @@ trait LeadsValidation
 
             'id_product' => [
                 'required',
-                'exists:products,id_product',
+                'array',
+                'min:1',
             ],
+            'id_product.*' => ['exists:products,id_product'],
 
             'temperature' => [
                 'required',
@@ -139,6 +141,7 @@ trait LeadsValidation
                 'id_channel.exists' => 'Sumber prospek tidak ditemukan.',
 
                 'id_product.required' => 'Silakan pilih produk.',
+                'id_product.min' => 'Silakan pilih minimal satu produk.',
                 'id_product.exists' => 'Produk yang dipilih tidak valid.',
 
                 'temperature.required' => 'Silakan pilih suhu prospek.',

@@ -31,7 +31,6 @@ class LeadServices
                 'id_user' => $user->id,
                 'id_branch' => $user->id_branch,
                 'id_channel' => $validated['id_channel'],
-                'id_product' => $validated['id_product'],
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'phone' => $validated['phone'],
@@ -40,6 +39,12 @@ class LeadServices
                 'customer_type' => $validated['customer_type'],
                 'notes' => $validated['notes'],
             ]);
+
+            // masukan banyak product kedalam database
+            if (!empty($validated['id_product'])) {
+                $leadProductMany = array_map(fn($idProduct) => array_merge(['id_product' => $idProduct]), $validated['id_product']);
+                $leads->leadProduct()->createMany($leadProductMany);
+            }
 
             // Jika prospek langsung Deal/Closing
             if ($validated['status'] === 'CLOSED_WON' && $validated['temperature'] === 'HOT') {
@@ -94,7 +99,6 @@ class LeadServices
 
             $leads->update([
                 'id_channel' => $validated['id_channel'],
-                'id_product' => $validated['id_product'],
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'phone' => $validated['phone'],
@@ -103,6 +107,14 @@ class LeadServices
                 'temperature' => $validated['temperature'],
                 'notes' => $validated['notes'],
             ]);
+
+            if (isset($validated['id_product']) && is_array($validated['id_product'])) {
+                $leads->leadProduct()->delete();
+                $leadProductMany = array_map(fn($idProduct) => array_merge(['id_product' => $idProduct]), $validated['id_product']);
+                if (!empty($leadProductMany)) {
+                    $leads->leadProduct()->createMany($leadProductMany);
+                }
+            }
             DB::commit();
             return $leads;
         } catch (\Exception $error) {
@@ -119,7 +131,6 @@ class LeadServices
             $sales = SalesModel::create([
                 'id_lead'        => $leads->id_lead,
                 'id_user'        => $leads->id_user,
-                'id_product'     => $leads->id_product,
                 'id_branch'      => $leads->id_branch,
                 'deal_price'     => $validated['deal_price'],
                 'paid_amount'    => $validated['paid_amount'],
@@ -129,6 +140,12 @@ class LeadServices
                 'deal_at'        => now()->toDateTimeString(),
                 'notes'          => $validated['notes']
             ]);
+
+            // masukan banyak product kedalam database
+            if (!empty($validated['id_product'])) {
+                $salesProductMany = array_map(fn($idProduct) => array_merge(['id_product' => $idProduct]), $validated['id_product']);
+                $sales->salesProduct()->createMany($salesProductMany);
+            }
 
             $leads->update([
                 'status' => 'CLOSED_WON',

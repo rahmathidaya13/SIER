@@ -18,7 +18,6 @@ class SalesModel extends Model
         'invoice',
         'id_lead',
         'id_user',
-        'id_product',
         'id_branch',
         'deal_price',
         'remaining_bill',
@@ -99,9 +98,9 @@ class SalesModel extends Model
     {
         return $this->belongsTo(User::class, 'id_user', 'id');
     }
-    public function product()
+    public function salesProduct()
     {
-        return $this->belongsTo(ProductModel::class, 'id_product', 'id_product');
+        return $this->hasMany(SalesProductModel::class, 'id_sales', 'id_sales');
     }
     public function branch()
     {

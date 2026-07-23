@@ -67,11 +67,18 @@ class ProductModel extends Model
     {
         return $this->hasMany(LeadModel::class, 'id_product', 'id_product');
     }
+    public function leadProduct()
+    {
+        return $this->hasMany(LeadProductModel::class, 'id_product', 'id_product');
+    }
     public function sales()
     {
         return $this->hasMany(SalesModel::class);
     }
-
+    public function salesProduct()
+    {
+        return $this->hasMany(SalesProductModel::class, 'id_product', 'id_product');
+    }
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by', 'id');

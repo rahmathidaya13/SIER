@@ -18,7 +18,6 @@ class LeadModel extends Model
     protected $fillable = [
         'id_user',
         'id_channel',
-        'id_product',
         'id_branch',
         'name',
         'phone',
@@ -62,6 +61,10 @@ class LeadModel extends Model
         return $this->belongsTo(ChannelModel::class, 'id_channel', 'id_channel');
     }
 
+    public function leadProduct()
+    {
+        return $this->hasMany(LeadProductModel::class, 'id_lead', 'id_lead');
+    }
     public function product()
     {
         return $this->belongsTo(ProductModel::class, 'id_product', 'id_product');
