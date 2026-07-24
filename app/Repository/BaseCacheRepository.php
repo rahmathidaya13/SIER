@@ -103,7 +103,6 @@ abstract class BaseCacheRepository
 
             // 🚀 3. QUERY DB (Panggil fungsi dari class turunannya)
             $result = $this->getData($scopeId, $filters);
-
             $payload = [
                 'data'         => collect($result->items())->toArray(),
                 'total'        => $result->total(),

@@ -9,6 +9,7 @@ use App\Http\Controllers\Leads\LeadController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Branch\BranchController;
 use App\Http\Controllers\Channel\ChannelController;
 use App\Http\Controllers\Leads\LeadActivityController;
 use App\Http\Controllers\Leads\LeadConversionController;
@@ -82,6 +83,13 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
         Route::get('/sales/list', 'index')->name('sales.index');
         Route::get('/sales/show/{id}', 'show')->name('sales.show');
         Route::post('/sales/pay/{id}', 'payRemaining')->name('sales.pay');
+    });
+    Route::controller(BranchController::class)->group(function () {
+        Route::get('/branch/list', 'index')->name('branch.index');
+        Route::get('/branch/show/{id}', 'show')->name('branch.show');
+        Route::post('/branch/store', 'store')->name('branch.store');
+        Route::put('/branch/update/{id}', 'update')->name('branch.update');
+        Route::delete('/branch/delete/{id}', 'destroy')->name('branch.delete');
     });
 });
 

@@ -43,6 +43,11 @@ class BranchModel extends Model
     {
         return $this->belongsTo(User::class, 'created_by', 'id');
     }
+
+    public function users()
+    {
+        return $this->hasMany(User::class, 'id_branch', 'id_branch');
+    }
     public function branchPhone()
     {
         return $this->hasMany(BranchPhoneModel::class, 'id_branch', 'id_branch');

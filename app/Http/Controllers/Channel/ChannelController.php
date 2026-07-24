@@ -27,7 +27,6 @@ class ChannelController extends Controller
             'limit',
             'order_by',
             'page',
-
         ]);
 
         $filters = app(ScopeResolverService::class)->filters($filters);

@@ -47,6 +47,13 @@ const menuItems = [
 
     },
     {
+        title: 'Daftar Cabang',
+        icon: 'bi bi-building',
+        route: 'branch.index',
+        prefixUrl: 'branch*',
+        roles: ['developer', 'super_admin']
+    },
+    {
         title: 'Data Pegawai',
         icon: 'bi bi-person-fill',
         route: 'employee.index',
