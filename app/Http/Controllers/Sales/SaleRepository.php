@@ -17,13 +17,11 @@ class SaleRepository extends BaseCacheRepository
             ->allowedForUser()
             ->joinUserRole()
             ->leftJoin('leads', 'leads.id_lead', '=', 'sales.id_lead')
-            ->leftJoin('products', 'products.id_product', '=', 'sales.id_product')
             ->leftJoin('branches', 'branches.id_branch', '=', 'sales.id_branch')
             ->select([
                 'sales.id_sales',
                 'sales.id_lead',
                 'sales.id_user',
-                'sales.id_product',
                 'sales.id_branch',
                 'sales.invoice',
                 'sales.deal_price',
@@ -38,7 +36,6 @@ class SaleRepository extends BaseCacheRepository
                 'leads.email as lead_customer_email',
                 'users.name as sales_name',
                 'roles.name as role_name',
-                'products.name as product_name',
                 'branches.name as branch_name',
             ]);
 

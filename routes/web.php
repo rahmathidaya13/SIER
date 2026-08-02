@@ -93,6 +93,7 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
     });
 });
 
+// akun yang belum login dan akan register
 Route::middleware(['guest'])->group(function () {
     Route::controller(LoginController::class)->group(function () {
         Route::get('/login', 'login')->name('login');
@@ -100,7 +101,7 @@ Route::middleware(['guest'])->group(function () {
     });
 
     Route::controller(RegisterController::class)->group(function () {
-        Route::get('/register', 'register')->name('register');
+        Route::get('/register', 'create')->name('register');
         Route::post('/register/store', 'store')->name('register.store');
     });
 

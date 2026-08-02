@@ -28,7 +28,6 @@ class LeadConversionServices
             $sales = SalesModel::create([
                 'id_lead'        => $leads->id_lead,
                 'id_user'        => $leads->id_user,
-                'id_product'     => $leads->id_product,
                 'id_branch'      => $leads->id_branch,
                 'deal_price'     => $validated['deal_price'],
                 'remaining_bill' => $remaining,
@@ -38,6 +37,12 @@ class LeadConversionServices
                 'deal_at'        => now()->toDateTimeString(),
                 'notes'          => $validated['notes']
             ]);
+
+            $idProducts = $leads->leadProduct()->pluck('id_product')->toArray();
+            if (!empty($idProducts)) {
+                $leadProductMany = array_map(fn($idProduct) => array_merge(['id_product' => $idProduct]),  $idProducts);
+                $sales->salesProduct()->createMany($leadProductMany);
+            }
 
             $leads->update([
                 'status' => 'CLOSED_WON',
@@ -61,6 +66,7 @@ class LeadConversionServices
                 $leads->activity()->create([
                     'id_user'     =>  $leads->id_user,
                     'id_lead'     =>  $leads->id_lead,
+                    'source'      => 'transaction',
                     'description' => '🎉 Pelanggan DEAL! Transaksi disahkan dengan nilai Rp ' . number_format($validated['deal_price'], 0, ',', '.') . ' (' . $validated['payment_status'] . ').'
                 ]);
             }

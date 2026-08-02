@@ -16,13 +16,14 @@ const emit = defineEmits(["update:show"]);
 const isLoading = ref(false);
 const activities = ref([]);
 const customerName = ref("");
-const productName = ref("");
-
+const phoneNumber = ref('');
+const products = ref(null);
 const close = () => {
     emit("update:show", false);
     activities.value = [];
     customerName.value = "";
-    productName.value = "";
+    phoneNumber.value = '';
+    products.value = null;
 };
 
 const loadTimeline = async () => {
@@ -32,10 +33,12 @@ const loadTimeline = async () => {
     try {
         // Kita manfaatkan endpoint show yang sudah membawa relasi lead.activity
         const { data } = await axios.get(`/leads/show/${props.idLead}`);
-        console.log(data);
-        customerName.value = data?.name || 'Konsumen';
-        activities.value = data?.activity || [];
-        productName.value = data?.product?.product_name || '';
+        const cleanData = data.data;
+        console.log(cleanData);
+        customerName.value = cleanData?.name || 'Konsumen';
+        phoneNumber.value = cleanData?.phone || '';
+        activities.value = cleanData?.activity || [];
+        products.value = cleanData?.products || null;
 
     } catch (error) {
         console.error("Gagal mengambil riwayat:", error);
@@ -92,6 +95,23 @@ const getRoleName = (roleName) => {
     };
     return roles[roleName] || 'bg-light text-dark border';
 };
+const customerType = (type) => {
+    const types = {
+        'NEW_CUSTOMER': {
+            label: 'Pelanggan Baru',
+            color: 'bg-success text-white'
+        },
+        'REPEAT_ORDER': {
+            label: 'Pelanggan Lama/Beli Ulang',
+            color: 'bg-primary text-white'
+        },
+        'WIN_BACK': {
+            label: 'Pelanggan Cancel',
+            color: 'bg-danger text-white'
+        },
+    };
+    return types[type] || 'bg-light text-dark border';
+};
 </script>
 
 <template>
@@ -101,15 +121,43 @@ const getRoleName = (roleName) => {
 
             <template #body>
                 <div class="bg-c-slate text-white p-3 rounded-3 mb-4 shadow-sm d-flex align-items-center gap-3">
+
                     <div class="bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                         style="width: 45px; height: 45px;">
                         <i class="bi bi-person-lines-fill fs-4 text-white"></i>
                     </div>
-                    <div>
-                        <p class="mb-0 text-white-50 small fw-medium text-uppercase tracking-wide">Timeline Konsumen</p>
-                        <h5 class="mb-0 fw-bold">{{ customerName }}</h5>
-                        <small class="mb-0 fw-semibold text-info">{{ productName }}</small>
+
+                    <div class="d-flex flex-column justify-content-center">
+                        <p class="mb-0 text-white-50 small fw-medium text-uppercase tracking-wide"
+                            style="font-size: 10.5px;">Timeline Konsumen</p>
+                        <h5 class="mb-1 fw-bold">{{ customerName }}</h5>
+                        <span class="small fw-medium">
+                            <i class="bi bi-telephone-fill me-1"></i>
+                            {{ phoneNumber }}
+                        </span>
+                        <div v-if="products && products.length > 0" class="d-flex flex-wrap gap-1 mt-1">
+
+                            <template v-for="(prod, index) in products" :key="prod.id_product || index">
+                                <span
+                                    class="badge bg-white bg-opacity-25 text-white border border-white border-opacity-25 fw-normal d-flex align-items-center py-1 px-2 rounded-pill shadow-sm"
+                                    style="font-size: 11px;">
+                                    <i class="bi bi-box-seam me-1 opacity-75"></i>
+                                    <span class="text-truncate" style="max-width: 130px;" :title="prod.product_name">
+                                        {{ prod.product_name }}
+                                    </span>
+                                </span>
+                            </template>
+                        </div>
+
+                        <div v-else class="mt-1">
+                            <span
+                                class="badge bg-white bg-opacity-10 text-white-50 border border-white border-opacity-10 fw-normal py-1 px-2 rounded-pill fst-italic"
+                                style="font-size: 10.5px;">
+                                Belum ada produk
+                            </span>
+                        </div>
                     </div>
+
                 </div>
 
                 <div v-if="isLoading" class="text-center py-5">
@@ -140,8 +188,8 @@ const getRoleName = (roleName) => {
                                         <div class="badge bg-light text-dark border small">
                                             <i class="bi bi-person-fill me-1"></i>
                                             <span class="text-capitalize">
-                                                {{ act.user?.activity_creator_name || 'Sistem' }} - {{
-                                                    getRoleName(act.user?.roles[0]?.name).label }}
+                                                {{ act.user?.activity_creator_name || 'Sistem' }} {{
+                                                    `(${getRoleName(act.user?.roles).label})` }}
                                             </span>
                                         </div>
                                     </div>

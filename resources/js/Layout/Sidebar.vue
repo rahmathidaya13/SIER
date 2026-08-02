@@ -22,29 +22,32 @@ const menuItems = [
         title: 'Produk',
         icon: 'bi bi-bag-check-fill',
         route: 'product.index',
-        prefixUrl: 'product*'
+        prefixUrl: 'product*',
+        permissions: ['product-view']
 
     },
     {
         title: 'Data Leads',
         icon: 'bi bi-person-vcard',
         route: 'leads.index',
-        prefixUrl: 'leads*'
+        prefixUrl: 'leads*',
+        permissions: ['lead-view']
 
     },
     {
         title: 'Rekap Closing',
         icon: 'bi bi-graph-up-arrow',
         route: 'sales.index',
-        prefixUrl: 'sales*'
-
+        prefixUrl: 'sales*',
+        permissions: ['closing-view']
     },
     {
         title: 'Sumber Trafik',
         icon: 'bi bi-broadcast',
         route: 'channel.index',
-        prefixUrl: 'channel*'
-
+        prefixUrl: 'channel*',
+        roles: ['developer', 'super_admin'],
+        permissions: ['channel-view']
     },
     {
         title: 'Daftar Cabang',

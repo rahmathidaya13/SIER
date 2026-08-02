@@ -90,7 +90,6 @@ watch(
     }
 );
 const fillForm = (data) => {
-    console.log(data);
     form.defaults({
         name: data.name,
         phone: data.phone,

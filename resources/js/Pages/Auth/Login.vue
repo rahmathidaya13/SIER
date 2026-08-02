@@ -79,9 +79,9 @@ onMounted(() => {
                         </form-wrapper>
                         <div class="text-center mt-3">
                             <p class="text-muted small">
-                                Belum memiliki akun? <br>
-                                <span class="text-dark fw-medium">Mintalah undangan (Invitation Link) kepada SPV Cabang
-                                    Anda.</span>
+                                Daftar sebagai karyawan<br>
+                                <Link :href="route('register')" class="text-decoration-none">Form pendaftaran
+                                </Link>
                             </p>
                         </div>
                     </div>

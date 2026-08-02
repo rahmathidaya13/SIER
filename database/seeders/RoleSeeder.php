@@ -51,6 +51,10 @@ class RoleSeeder extends Seeder
             'channel-edit',
             'channel-delete',
 
+            'branch-view',
+            'branch-create',
+            'branch-edit',
+            'branch-delete',
 
             // Modul User
             'users-view',

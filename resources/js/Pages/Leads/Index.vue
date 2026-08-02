@@ -18,8 +18,6 @@ const props = defineProps({
     products: Array,
     role_name: String
 });
-console.log(props.leads);
-
 const getCurrentMonth = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -360,33 +358,28 @@ const canAccess = (permission, role = []) => {
                                     <td class="align-middle">
                                         <div class="d-flex flex-column gap-2 my-1">
 
-                                            <!-- 1. BAGIAN CHANNEL (Dibuat sedikit lebih soft/muted agar tidak bersaing dengan produk) -->
                                             <div class="d-flex align-items-center gap-1 fw-semibold"
                                                 style="font-size: 14px;">
                                                 <i :class="item.icon || 'bi-broadcast'" class="text-muted"></i>
                                                 <span>{{ item.channel_name || 'Tidak diketahui' }}</span>
                                             </div>
 
-                                            <!-- 2. BAGIAN MULTI-PRODUCT -->
                                             <div v-if="item.lead_product && item.lead_product.length > 0"
                                                 class="d-flex flex-wrap gap-1">
 
-                                                <!-- Render maksimal 2 produk -->
                                                 <template v-for="(lp, index) in item.lead_product.slice(0, 2)"
                                                     :key="lp.product?.id_product || index">
                                                     <span v-if="lp.product"
                                                         class="badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center py-1 px-2 rounded-pill shadow-sm"
-                                                        style="font-size: 12px; max-width: 140px;" v-b-tooltip.hover
+                                                        style="font-size: 12px; max-width: 140px;"
                                                         :title="lp.product.name">
 
-                                                        <!-- Icon Box sbg ornamen (opsional, ganti tag img jika ingin gambar asli) -->
                                                         <i class="bi bi-box-seam me-1 opacity-75"></i>
 
                                                         <span class="text-truncate">{{ lp.product.name }}</span>
                                                     </span>
                                                 </template>
 
-                                                <!-- Indikator Sisa Produk -->
                                                 <span v-if="item.lead_product.length > 2"
                                                     class="badge bg-light text-secondary border py-1 px-2 rounded-pill shadow-sm"
                                                     style="font-size: 11px; cursor: help;"
@@ -395,8 +388,6 @@ const canAccess = (permission, role = []) => {
                                                 </span>
 
                                             </div>
-
-                                            <!-- 3. EMPTY STATE (Jika tidak ada produk) -->
                                             <div v-else>
                                                 <span
                                                     class="badge bg-light text-muted border border-dashed py-1 px-2 fw-normal"
