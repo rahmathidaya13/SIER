@@ -17,14 +17,17 @@ const emit = defineEmits(["update:show"]);
 const isLoading = ref(false);
 const activities = ref([]);
 const customerName = ref("");
-const productName = ref("");
+const phoneNumber = ref("");
+const products = ref(null);
 const paymentHistories = ref([]);
 const sales = ref({});
 const close = () => {
     emit("update:show", false);
     activities.value = [];
     customerName.value = "";
-    productName.value = "";
+    phoneNumber.value = "";
+    products.value = null;
+    sales.value = {};
     paymentHistories.value = [];
 };
 
@@ -36,8 +39,9 @@ const loadTimeline = async () => {
         // Kita manfaatkan endpoint show yang sudah membawa relasi lead.activity
         const { data } = await axios.get(`/sales/show/${props.idSales}`);
         customerName.value = data.lead?.name || 'Konsumen';
+        phoneNumber.value = data.lead?.phone || 'Tidak Tersedia';
         activities.value = data.lead?.activity || [];
-        productName.value = data.product?.name || '';
+        products.value = data.sales_product || null;
         paymentHistories.value = data.payment_history || [];
         sales.value = data;
         console.log(data);
@@ -128,11 +132,35 @@ const getRoleName = (roleName) => {
                         style="width: 45px; height: 45px;">
                         <i class="bi bi-person-lines-fill fs-4 text-white"></i>
                     </div>
-                    <div>
-                        <p class="mb-0 text-white-50 small fw-medium text-uppercase tracking-wide">Timeline Konsumen</p>
-                        <h5 class="mb-0 fw-bold">{{ customerName }}</h5>
-                        <small class="mb-0 fw-semibold text-info">{{ productName }}</small>
+                    <div class="d-flex flex-column justify-content-center">
+                        <p class="mb-0 text-white-50 small fw-medium text-uppercase tracking-wide"
+                            style="font-size: 10.5px;">Timeline Konsumen</p>
+                        <h5 class="mb-1 fw-bold">{{ customerName }}</h5>
+                        <span class="small fw-medium">
+                            <i class="bi bi-telephone-fill me-1"></i>
+                            {{ phoneNumber }}
+                        </span>
+                        <div v-if="products && products.length > 0" class="d-flex flex-wrap gap-1 mt-1">
 
+                            <template v-for="(prod, index) in products" :key="prod.id_product || index">
+                                <span
+                                    class="badge bg-white bg-opacity-25 text-white border border-white border-opacity-25 fw-normal d-flex align-items-center py-1 px-2 rounded-pill shadow-sm"
+                                    style="font-size: 11px;">
+                                    <i class="bi bi-box-seam me-1 opacity-75"></i>
+                                    <span class="text-truncate" style="max-width: 130px;" :title="prod.product.name">
+                                        {{ prod.product.name }}
+                                    </span>
+                                </span>
+                            </template>
+                        </div>
+
+                        <div v-else class="mt-1">
+                            <span
+                                class="badge bg-white bg-opacity-10 text-white-50 border border-white border-opacity-10 fw-normal py-1 px-2 rounded-pill fst-italic"
+                                style="font-size: 10.5px;">
+                                Belum ada produk
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -201,7 +229,7 @@ const getRoleName = (roleName) => {
                                                             <i class="bi bi-person-circle me-1"></i> {{ pay.user?.name
                                                                 ||
                                                                 'Sistem' }} {{
-                                                            `(${getRoleName(pay.user.roles[0].name).label})` }}
+                                                                `(${getRoleName(pay.user.roles[0].name).label})` }}
                                                         </span>
                                                     </div>
                                                 </td>
@@ -268,7 +296,8 @@ const getRoleName = (roleName) => {
                                             <div class="badge bg-light text-dark border small">
                                                 <i class="bi bi-person-fill me-1"></i>
                                                 <span class="text-capitalize">
-                                                    {{ act.user?.name || 'Sistem' }} - {{ getRoleName(act.user?.roles[0]?.name).label }}
+                                                    {{ act.user?.name || 'Sistem' }} - {{
+                                                        getRoleName(act.user?.roles[0]?.name).label }}
                                                 </span>
                                             </div>
                                         </div>

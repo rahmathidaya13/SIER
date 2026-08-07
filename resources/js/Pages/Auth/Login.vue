@@ -79,8 +79,8 @@ onMounted(() => {
                         </form-wrapper>
                         <div class="text-center mt-3">
                             <p class="text-muted small">
-                                Daftar sebagai karyawan<br>
-                                <Link :href="route('register')" class="text-decoration-none">Form pendaftaran
+                                Daftar sebagai karyawan
+                                <Link :href="route('register')">Form pendaftaran
                                 </Link>
                             </p>
                         </div>

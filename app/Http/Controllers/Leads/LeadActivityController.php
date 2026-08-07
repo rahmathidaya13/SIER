@@ -7,9 +7,9 @@ use App\Models\LeadActivityModel;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Traits\BranchMutationHelper;
+use App\Repository\Sale\SaleRepository;
 use App\Repository\Lead\LeadsRepository;
 use App\Repository\Channel\ChannelRepository;
-use App\Http\Controllers\Sales\SaleRepository;
 
 class LeadActivityController extends Controller
 {

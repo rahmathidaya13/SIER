@@ -118,7 +118,7 @@ watch(() => props.show, async (isOpen) => {
                             <div class="col-12 mb-3">
                                 <label class="form-label small fw-bold text-muted mb-2">METODE PEMBAYARAN
                                     *</label>
-                                <select-input text="Pilih metode pembayaran" name="payment_method"
+                                <select-input text="Pilih Metode Pembayaran" name="payment_method"
                                     v-model="form.payment_method" :error="form.errors.payment_method" :options="[
                                         { label: '🏦 Tunai / Cash', value: 'cash' },
                                         { label: '🏦 Transfer', value: 'transfer' },

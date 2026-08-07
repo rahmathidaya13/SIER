@@ -106,6 +106,12 @@ const deleted = async (nameRoute, data) => {
         });
     }
 }
+const keywordRef = ref(null);
+onMounted(() => {
+    if (keywordRef.value) {
+        keywordRef.value.focus();
+    }
+});
 </script>
 <template>
 

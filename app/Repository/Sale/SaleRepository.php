@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Sales;
+namespace App\Repository\Sale;
 
 use App\Models\SalesModel;
 use App\Repository\BaseCacheRepository;
@@ -14,6 +14,7 @@ class SaleRepository extends BaseCacheRepository
     {
         $user = auth()->user();
         $query = SalesModel::query()
+            ->with(['salesProduct.product:id_product,name,image_link,image_path'])
             ->allowedForUser()
             ->joinUserRole()
             ->leftJoin('leads', 'leads.id_lead', '=', 'sales.id_lead')
@@ -40,8 +41,9 @@ class SaleRepository extends BaseCacheRepository
             ]);
 
         if ($user->hasRole('super_admin')) {
-            $query->when(!empty($filters['branch']), function ($q) use ($filters) {
-                $q->where('branches.name', $filters['branch']);
+            $branchFilter = $filters['branch'] ?? 'all';
+            $query->when($branchFilter !== 'all', function ($q) use ($branchFilter) {
+                $q->where('branches.name', $branchFilter);
             });
         }
 

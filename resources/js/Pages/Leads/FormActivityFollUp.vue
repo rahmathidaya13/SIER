@@ -243,14 +243,15 @@ const getRoleName = (data, mode = 'create') => {
 
                                     <div class="timeline-container position-relative ps-4 pe-2"
                                         style="max-height: 480px; overflow-y: auto;">
-                                        <div class="position-absolute h-100 border-start border-2 border-secondary-subtle"
-                                            style="left: 15px; top: 8px; z-index: 1;"></div>
+
+                                        <div class="position-absolute vh-100 border-start border-2 border-secondary-subtle"
+                                            style="left: 8px; top: 8px; z-index: 1;"></div>
 
                                         <div class="position-relative mb-4" v-for="act in dataLead.activity"
                                             :key="act.id_lead_activity">
 
                                             <div class="position-absolute bg-primary rounded-circle border border-3 border-white shadow-sm"
-                                                style="width: 18px; height: 18px; left: -18px; top: 5px; z-index: 2;">
+                                                style="width: 18px; height: 18px; left: -25px; top: 5px; z-index: 2;">
                                             </div>
 
                                             <div class="card border shadow-sm rounded-4 overflow-hidden">

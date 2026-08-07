@@ -68,8 +68,7 @@ class ProductRepository extends BaseCacheRepository
         $limit = min((int)($filters['limit'] ?? 10), 100);
 
         return $query->orderBy($column, $direction)
-            ->paginate($limit)
-            ->withQueryString();
+            ->paginate($limit);
     }
 
 

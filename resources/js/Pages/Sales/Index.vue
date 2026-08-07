@@ -17,6 +17,7 @@ const props = defineProps({
     stats: Object,
     branch: Array
 });
+console.log(props.sales.data);
 const {
     filters,
     isLoading,
@@ -259,6 +260,7 @@ onMounted(() => {
                                 </div>
                             </div>
                         </div>
+
                         <div class="row p-3 g-2 align-items-center">
                             <div class="col-12 col-md-12 col-lg-12 col-xl-6">
                                 <div class="position-relative">
@@ -317,22 +319,53 @@ onMounted(() => {
                                             <div class="badge bg-primary-subtle text-primary p-2 rounded-circle fs-4">
                                                 <i class="bi bi-person-fill"></i>
                                             </div>
+
                                             <div class="text-capitalize">
                                                 <span @click.prevent="openActivityModal(item)"
                                                     class="fw-bold text-decoration-underline text-primary mb-0 cursor-pointer"
                                                     v-html="highlight(item.lead_customer_name ||
                                                         'Unknown', filters.keyword)"></span>
 
-                                                <div class="d-block mb-0 small fw-medium">
+                                                <div
+                                                    class="d-block mb-1 small fw-medium badge bg-success rounded-2 rounded-pill">
                                                     <i class="bi bi-whatsapp me-1"></i>
                                                     <span v-html="highlight(item.lead_customer_phone ||
                                                         'Unknown', filters.keyword)">
                                                     </span>
                                                 </div>
-                                                <span class="text-muted small" style="font-size: 14px;">
-                                                    <i class="bi bi-box me-1"></i> {{ item.product_name || '-'
-                                                    }}
-                                                </span>
+
+
+                                                <div v-if="item.sales_product && item.sales_product.length > 0"
+                                                    class="d-flex flex-wrap gap-1">
+
+                                                    <template v-for="(lp, index) in item.sales_product.slice(0, 2)"
+                                                        :key="lp.product?.id_product || index">
+                                                        <span v-if="lp.product"
+                                                            class="badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center py-1 px-2 rounded-pill shadow-sm"
+                                                            style="font-size: 12px; max-width: 200px;"
+                                                            :title="lp.product.name">
+
+                                                            <i class="bi bi-box-seam me-1 opacity-75"></i>
+
+                                                            <span class="text-truncate">{{ lp.product.name }}</span>
+                                                        </span>
+                                                    </template>
+
+                                                    <span v-if="item.sales_product.length > 2"
+                                                        class="badge bg-light text-secondary border py-1 px-2 rounded-pill shadow-sm"
+                                                        style="font-size: 11px; cursor: help;"
+                                                        :title="'Ada ' + (item.sales_product.length - 2) + ' produk lainnya di dalam form'">
+                                                        +{{ item.sales_product.length - 2 }}
+                                                    </span>
+
+                                                </div>
+                                                <div v-else>
+                                                    <span
+                                                        class="badge bg-light text-muted border border-dashed py-1 px-2 fw-normal"
+                                                        style="font-size: 10.5px;">
+                                                        <i class="bi bi-slash-circle me-1"></i> Belum ada produk
+                                                    </span>
+                                                </div>
                                             </div>
 
                                         </div>
@@ -379,7 +412,11 @@ onMounted(() => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.sales_name || 'Sistem'
-                                                    }} {{ `(${getRoleName(item.role_name).label ?? 'Unknown'})` }}
+                                                    }} - {{ `${getRoleName(item.role_name).label ?? 'Unknown'}` }}
+                                                </span>
+                                                <span class="small mb-1 fw-semibold">
+                                                    <i class="bi bi-geo-alt-fill text-danger"></i>
+                                                    {{ item.branch_name }}
                                                 </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>

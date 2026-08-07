@@ -10,14 +10,14 @@ use Illuminate\Http\Request;
 use App\Traits\LeadsValidation;
 use App\Services\Lead\LeadServices;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\LeadResource;
 use App\Traits\BranchMutationHelper;
 use Illuminate\Support\Facades\Gate;
+use App\Repository\Sale\SaleRepository;
 use App\Repository\Lead\LeadsRepository;
 use App\Traits\ActivityMessageFormatter;
 use App\Repository\Channel\ChannelRepository;
 use App\Services\Lead\LeadConversionServices;
-use App\Http\Controllers\Sales\SaleRepository;
-use App\Http\Resources\LeadResource;
 use Illuminate\Validation\ValidationException;
 use App\Services\Authorization\ScopeResolverService;
 
@@ -179,7 +179,7 @@ class LeadController extends Controller
             'activity.userUpdate:id,name',
             'activity.userUpdate.roles:id,name',
         ])->findOrFail($id);
-        
+
         return new LeadResource($leads);
     }
     public function destroy(string $id)

@@ -190,7 +190,7 @@ watch(() => form.id_branch, (value) => {
                         </form-wrapper>
                         <div class="mb-2 mt-3 d-flex justify-content-center align-items-center px-2 gap-1 small">
                             <span class="text-muted">Sudah punya akun karyawan?</span>
-                            <Link :href="route('login')" class="text-decoration-none fw-bold text-primary">Masuk di sini
+                            <Link :href="route('login')">Masuk di sini
                             </Link>
                         </div>
                     </div>

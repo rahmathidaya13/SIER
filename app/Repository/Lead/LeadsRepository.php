@@ -15,13 +15,19 @@ class LeadsRepository extends BaseCacheRepository
     {
         $query = LeadModel::query()
             ->with([
-                'activity:id_lead,created_at',
+                // 'activity:id_lead,created_at',
                 'leadProduct.product:id_product,name,image_link,image_path',
+                'activity' => function ($query) {
+                $query->select('id_lead', 'created_at')
+                    ->latest()
+                    ->limit(10);
+            },
             ])
             ->allowedForUser()
             ->joinUserRole()
             ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')
             ->leftJoin('sales', 'sales.id_lead', '=', 'leads.id_lead')
+            ->leftJoin('branches', 'branches.id_branch', '=', 'users.id_branch')
             ->select([
                 'leads.id_lead',
                 'leads.name',
@@ -35,6 +41,7 @@ class LeadsRepository extends BaseCacheRepository
                 'leads.updated_at',
                 'users.name as creator_name',
                 'roles.name as role_name',
+                'branches.name as branch_name',
                 'channels.name as channel_name',
                 'channels.icon',
                 'sales.invoice',

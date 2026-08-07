@@ -9,10 +9,10 @@ use Illuminate\Http\Request;
 use App\Traits\SalesValidation;
 use App\Http\Controllers\Controller;
 use App\Traits\BranchMutationHelper;
+use App\Repository\Sale\SaleRepository;
 use App\Repository\Lead\LeadsRepository;
 use App\Services\Sales\SalePaymentService;
 use App\Repository\Channel\ChannelRepository;
-use App\Http\Controllers\Sales\SaleRepository;
 use App\Services\Sales\PaymentValidationService;
 use App\Services\Authorization\ScopeResolverService;
 
@@ -37,7 +37,7 @@ class SaleController extends Controller
             'limit' => 'nullable|integer|min:1|max:100',
             'order_by' => 'nullable|string|in:oldest,latest',
             'page' => 'nullable|integer|min:1',
-
+            'branch' => 'nullable|string|in:all,' . implode(',', BranchModel::pluck('name')->toArray()),
         ]);
 
         $filters = $request->only([
@@ -67,7 +67,16 @@ class SaleController extends Controller
 
     public function show(string $id)
     {
-        $sales = SalesModel::with(['lead', 'user', 'product', 'branch', 'lead.activity.user.roles', 'paymentHistory.user.roles'])
+        $sales = SalesModel::with(
+            [
+                'lead',
+                'user',
+                'branch',
+                'lead.activity.user.roles',
+                'paymentHistory.user.roles',
+                'salesProduct.product:id_product,name,image_link,image_path'
+            ]
+        )
             ->find($id);
         return response()->json($sales);
     }

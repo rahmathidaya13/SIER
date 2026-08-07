@@ -7,12 +7,12 @@ use App\Models\LeadModel;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Traits\BranchMutationHelper;
+use App\Repository\Sale\SaleRepository;
 use App\Traits\ImmutableFieldValidator;
 use App\Repository\Lead\LeadsRepository;
 use App\Traits\LeadConversionValidation;
 use App\Repository\Channel\ChannelRepository;
 use App\Services\Lead\LeadConversionServices;
-use App\Http\Controllers\Sales\SaleRepository;
 use Illuminate\Validation\ValidationException;
 
 class LeadConversionController extends Controller

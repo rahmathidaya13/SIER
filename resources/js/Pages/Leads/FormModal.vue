@@ -755,7 +755,7 @@ const dpAmount = computed(() => {
 
                         <button @click.prevent="submit" type="button" :disabled="form.processing || isLoading"
                             class="btn btn-height-1 fw-semibold"
-                            :class="form.status === 'CLOSED_WON' ? 'btn-c-success' : 'btn-c-primary'">
+                            :class="isEdit ? 'btn-c-success' : 'btn-c-primary'">
                             <span v-if="form.processing" class="spinner-border spinner-border-sm me-2"></span>
                             <i v-else :class="isEdit ? 'bi bi-check-circle me-1' : 'bi bi-save me-1'"></i>
                             {{ submitTextButton }}

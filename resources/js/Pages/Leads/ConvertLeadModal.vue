@@ -74,7 +74,6 @@ const loadLead = async () => {
         const { data } = await axios.get(`/leads/show/${props.idLead}`);
         const cleanData = data.data;
         dataLead.value = cleanData;
-        console.log(cleanData);
     } catch (error) {
         console.error("Gagal mengambil data:", error);
         alert("Terjadi kesalahan saat memuat data.");

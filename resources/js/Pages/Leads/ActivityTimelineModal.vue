@@ -34,7 +34,6 @@ const loadTimeline = async () => {
         // Kita manfaatkan endpoint show yang sudah membawa relasi lead.activity
         const { data } = await axios.get(`/leads/show/${props.idLead}`);
         const cleanData = data.data;
-        console.log(cleanData);
         customerName.value = cleanData?.name || 'Konsumen';
         phoneNumber.value = cleanData?.phone || '';
         activities.value = cleanData?.activity || [];
