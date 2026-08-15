@@ -37,9 +37,12 @@ class ScrapeProduct extends Command
             'headers' => [
                 'User-Agent' => $this->randomUserAgent(),
                 'Referer' => 'https://www.google.com',
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
                 'Accept-Language' => 'en-US,en;q=0.9',
+                'Cache-Control' => 'no-cache',
             ],
-            'timeout' => 15,
+            'timeout' => 30,
+            'max_duration' => 60,
         ]));
 
         $categories = $this->categoryProduct();

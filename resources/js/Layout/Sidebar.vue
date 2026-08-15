@@ -5,7 +5,7 @@ import { computed } from 'vue';
 defineProps({
     isOpen: Boolean
 })
-defineEmits(['close']);
+const emit = defineEmits(['close','openProfileModal']);
 const currentPath = usePage().props.path;
 const isSelectedActive = (pattern) => {
     const regex = new RegExp("^" + pattern.replace("*", ".*") + "$");
@@ -122,19 +122,21 @@ const getNameRoles = () => {
     const role = usePage().props.auth.user.roles[0].name
     return rolesName(role)
 }
+
 </script>
 <template>
     <aside class="sidebar custom-slim-scroll" :class="{ 'show': isOpen, 'hide-desktop': !isOpen }">
+
         <div class="sidebar-brand">
             <i class="bi bi-funnel-fill me-2"></i> {{ $page.props.app.name ?? 'Aplikasi' }}
         </div>
 
-        <section class="p-3 text-center border-bottom mx-3 mb-3" aria-label="User Info">
+        <section class="p-3 border-bottom mx-3 mb-3 d-flex flex-column justify-content-center align-items-center" aria-label="User Info">
             <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
-                class="rounded-circle mb-2 object-fit-cover shadow-sm" width="65" height="65" alt="Foto Profil">
-            <Link class="nav-link text-primary">
+                class="rounded-circle mb-2 object-fit-cover shadow-sm" width="65" height="65" :alt="$page.props.auth.user.name">
+            <button @click.prevent="emit('openProfileModal')" class="btn nav-link text-primary">
                 <span class="mb-1 fw-bold text-capitalize">{{ $page.props.auth.user.name }}</span>
-            </Link>
+            </button>
             <span class="badge rounded-pill px-3 py-2 fw-medium" :class="getNameRoles().color">
                 <i class="bi bi-shield-check me-1 opacity-75"></i> {{
                     getNameRoles().label

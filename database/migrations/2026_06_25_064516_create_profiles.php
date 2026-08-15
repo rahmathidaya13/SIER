@@ -14,8 +14,11 @@ return new class extends Migration
         Schema::create('profiles', function (Blueprint $table) {
             $table->uuid('id_profile')->primary();
             $table->foreignUuid('id_user')->constrained('users', 'id')->cascadeOnDelete();
+            $table->enum('gender', ['L', 'P'])->nullable();
             $table->string('phone', 25)->nullable();
             $table->string('address', 255)->nullable();
+            $table->string('city', 255)->nullable();
+            $table->string('province', 255)->nullable();
             $table->string('photo', 255)->nullable();
             $table->softDeletes();
             $table->timestamps();

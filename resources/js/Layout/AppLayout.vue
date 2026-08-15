@@ -3,6 +3,7 @@ import { ref, watch, onUnmounted } from 'vue';
 import Sidebar from './Sidebar.vue';
 import Header from './Header.vue';
 import { useConfirm } from "@/Composables/useConfirm"
+import FormModalProfile from '../Pages/Profile/FormModalProfile.vue';
 const { state } = useConfirm();
 
 const sideBarOpen = ref(window.innerWidth >= 992);
@@ -22,7 +23,9 @@ watch(sideBarOpen, (value) => {
 })
 onUnmounted(() => {
     document.body.style.overflow = ''
-})
+});
+
+const isProfileModalOpen = ref(false);
 </script>
 <template>
     <!-- Confirm Modal -->
@@ -66,7 +69,7 @@ onUnmounted(() => {
 
     <div class="d-flex wrapper">
 
-        <Sidebar :isOpen="sideBarOpen" @close="closeSideBar" />
+        <Sidebar @openProfileModal="isProfileModalOpen = true" :isOpen="sideBarOpen" @close="closeSideBar" />
 
         <div class="page-content-wrapper " :class="{ 'expanded': !sideBarOpen }">
             <Header @close="toggleSidebar" />
@@ -75,6 +78,7 @@ onUnmounted(() => {
             </main>
         </div>
     </div>
+    <FormModalProfile v-model:show="isProfileModalOpen"/>
 </template>
 <style scoped>
 .wrapper {

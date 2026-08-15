@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Branch;
 
+use App\Models\User;
 use App\Models\BranchModel;
 use Illuminate\Http\Request;
 use App\Traits\BranchValidation;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Traits\BranchMutationHelper;
 use App\Services\Branches\BranchServices;
 use App\Repository\Branches\BranchRepository;
+use App\Repository\User\UserRepository;
 use Illuminate\Validation\ValidationException;
 use App\Services\Authorization\ScopeResolverService;
 
@@ -51,7 +53,7 @@ class BranchController extends Controller
         $user = auth()->user();
         try {
             $branch = $this->branchServices->store($validated, $user);
-            $this->invalidateCaches([BranchRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
+            $this->invalidateCaches([BranchRepository::class, UserRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
             return redirect()->back()->with('message', 'Cabang baru ' . $branch->name . ' berhasil ditambahkan!');
         } catch (\Exception $error) {
             return redirect()->back()
@@ -72,10 +74,23 @@ class BranchController extends Controller
     {
         $validated = $this->branchValidation($request->all());
         $user = auth()->user();
+
+        $branch = BranchModel::find($id);
+
+        // periksa apakah ada perubahan status dari aktif ke non-aktif
+        $isDeactivating = $branch->is_active !== $validated['isActive'];
+        if ($isDeactivating) {
+            $hasActiveUser = $branch->users()->where('is_active', 'active')->exists();
+            if ($hasActiveUser) {
+                throw ValidationException::withMessages([
+                    'isActive' => 'Tidak dapat menonaktifkan cabang ' . ucwords($branch->name) . ' karena masih memiliki pengguna yang aktif.',
+                ]);
+            }
+        }
+
         try {
-            $branch = BranchModel::find($id);
             $this->branchServices->update($branch, $validated, $user);
-            $this->invalidateCaches([BranchRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
+            $this->invalidateCaches([BranchRepository::class, UserRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
             return redirect()->back()->with('message', 'Perubahan data dari cabang ' . $branch->name . ' berhasil diperbarui!');
         } catch (\Exception $error) {
             return redirect()->back()
@@ -92,7 +107,8 @@ class BranchController extends Controller
         $user = auth()->user();
         $branch = BranchModel::find($id);
 
-        if ($branch->users()->exists()) {
+        $isDeactivating = $branch->users()->where('is_active',  'active')->exists();
+        if ($isDeactivating) {
             throw ValidationException::withMessages([
                 'error' => 'Tidak dapat menghapus cabang ' . ucwords($branch->name) . ' saat ini masih memiliki pengguna yang aktif.'
             ]);

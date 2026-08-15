@@ -186,7 +186,7 @@ const removePhone = (index) => {
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <input-label labelClass="small mb-0 fw-bold text-muted"
                                                 value="NOMOR TELEPON CABANG" />
-                                            <button type="button" class="btn btn-primary btn-sm py-1 fw-medium"
+                                            <button type="button" class="btn btn-primary btn-sm py-1 fw-medium rounded-4"
                                                 @click="addPhone">
                                                 <i class="bi bi-plus-circle me-1"></i> Tambah Nomor
                                             </button>

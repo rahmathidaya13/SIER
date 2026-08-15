@@ -22,6 +22,9 @@ class UserSeeder extends Seeder
             'email_verified_at' => now(),
             'id_branch' => null
         ]);
+        $developer->profile()->createOrFirst([
+            'id_user' => $developer->id,
+        ]);
         // beri hak akses developer ke semua permission
         $developer->assignRole('developer');
         $developer->givePermissionTo(Permission::all());
@@ -33,6 +36,9 @@ class UserSeeder extends Seeder
             'password'  => bcrypt('@Password123'),
             'email_verified_at' => now(),
             'id_branch' => $headOfficeId->id_branch
+        ]);
+        $superadmin->profile()->createOrFirst([
+            'id_user' => $superadmin->id,
         ]);
         $superadmin->assignRole('super_admin');
         // beri hak akses ke semua permission

@@ -100,7 +100,7 @@ const deleted = async (nameRoute, data) => {
 
     if (setConfirm) {
         router.delete(route(nameRoute, data.id_branch), {
-            preserveScroll: true,
+            preserveScroll: false,
             replace: true,
             preserveState: true
         });
@@ -135,8 +135,27 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <div class="row p-3 g-2 align-items-center">
-                            <div class="col-12 col-md-12 col-lg-12 col-xl-6">
+                        <div class="row p-3 g-3 align-items-center">
+
+                            <div
+                                class="col-xl-4 col-12 col-md-4 col-lg-4 border rounded-4 p-0 order-last order-md-first">
+                                <div class="position-relative d-flex align-items-center gap-1">
+                                    <select-input selectClass="border-0 rounded-4 p-2" :isValid="false" name="limit"
+                                        v-model="filters.limit" text="Pilih Batas Data" :options="[
+                                            { label: '☰ 10 Data', value: 10 },
+                                            { label: '☰ 25 Data', value: 25 },
+                                            { label: '☰ 50 Data', value: 50 },
+                                            { label: '☰ 100 Data', value: 100 },
+                                        ]" />
+                                    <select-input selectClass="border-0 rounded-4 p-2" :isValid="false"
+                                        name="sort_order" v-model="filters.order_by" text="Pilih Urutan" :options="[
+                                            { label: '🔼 Terbaru', value: 'latest' },
+                                            { label: '🔽 Terlama', value: 'oldest' }
+                                        ]" />
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-8 col-lg-8 col-xl-6">
                                 <div class="position-relative">
                                     <i class="bi bi-search input-icon-left"></i>
                                     <input-text ref="keywordRef" :isValid="false" v-model="filters.keyword"
@@ -144,22 +163,7 @@ onMounted(() => {
                                         placeholder="Cari cabang dan nomor telepon...." />
                                 </div>
                             </div>
-                            <div class="col-xl-1 col-6 col-md-6 col-lg-6">
-                                <select-input :isValid="false" name="limit" v-model="filters.limit"
-                                    text="Pilih Batas Data" :options="[
-                                        { label: '☰ 10 Data', value: 10 },
-                                        { label: '☰ 25 Data', value: 25 },
-                                        { label: '☰ 50 Data', value: 50 },
-                                        { label: '☰ 100 Data', value: 100 },
-                                    ]" />
-                            </div>
-                            <div class="col-xl-1 col-6 col-md-6 col-lg-6">
-                                <select-input :isValid="false" name="sort_order" v-model="filters.order_by"
-                                    text="Pilih Urutan" :options="[
-                                        { label: '🔼 Terbaru', value: 'latest' },
-                                        { label: '🔽 Terlama', value: 'oldest' }
-                                    ]" />
-                            </div>
+
                         </div>
 
                         <div class="card-body p-0">

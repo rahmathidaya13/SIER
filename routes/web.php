@@ -14,6 +14,7 @@ use App\Http\Controllers\Channel\ChannelController;
 use App\Http\Controllers\Leads\LeadActivityController;
 use App\Http\Controllers\Leads\LeadConversionController;
 use App\Http\Controllers\Product\ProductController;
+use App\Http\Controllers\Profile\ProfileController;
 use App\Http\Controllers\Sales\SaleController;
 
 /*
@@ -90,6 +91,10 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
         Route::post('/branch/store', 'store')->name('branch.store');
         Route::put('/branch/update/{id}', 'update')->name('branch.update');
         Route::delete('/branch/delete/{id}', 'destroy')->name('branch.delete');
+    });
+
+    Route::controller(ProfileController::class)->group(function () {
+        Route::get('/profile/detail/{id}', 'show')->name('profile.detail');
     });
 });
 

@@ -2,9 +2,11 @@
 
 namespace App\Services\Branches;
 
+use App\Models\User;
 use App\Models\BranchModel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class BranchServices
 {
@@ -39,6 +41,9 @@ class BranchServices
     {
         DB::beginTransaction();
         try {
+
+
+
             $branch->update([
                 'name' => $validated['name'],
                 'address' => $validated['address'],
