@@ -15,9 +15,12 @@ class ProfileModel extends Model
     protected $keyType = 'string';
     protected $fillable = [
         'id_user',
+        'gender',
         'phone',
         'address',
         'photo',
+        'city',
+        'province',
     ];
     protected $dates    = ["deleted_at"];
 

@@ -26,7 +26,7 @@ const props = defineProps({
         default: 250
     },
     error: {
-        type: [String, Array, Boolean],
+        type: [String, Array, Boolean, Object, null, Number],
         default: ""
     },
     isValid: {
@@ -44,7 +44,7 @@ const props = defineProps({
 })
 const model = defineModel({
     type: [String, Number, Array, Object, Boolean, null],
-    required: true,
+    default: "",
 });
 
 /* Hitung jumlah karakter */

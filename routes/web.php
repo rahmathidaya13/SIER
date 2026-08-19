@@ -95,6 +95,7 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
 
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/profile/detail/{id}', 'show')->name('profile.detail');
+        Route::put('/profile/update/{id}', 'update')->name('profile.update');
     });
 });
 

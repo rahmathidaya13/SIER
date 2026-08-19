@@ -11,25 +11,41 @@ const isLoading = ref(false);
 const user = usePage().props.auth.user;
 const photoPreview = ref(null);
 const fileInput = ref(null);
-
+const profilePreview = computed(() => !!user?.id);
 const emit = defineEmits(["update:show"]);
 const close = () => {
     emit("update:show", false);
 }
 const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
-    return isEdit.value ? 'Simpan Perubahan' : ' Simpan';
+    return profilePreview.value ? 'Simpan Perubahan' : ' Simpan';
 });
 
 const form = useForm({
-    _method: 'PUT',
     name: '',
     email: '',
     photo: null,
-    current_password: '',
-    password: '',
-    password_confirmation: ''
+    numberPhone: '',
+    gender: '',
+    city: '',
+    province: '',
+    address: '',
 });
+const submit = () => {
+    const url = route('profile.update', user.id);
+    const transformData = (data) => ({ ...data, _method: 'put' })
+    form.transform(transformData).post(url, {
+        preserveScroll: false,
+        preserveState: true,
+        replace: true,
+        onSuccess: () => {
+            close();
+            resetForm();
+        },
+
+    });
+};
+
 const loadUser = async () => {
     isLoading.value = true
     try {
@@ -45,46 +61,32 @@ const loadUser = async () => {
 }
 const fillForm = (data) => {
     console.log(data);
-    // form.defaults({
-    //     name: data.name,
-    //     category: data.category || null,
-    //     item_condition: data.item_condition,
-    //     type_item: data.type_item,
-    //     source: data.source,
-    //     link: data.link,
-    //     image: null,
-    //     base_price: data.prices[0]?.base_price || 0,
-    //     discount_percentage: data.prices[0]?.discount_percentage || 0,
-    //     discount_price: data.prices[0]?.discount_price || 0,
-    //     status: data.prices[0]?.status || 'published',
-    //     valid_from: data.prices[0]?.valid_from,
-    //     valid_until: data.prices[0]?.valid_until,
-    // });
+    form.defaults({
+        name: data.name,
+        email: data.email,
+        numberPhone: data.phone,
+        gender: data.gender,
+        city: data.city,
+        province: data.province,
+        address: data.address,
+    });
 
     // isDiscountActive.value = data.prices[0]?.discount_percentage > 0
     // imagePreview.value = getImageUrl(data);
-    // form.reset();
+    form.reset();
 }
 const resetForm = () => {
-    // form.defaults({
-    //     name: '',
-    //     category: null,
-    //     item_condition: null,
-    //     type_item: null,
-    //     source: 'manual',
-    //     link: '',
-    //     image: null,
-    //     base_price: 0,
-    //     discount_percentage: 0,
-    //     discount_price: 0,
-    //     status: 'published',
-    //     valid_from: '',
-    //     valid_until: '',
-    // })
-    // isDiscountActive.value = false
-    // imagePreview.value = null;
-    // form.reset();
-    // form.clearErrors();
+    form.defaults({
+        name: '',
+        email: '',
+        numberPhone: '',
+        city: '',
+        gender: '',
+        province: '',
+        address: '',
+    })
+    form.reset();
+    form.clearErrors();
 }
 watch(
     () => props.show,
@@ -154,8 +156,6 @@ const getRoleName = (roleName) => {
                 title="Pengaturan Profile" :mobileFullscreen="true" @closed="close">
 
                 <template #body>
-                    <alert-error-all :errors="form.errors" @close="form.clearErrors()" />
-
                     <div v-if="isLoading" class="text-center py-5">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Loading...</span>
@@ -177,7 +177,6 @@ const getRoleName = (roleName) => {
                                     <i v-else class="bi bi-person text-secondary" style="font-size: 3rem;"></i>
                                 </div>
 
-                                <!-- Tombol Ganti Foto -->
                                 <button type="button" @click="selectNewPhoto"
                                     class="btn btn-primary btn-sm rounded-circle position-absolute bottom-0 end-0 shadow border border-2 border-white d-flex align-items-center justify-content-center"
                                     style="width: 32px; height: 32px;" title="Ganti Foto">
@@ -201,22 +200,46 @@ const getRoleName = (roleName) => {
                                     INFORMASI DASAR</h6>
                             </div>
                             <div class="col-md-6">
-                                <input-label for="name" value="Nama Lengkap" labelClass="mb-2"  />
-                                <input-text v-model="form.name" name="name" placeholder="Nama lengkap Anda" />
+                                <input-label for="name_input" value="Nama Lengkap" labelClass="mb-2" />
+                                <input-text :error="form.errors.name" v-model="form.name" name="name"
+                                    placeholder="Nama lengkap" />
                                 <input-error :message="form.errors.name" />
                             </div>
                             <div class="col-md-6">
-                                <input-label for="email" value="Alamat Email" labelClass="mb-2"  />
-                                <input-text type="email" v-model="form.email" name="email" placeholder="Email aktif" />
+                                <input-label for="email_input" value="Alamat Email" labelClass="mb-2" />
+                                <input-text :error="form.errors.email" :disabled="true" type="email"
+                                    v-model="form.email" name="email" placeholder="Email aktif" />
                                 <input-error :message="form.errors.email" />
                             </div>
+                            <div class="col-md-6">
+                                <input-label for="phone_input" value="No.Handphone" labelClass="mb-2" />
+                                <input-text :error="form.errors.numberPhone" v-model="form.numberPhone" name="phone"
+                                    placeholder="Nomor handphone aktif" />
+                                <input-error :message="form.errors.numberPhone" />
+                            </div>
+                            <div class="col-md-6">
+                                <input-label for="gender_select" value="Jenis Kelamin" labelClass="mb-2" />
+                                <select-input text="-- Pilih Jenis Kelamin --" name="gender" :error="form.errors.gender" v-model="form.gender" :options="[
+                                    { value: 'L', label: 'Laki-laki' },
+                                    { value: 'P', label: 'Perempuan`' }
+                                ]" />
+                                <input-error :message="form.errors.gender" />
+                            </div>
+
                             <div class="col-md-12">
-                                <input-label for="phone" value="No.Handphone" labelClass="mb-2"  />
-                                <input-text v-model="form.phone" name="phone" placeholder="Nomor handphone aktif" />
-                                <input-error :message="form.errors.phone" />
+                                <input-label for="city_input" value="Kota/Kabupaten" labelClass="mb-2" />
+                                <input-text :error="form.errors.city" v-model="form.city" name="city"
+                                    placeholder="Kota tempat tinggal" />
+                                <input-error :message="form.errors.city" />
                             </div>
                             <div class="col-md-12">
-                                <input-label for="address" value="Alamat" labelClass="mb-2" />
+                                <input-label for="province_input" value="Provinsi" labelClass="mb-2" />
+                                <input-text :error="form.errors.province" v-model="form.province" name="province"
+                                    placeholder="Provinsi tempat tinggal" />
+                                <input-error :message="form.errors.province" />
+                            </div>
+                            <div class="col-md-12">
+                                <input-label for="address_input" value="Alamat" labelClass="mb-2" />
                                 <text-area :error="form.errors.address" name="address" v-model="form.address" :rows="3"
                                     placeholder="Masukkan alamat yang sesuai..." />
                                 <input-error :message="form.errors.address" />
@@ -226,18 +249,19 @@ const getRoleName = (roleName) => {
 
                 </template>
 
-                <!-- <template #footer>
+                <template #footer>
                     <div v-if="!isLoading" class="d-flex justify-content-end gap-2 p-2 bg-transparent">
                         <button type="button" class="btn btn-c-slate border-0 fw-medium px-4"
                             @click.prevent="close">Batal</button>
                         <button @click.prevent="submit" type="button" :disabled="form.processing"
-                            class="btn btn-height-1 fw-semibold" :class="isEdit ? 'btn-c-success' : 'btn-c-primary'">
+                            class="btn btn-height-1 fw-semibold"
+                            :class="profilePreview ? 'btn-c-success' : 'btn-c-primary'">
                             <span v-if="form.processing" class="spinner-border spinner-border-sm me-2"></span>
-                            <i v-else :class="isEdit ? 'bi bi-check-circle me-1' : 'bi bi-save me-1'"></i>
+                            <i v-else :class="profilePreview ? 'bi bi-check-circle me-1' : 'bi bi-save me-1'"></i>
                             {{ submitTextButton }}
                         </button>
                     </div>
-                </template> -->
+                </template>
 
             </modal>
         </div>
