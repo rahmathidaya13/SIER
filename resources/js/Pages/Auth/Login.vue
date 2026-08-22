@@ -72,7 +72,7 @@ onMounted(() => {
                                 :disabled="form.processing">
                                 <span v-if="form.processing" class="spinner-border spinner-border-sm"
                                     role="status"></span>
-                                <span>{{ form.processing ? 'Memeriksa Kredensial...' : 'Masuk ke Portal' }}</span>
+                                <span>{{ form.processing ? 'Memeriksa Kredensial...' : 'Masuk' }}</span>
                                 <i v-if="!form.processing" class="bi bi-arrow-right"></i>
                             </button>
 

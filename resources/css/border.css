@@ -1,0 +1,16 @@
+.border-success{
+    border: 1px solid var(--c-success);
+}
+.border-danger{
+    border: 1px solid var(--c-danger);
+}
+.border-warning{
+    border: 1px solid var(--c-warning);
+}
+.border-info{
+    border: 1px solid var(--c-info);
+}
+.border-secondary{
+    border: 1px solid var(--c-slate);
+}
+

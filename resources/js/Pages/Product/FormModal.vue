@@ -168,7 +168,6 @@ const handleImageUpload = (event) => {
     }
 }
 const getImageUrl = (item) => {
-    console.log(item);
     if (item.source === 'scrape' && item.image_link) {
         return item.image_link; // Gambar dari URL luar
     }

@@ -12,9 +12,11 @@ const user = usePage().props.auth.user;
 const photoPreview = ref(null);
 const fileInput = ref(null);
 const profilePreview = computed(() => !!user?.id);
+const userName = ref('');
 const emit = defineEmits(["update:show"]);
 const close = () => {
     emit("update:show", false);
+    resetForm();
 }
 const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
@@ -35,7 +37,7 @@ const submit = () => {
     const url = route('profile.update', user.id);
     const transformData = (data) => ({ ...data, _method: 'put' })
     form.transform(transformData).post(url, {
-        preserveScroll: false,
+        preserveScroll: true,
         preserveState: true,
         replace: true,
         onSuccess: () => {
@@ -50,6 +52,7 @@ const loadUser = async () => {
     isLoading.value = true
     try {
         const { data } = await axios.get(`/profile/detail/${user.id}`);
+        userName.value = data.name ?? 'User';
         fillForm(data);
     } catch (error) {
         console.error("Gagal mengambil data:", error);
@@ -64,15 +67,13 @@ const fillForm = (data) => {
     form.defaults({
         name: data.name,
         email: data.email,
-        numberPhone: data.phone,
-        gender: data.gender,
-        city: data.city,
-        province: data.province,
-        address: data.address,
+        numberPhone: data.profile.phone,
+        gender: data.profile.gender,
+        city: data.profile.city,
+        province: data.profile.province,
+        address: data.profile.address,
     });
-
-    // isDiscountActive.value = data.prices[0]?.discount_percentage > 0
-    // imagePreview.value = getImageUrl(data);
+    photoPreview.value = getImageUrl(data.profile);
     form.reset();
 }
 const resetForm = () => {
@@ -85,9 +86,18 @@ const resetForm = () => {
         province: '',
         address: '',
     })
+    photoPreview.value = null;
     form.reset();
     form.clearErrors();
 }
+const getImageUrl = (item) => {
+    if (item.photo !== null && item.photo !== undefined) {
+        return `/storage/${item.photo}`; // load gambar dari storage jika ada
+    }
+
+    return '/storage/no_image/no-image.png'; // Fallback jika tidak ada gambar
+};
+
 watch(
     () => props.show,
     async (isOpen) => {
@@ -97,7 +107,6 @@ watch(
         } else {
             resetForm();
         }
-
     }, {
     immediate: true
 }
@@ -148,6 +157,10 @@ const getRoleName = (roleName) => {
     };
     return roles[roleName] || 'bg-light text-dark border';
 };
+const borderCheck = (inputValue) => {
+    if (form.errors[inputValue]) return 'border-danger';
+    // return form[inputValue] ? 'border-success' : 'border-secondary';
+}
 </script>
 <template>
     <div class="row" v-if="props.show">
@@ -168,7 +181,7 @@ const getRoleName = (roleName) => {
                             <div class="position-relative mb-3">
 
                                 <div class="rounded-circle overflow-hidden border border-3 border shadow-sm bg-light d-flex align-items-center justify-content-center"
-                                    style="width: 150px; height: 150px;">
+                                    style="width: 180px; height: 180px;">
 
                                     <img v-if="photoPreview" :src="photoPreview" class="w-100 h-100 object-fit-cover"
                                         alt="Preview">
@@ -178,70 +191,103 @@ const getRoleName = (roleName) => {
                                 </div>
 
                                 <button type="button" @click="selectNewPhoto"
-                                    class="btn btn-primary btn-sm rounded-circle position-absolute bottom-0 end-0 shadow border border-2 border-white d-flex align-items-center justify-content-center"
-                                    style="width: 32px; height: 32px;" title="Ganti Foto">
-                                    <i class="bi bi-camera-fill" style="font-size: 12px;"></i>
+                                    class="btn btn-primary btn-sm me-3 rounded-circle position-absolute bottom-0 end-0 shadow border border-2 border-white d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px; " title="Ganti Foto">
+                                    <i class="bi bi-camera-fill" style="font-size: 18px;"></i>
                                 </button>
 
                                 <input type="file" ref="fileInput" class="d-none" accept="image/*"
                                     @change="updatePhotoPreview">
                             </div>
 
-                            <h5 class="fw-bold text-dark mb-0 text-capitalize">{{ user?.name }}</h5>
+                            <h5 class="fw-bold text-dark mb-0 text-capitalize">{{ userName }}</h5>
+
                             <span :class="`badge ${getRoleName(user?.roles?.[0]?.name).color} mt-1 px-3`">{{
                                 getRoleName(user?.roles?.[0]?.name).label ||
                                 'Karyawan' }}</span>
                             <input-error :message="form.errors.photo" class="mt-2 text-center" />
                         </div>
 
-                        <div class="row px-2 g-3">
+                        <div class="row g-3 p-4">
                             <div class="col-12">
                                 <h6 class="text-primary fw-bold small mb-2"><i class="bi bi-person-lines-fill me-1"></i>
                                     INFORMASI DASAR</h6>
                             </div>
                             <div class="col-md-6">
-                                <input-label for="name_input" value="Nama Lengkap" labelClass="mb-2" />
-                                <input-text :error="form.errors.name" v-model="form.name" name="name"
-                                    placeholder="Nama lengkap" />
+                                <input-label for="name_input" value="Nama Lengkap" labelClass="mb-2 text-muted"
+                                    style="font-size: 12px;" />
+                                <div :class="`border-bottom ${borderCheck('name')}`">
+                                    <input-text :error="form.errors.name" v-model="form.name" name="name"
+                                        inputClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
+                                        placeholder="Nama lengkap" />
+                                </div>
                                 <input-error :message="form.errors.name" />
                             </div>
                             <div class="col-md-6">
-                                <input-label for="email_input" value="Alamat Email" labelClass="mb-2" />
-                                <input-text :error="form.errors.email" :disabled="true" type="email"
-                                    v-model="form.email" name="email" placeholder="Email aktif" />
+                                <input-label for="email_input" value="Alamat Email" labelClass="mb-2 text-muted"
+                                    style="font-size: 12px;" />
+                                <div :class="`border-bottom ${borderCheck('email')}`">
+                                    <input-text
+                                        inputClass="border-0 shadow-none p-0 mb-1 rounded-0 bg-transparent fw-bold"
+                                        :error="form.errors.email" :disabled="true" type="email" v-model="form.email"
+                                        name="email" placeholder="Email aktif" />
+                                </div>
                                 <input-error :message="form.errors.email" />
                             </div>
                             <div class="col-md-6">
-                                <input-label for="phone_input" value="No.Handphone" labelClass="mb-2" />
-                                <input-text :error="form.errors.numberPhone" v-model="form.numberPhone" name="phone"
-                                    placeholder="Nomor handphone aktif" />
+                                <input-label for="phone_input" value="No.Handphone" labelClass="mb-2 text-muted" />
+                                <div :class="`border-bottom ${borderCheck('numberPhone')}`">
+                                    <input-text inputClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
+                                        :error="form.errors.numberPhone" v-model="form.numberPhone" name="phone"
+                                        placeholder="Nomor handphone aktif" />
+                                </div>
                                 <input-error :message="form.errors.numberPhone" />
                             </div>
                             <div class="col-md-6">
-                                <input-label for="gender_select" value="Jenis Kelamin" labelClass="mb-2" />
-                                <select-input text="-- Pilih Jenis Kelamin --" name="gender" :error="form.errors.gender" v-model="form.gender" :options="[
-                                    { value: 'L', label: 'Laki-laki' },
-                                    { value: 'P', label: 'Perempuan`' }
-                                ]" />
+                                <input-label for="gender_select" value="Jenis Kelamin" labelClass="mb-2 text-muted"
+                                    style="font-size: 12px;" />
+                                <div :class="`border-bottom ${borderCheck('gender')}`">
+                                    <select-input selectClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
+                                        text="-- Pilih Jenis Kelamin --" name="gender" :error="form.errors.gender"
+                                        v-model="form.gender" :options="[
+                                            { value: 'L', label: 'Laki-laki' },
+                                            { value: 'P', label: 'Perempuan`' }
+                                        ]" />
+                                </div>
+
                                 <input-error :message="form.errors.gender" />
                             </div>
 
                             <div class="col-md-12">
-                                <input-label for="city_input" value="Kota/Kabupaten" labelClass="mb-2" />
-                                <input-text :error="form.errors.city" v-model="form.city" name="city"
-                                    placeholder="Kota tempat tinggal" />
+                                <input-label for="city_input" value="Kota/Kabupaten" labelClass="mb-2 text-muted"
+                                    style="font-size: 12px;" />
+                                <div :class="`border-bottom ${borderCheck('city')}`">
+                                    <input-text inputClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
+                                        :error="form.errors.city" v-model="form.city" name="city"
+                                        placeholder="Kota tempat tinggal" />
+                                </div>
                                 <input-error :message="form.errors.city" />
                             </div>
                             <div class="col-md-12">
-                                <input-label for="province_input" value="Provinsi" labelClass="mb-2" />
-                                <input-text :error="form.errors.province" v-model="form.province" name="province"
-                                    placeholder="Provinsi tempat tinggal" />
+                                <input-label for="province_input" value="Provinsi" labelClass="mb-2 text-muted"
+                                    style="font-size: 12px;" />
+                                <div :class="`border-bottom ${borderCheck('province')}`">
+                                    <input-text inputClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
+                                        :error="form.errors.province" v-model="form.province" name="province"
+                                        placeholder="Provinsi tempat tinggal" />
+                                </div>
                                 <input-error :message="form.errors.province" />
                             </div>
                             <div class="col-md-12">
-                                <input-label for="address_input" value="Alamat" labelClass="mb-2" />
-                                <text-area :error="form.errors.address" name="address" v-model="form.address" :rows="3"
-                                    placeholder="Masukkan alamat yang sesuai..." />
+                                <input-label for="address_input" value="Alamat" labelClass="mb-2 text-muted"
+                                    style="font-size: 12px;" />
+                                <div :class="`border-bottom ${borderCheck('address')}`">
+                                    <textarea v-model="form.address"
+                                        :class="`form-control border-0 shadow-none p-0 mb-1 rounded-0 fw-bold resize-none
+                                        ${form.address ? 'is-valid' : ''}`"
+                                        name="address" id="address_input" cols="3" rows="3"
+                                        placeholder="Masukkan alamat yang sesuai..."></textarea>
+                                </div>
                                 <input-error :message="form.errors.address" />
                             </div>
                         </div>
