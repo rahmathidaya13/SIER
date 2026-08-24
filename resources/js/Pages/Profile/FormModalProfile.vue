@@ -6,17 +6,19 @@ import axios from "axios";
 const props = defineProps({
     show: Boolean,
 });
-
+const page = usePage();
+const users = computed(() => page.props.auth.user);
 const isLoading = ref(false);
-const user = usePage().props.auth.user;
 const photoPreview = ref(null);
 const fileInput = ref(null);
-const profilePreview = computed(() => !!user?.id);
-const userName = ref('');
+const profilePreview = computed(() => !!users?.value.id);
+const isEdit = ref(false);
+const flashMessage = ref(null);
 const emit = defineEmits(["update:show"]);
 const close = () => {
     emit("update:show", false);
     resetForm();
+    isEdit.value = false
 }
 const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
@@ -26,23 +28,28 @@ const submitTextButton = computed(() => {
 const form = useForm({
     name: '',
     email: '',
-    photo: null,
     numberPhone: '',
-    gender: '',
+    gender: null,
     city: '',
     province: '',
     address: '',
+    photo: null,
 });
 const submit = () => {
-    const url = route('profile.update', user.id);
+    const url = route('profile.update', users?.value.id);
     const transformData = (data) => ({ ...data, _method: 'put' })
     form.transform(transformData).post(url, {
         preserveScroll: true,
         preserveState: true,
         replace: true,
-        onSuccess: () => {
-            close();
-            resetForm();
+        onSuccess: async () => {
+            // close();
+            await loadUser();
+            isEdit.value = false
+            flashMessage.value = 'Perubahan Data Profile Berhasil disimpan';
+            setTimeout(() => {
+                flashMessage.value = null;
+            }, 5000);
         },
 
     });
@@ -51,8 +58,7 @@ const submit = () => {
 const loadUser = async () => {
     isLoading.value = true
     try {
-        const { data } = await axios.get(`/profile/detail/${user.id}`);
-        userName.value = data.name ?? 'User';
+        const { data } = await axios.get(`/profile/detail/${users?.value.id}`);
         fillForm(data);
     } catch (error) {
         console.error("Gagal mengambil data:", error);
@@ -65,13 +71,13 @@ const loadUser = async () => {
 const fillForm = (data) => {
     console.log(data);
     form.defaults({
-        name: data.name,
-        email: data.email,
-        numberPhone: data.profile.phone,
-        gender: data.profile.gender,
-        city: data.profile.city,
-        province: data.profile.province,
-        address: data.profile.address,
+        name: data.name || '-',
+        email: data.email || '-',
+        numberPhone: data.profile.phone || '-',
+        gender: data.profile.gender || null,
+        city: data.profile.city || '-',
+        province: data.profile.province || '-',
+        address: data.profile.address || '-',
     });
     photoPreview.value = getImageUrl(data.profile);
     form.reset();
@@ -102,7 +108,7 @@ watch(
     () => props.show,
     async (isOpen) => {
         if (!isOpen) return;
-        if (user) {
+        if (users?.value.id) {
             await loadUser();
         } else {
             resetForm();
@@ -144,7 +150,7 @@ const getRoleName = (roleName) => {
         },
         'admin': {
             label: 'Admin',
-            color: 'bg-info text-dark'
+            color: 'bg-info text-white'
         },
         'sales': {
             label: 'Sales',
@@ -159,14 +165,21 @@ const getRoleName = (roleName) => {
 };
 const borderCheck = (inputValue) => {
     if (form.errors[inputValue]) return 'border-danger';
-    // return form[inputValue] ? 'border-success' : 'border-secondary';
+    return form[inputValue] ? 'border-success' : 'border-secondary';
+}
+const genderCheck = (value) => {
+    const gender = {
+        'L': 'Laki-laki',
+        'P': 'Perempuan'
+    }
+    return gender[value]
 }
 </script>
 <template>
     <div class="row" v-if="props.show">
         <div class="col-12">
             <modal width="750px" size="modal-lg" icon="bi bi-person-bounding-box text-primary" :show="props.show"
-                title="Pengaturan Profile" :mobileFullscreen="true" @closed="close">
+                title="Pengaturan Profile" :mobileFullscreen="true" @closed="close" :footer="isEdit">
 
                 <template #body>
                     <div v-if="isLoading" class="text-center py-5">
@@ -177,6 +190,17 @@ const borderCheck = (inputValue) => {
                     </div>
 
                     <div v-else>
+
+                        <transition name="slide-fade">
+                            <template v-if="flashMessage">
+                                <div class="alert bg-c-success p-2" role="alert">
+                                    <span><i class="bi bi-check-circle fw-bold"></i>
+                                        {{ flashMessage }}
+                                    </span>
+                                </div>
+                            </template>
+                        </transition>
+
                         <div class="d-flex flex-column align-items-center mb-4 pb-4 border-bottom border-light">
                             <div class="position-relative mb-3">
 
@@ -185,12 +209,12 @@ const borderCheck = (inputValue) => {
 
                                     <img v-if="photoPreview" :src="photoPreview" class="w-100 h-100 object-fit-cover"
                                         alt="Preview">
-                                    <img v-else-if="user?.profile.photo" :src="user?.profile.photo"
+                                    <img v-else-if="users?.profile.photo" :src="users?.profile.photo"
                                         class="w-100 h-100 object-fit-cover" alt="Profile">
                                     <i v-else class="bi bi-person text-secondary" style="font-size: 3rem;"></i>
                                 </div>
 
-                                <button type="button" @click="selectNewPhoto"
+                                <button v-if="isEdit" type="button" @click="selectNewPhoto"
                                     class="btn btn-primary btn-sm me-3 rounded-circle position-absolute bottom-0 end-0 shadow border border-2 border-white d-flex align-items-center justify-content-center"
                                     style="width: 40px; height: 40px; " title="Ganti Foto">
                                     <i class="bi bi-camera-fill" style="font-size: 18px;"></i>
@@ -200,95 +224,142 @@ const borderCheck = (inputValue) => {
                                     @change="updatePhotoPreview">
                             </div>
 
-                            <h5 class="fw-bold text-dark mb-0 text-capitalize">{{ userName }}</h5>
+                            <h5 class="fw-bold text-dark mb-2 text-capitalize ">{{ users?.name || 'User' }}</h5>
 
-                            <span :class="`badge ${getRoleName(user?.roles?.[0]?.name).color} mt-1 px-3`">{{
-                                getRoleName(user?.roles?.[0]?.name).label ||
-                                'Karyawan' }}</span>
+                            <div class="d-flex gap-1">
+                                <span
+                                    :class="`badge text-uppercase ${getRoleName(users?.roles?.[0]?.name).color} mt-1 px-3`">
+                                    <i class="bi bi-shield-check me-1"></i>
+                                    {{
+                                        getRoleName(users?.roles?.[0]?.name).label ||
+                                        'Karyawan' }}
+                                </span>
+                                <span class="badge badge-soft-info mt-1 px-3">
+                                    <i class="bi bi-geo-alt-fill me-1"></i>
+                                    {{ users?.branch?.name }}
+                                </span>
+                            </div>
                             <input-error :message="form.errors.photo" class="mt-2 text-center" />
                         </div>
 
                         <div class="row g-3 p-4">
                             <div class="col-12">
-                                <h6 class="text-primary fw-bold small mb-2"><i class="bi bi-person-lines-fill me-1"></i>
-                                    INFORMASI DASAR</h6>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="text-primary fw-bold small mb-2"><i
+                                            class="bi bi-person-lines-fill me-1"></i>
+                                        INFORMASI DASAR</h6>
+                                    <div style="font-size: 13px;" class="text-muted cursor-pointer"
+                                        @click="isEdit = !isEdit" title="Edit Profile">
+                                        <i
+                                            :class="` me-1 fas ${isEdit ? 'fa-times-circle text-danger' : 'fa-edit text-primary'}`"></i>
+                                        <span :class="isEdit ? 'text-danger' : 'text-primary'">{{ isEdit ? 'Batal' :
+                                            'Ubah' }}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6 d-flex flex-column">
                                 <input-label for="name_input" value="Nama Lengkap" labelClass="mb-2 text-muted"
                                     style="font-size: 12px;" />
-                                <div :class="`border-bottom ${borderCheck('name')}`">
-                                    <input-text :error="form.errors.name" v-model="form.name" name="name"
-                                        inputClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
-                                        placeholder="Nama lengkap" />
-                                </div>
-                                <input-error :message="form.errors.name" />
+                                <template v-if="isEdit">
+                                    <div :class="`border-bottom ${borderCheck('name')}`">
+                                        <input-text :error="form.errors.name" v-model="form.name" name="name"
+                                            inputClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
+                                            placeholder="Nama lengkap" />
+                                    </div>
+                                    <input-error :message="form.errors.name" />
+                                </template>
+                                <span v-if="!isEdit" class="fw-bold">{{ users?.name }}</span>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6 d-flex flex-column">
                                 <input-label for="email_input" value="Alamat Email" labelClass="mb-2 text-muted"
                                     style="font-size: 12px;" />
-                                <div :class="`border-bottom ${borderCheck('email')}`">
-                                    <input-text
-                                        inputClass="border-0 shadow-none p-0 mb-1 rounded-0 bg-transparent fw-bold"
-                                        :error="form.errors.email" :disabled="true" type="email" v-model="form.email"
-                                        name="email" placeholder="Email aktif" />
-                                </div>
-                                <input-error :message="form.errors.email" />
+                                <template v-if="isEdit">
+                                    <div :class="`border-bottom ${borderCheck('email')}`">
+                                        <input-text
+                                            inputClass="border-0 shadow-none p-0 mb-1 rounded-0 bg-transparent fw-bold"
+                                            :error="form.errors.email" :disabled="true" type="email"
+                                            v-model="form.email" name="email" placeholder="Email aktif" />
+                                    </div>
+                                    <input-error :message="form.errors.email" />
+                                </template>
+                                <span v-if="!isEdit" class="fw-bold text-primary">{{ users?.email }}</span>
                             </div>
-                            <div class="col-md-6">
-                                <input-label for="phone_input" value="No.Handphone" labelClass="mb-2 text-muted" />
-                                <div :class="`border-bottom ${borderCheck('numberPhone')}`">
-                                    <input-text inputClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
-                                        :error="form.errors.numberPhone" v-model="form.numberPhone" name="phone"
-                                        placeholder="Nomor handphone aktif" />
-                                </div>
-                                <input-error :message="form.errors.numberPhone" />
+                            <div class="col-md-6 d-flex flex-column">
+                                <input-label for="phone_input" value="No.Handphone" labelClass="mb-2 text-muted"
+                                    style="font-size: 12px;" />
+                                <template v-if="isEdit">
+                                    <div :class="`border-bottom ${borderCheck('numberPhone')}`">
+                                        <input-text inputClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
+                                            :error="form.errors.numberPhone" v-model="form.numberPhone" name="phone"
+                                            placeholder="Nomor handphone aktif" />
+                                    </div>
+                                    <input-error :message="form.errors.numberPhone" />
+                                </template>
+                                <span v-if="!isEdit" class="fw-bold">{{ users?.profile?.phone }}</span>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6 d-flex flex-column">
                                 <input-label for="gender_select" value="Jenis Kelamin" labelClass="mb-2 text-muted"
                                     style="font-size: 12px;" />
-                                <div :class="`border-bottom ${borderCheck('gender')}`">
-                                    <select-input selectClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
-                                        text="-- Pilih Jenis Kelamin --" name="gender" :error="form.errors.gender"
-                                        v-model="form.gender" :options="[
-                                            { value: 'L', label: 'Laki-laki' },
-                                            { value: 'P', label: 'Perempuan`' }
-                                        ]" />
-                                </div>
 
-                                <input-error :message="form.errors.gender" />
+                                <template v-if="isEdit">
+                                    <div :class="`border-bottom ${borderCheck('gender')}`">
+                                        <select-input selectClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
+                                            text="-- Pilih Jenis Kelamin --" name="gender" :error="form.errors.gender"
+                                            v-model="form.gender" :options="[
+                                                { value: 'L', label: 'Laki-laki' },
+                                                { value: 'P', label: 'Perempuan' }
+                                            ]" />
+                                    </div>
+                                    <input-error :message="form.errors.gender" />
+                                </template>
+                                <span v-if="!isEdit" class="fw-bold">
+                                    {{ genderCheck(users?.profile?.gender) }}
+                                </span>
                             </div>
 
-                            <div class="col-md-12">
+                            <div class="col-md-6 d-flex flex-column">
                                 <input-label for="city_input" value="Kota/Kabupaten" labelClass="mb-2 text-muted"
                                     style="font-size: 12px;" />
-                                <div :class="`border-bottom ${borderCheck('city')}`">
-                                    <input-text inputClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
-                                        :error="form.errors.city" v-model="form.city" name="city"
-                                        placeholder="Kota tempat tinggal" />
-                                </div>
-                                <input-error :message="form.errors.city" />
+
+                                <template v-if="isEdit">
+                                    <div :class="`border-bottom ${borderCheck('city')}`">
+                                        <input-text inputClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
+                                            :error="form.errors.city" v-model="form.city" name="city"
+                                            placeholder="Kota tempat tinggal" />
+                                    </div>
+                                    <input-error :message="form.errors.city" />
+                                </template>
+                                <span v-if="!isEdit" class="fw-bold">{{ users?.profile?.city }}</span>
                             </div>
-                            <div class="col-md-12">
+
+                            <div class="col-md-6 d-flex flex-column ">
                                 <input-label for="province_input" value="Provinsi" labelClass="mb-2 text-muted"
                                     style="font-size: 12px;" />
-                                <div :class="`border-bottom ${borderCheck('province')}`">
-                                    <input-text inputClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
-                                        :error="form.errors.province" v-model="form.province" name="province"
-                                        placeholder="Provinsi tempat tinggal" />
-                                </div>
-                                <input-error :message="form.errors.province" />
+                                <template v-if="isEdit">
+                                    <div :class="`border-bottom ${borderCheck('province')}`">
+                                        <input-text inputClass="border-0 shadow-none p-0 mb-1 rounded-0 fw-bold"
+                                            :error="form.errors.province" v-model="form.province" name="province"
+                                            placeholder="Provinsi tempat tinggal" />
+                                    </div>
+                                    <input-error :message="form.errors.province" />
+                                </template>
+                                <span v-if="!isEdit" class="fw-bold">{{ users?.profile?.province }}</span>
+
                             </div>
-                            <div class="col-md-12">
+                            <div class="col-md-12 d-flex flex-column ">
                                 <input-label for="address_input" value="Alamat" labelClass="mb-2 text-muted"
                                     style="font-size: 12px;" />
-                                <div :class="`border-bottom ${borderCheck('address')}`">
-                                    <textarea v-model="form.address"
-                                        :class="`form-control border-0 shadow-none p-0 mb-1 rounded-0 fw-bold resize-none
-                                        ${form.address ? 'is-valid' : ''}`"
-                                        name="address" id="address_input" cols="3" rows="3"
-                                        placeholder="Masukkan alamat yang sesuai..."></textarea>
-                                </div>
-                                <input-error :message="form.errors.address" />
+
+                                <template v-if="isEdit">
+                                    <div :class="`border-bottom ${borderCheck('address')}`">
+                                        <textarea v-model="form.address" :class="`form-control border-0 shadow-none p-0 mb-1 rounded-0 fw-bold resize-none
+                                        ${form.address ? 'is-valid' : ''}`" name="address" id="address_input" cols="3"
+                                            rows="3" placeholder="Masukkan alamat yang sesuai..."></textarea>
+                                    </div>
+                                    <input-error :message="form.errors.address" />
+                                </template>
+                                <span v-if="!isEdit" class="fw-bold">{{ users?.profile?.address }}</span>
+
                             </div>
                         </div>
                     </div>
@@ -296,7 +367,7 @@ const borderCheck = (inputValue) => {
                 </template>
 
                 <template #footer>
-                    <div v-if="!isLoading" class="d-flex justify-content-end gap-2 p-2 bg-transparent">
+                    <div v-if="!isLoading && isEdit" class="d-flex justify-content-end gap-2 p-2 bg-transparent">
                         <button type="button" class="btn btn-c-slate border-0 fw-medium px-4"
                             @click.prevent="close">Batal</button>
                         <button @click.prevent="submit" type="button" :disabled="form.processing"
@@ -313,3 +384,15 @@ const borderCheck = (inputValue) => {
         </div>
     </div>
 </template>
+<style scoped>
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+    transition: .25s ease;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
+}
+</style>

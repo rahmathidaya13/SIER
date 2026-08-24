@@ -7,6 +7,7 @@ use App\Services\Profile\ProfileService;
 use App\Traits\ProfileValidation;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Repository\Sale\SaleRepository;
 use App\Repository\User\UserRepository;
 use App\Traits\BranchMutationHelper;
 
@@ -21,7 +22,7 @@ class ProfileController extends Controller
     }
     public function show(string $id)
     {
-        $query = User::with(['profile', 'branch', 'roles'])
+        $query = User::with(['profile:id_user,gender,phone,address,city,province,photo', 'branch:id_branch,name', 'roles:id,name'])
             ->find($id);
 
         return response()->json($query);
@@ -33,7 +34,7 @@ class ProfileController extends Controller
         $validate = $this->validateProfile(request()->all());
         $profile = User::find($id);
         $this->service->updateProfile($profile, $validate);
-        $this->invalidateCaches([UserRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
-        return redirect()->back()->with('message', 'Perubahan profile berhasil diperbarui!');
+        $this->invalidateCaches([UserRepository::class, SaleRepository::class,], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
+        return redirect()->back()->with('prf-message', 'Perubahan profile berhasil diperbarui!');
     }
 }

@@ -14,7 +14,7 @@ trait ProfileValidation
                 'name'          => 'required|string|max:50',
                 'email'         => 'required|string|email|max:50|unique:users,email,' . auth()->id(),
                 'gender'        => 'required|in:L,P',
-                'numberPhone'  =>  'required|string|max:15',
+                'numberPhone'  =>  'required|numeric',
                 'city'          => 'required|string|max:100',
                 'province'      => 'required|string|max:100',
                 'address'       => 'required|string|max:255',
@@ -30,12 +30,11 @@ trait ProfileValidation
                 'email.max' => 'Email maksimal 50 karakter',
                 'email.unique' => 'Email sudah digunakan',
 
-                'gender.required' => 'Jenis kelamin tidak boleh kosong',
+                'gender.required' => 'Jenis kelamin harus dipilih',
                 'gender.in' => 'Jenis kelamin tidak valid',
 
                 'numberPhone.required' => 'Nomor telepon tidak boleh kosong',
-                'numberPhone.string' => 'Nomor telepon harus berupa teks',
-                'numberPhone.max' => 'Nomor telepon maksimal 15 karakter',
+                'numberPhone.numeric' => 'Nomor telepon harus berupa angka',
 
                 'city.required' => 'Kota tidak boleh kosong',
                 'city.string' => 'Kota harus berupa teks',

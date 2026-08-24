@@ -5,7 +5,6 @@ const props = defineProps({
     branches: Array,
     roles: Array
 })
-console.log(props.branches, props.roles);
 const form = useForm({
     name: "",
     email: "",

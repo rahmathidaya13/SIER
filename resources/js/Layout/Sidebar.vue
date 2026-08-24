@@ -93,27 +93,33 @@ const rolesName = (role) => {
     const roles = {
         'developer': {
             label: 'DEVELOPER',
-            color: 'bg-dark text-white'
+            color: 'bg-dark text-white',
+            icon: 'bi bi-code-slash'
         },
         'super_admin': {
             label: 'HEAD OFFICE',
-            color: 'bg-dark text-white'
+            color: 'bg-dark text-white',
+            icon: 'bi bi-bank'
         },
         'supervisor': {
             label: 'SUPERVISOR',
-            color: 'bg-primary text-white'
+            color: 'bg-primary text-white',
+            icon: 'bi bi-people-fill'
         },
         'admin': {
             label: 'ADMIN',
-            color: 'bg-info text-dark'
+            color: 'bg-info text-white',
+            icon: 'bi bi-gear-fill'
         },
         'sales': {
             label: 'SALES',
-            color: 'bg-success text-white'
+            color: 'bg-success text-white',
+            icon: 'bi bi-people-fill'
         },
         'teknisi': {
             label: 'TEKNISI',
-            color: 'bg-secondary text-white'
+            color: 'bg-secondary text-white',
+            icon: 'bi bi-people-fill'
         }
     };
     return roles[role] || 'bg-light text-dark border';
@@ -144,8 +150,8 @@ const getImageUrl = (item) => {
             <button @click.prevent="emit('openProfileModal')" class="btn nav-link text-primary">
                 <span class="mb-1 fw-bold text-capitalize">{{ $page.props.auth.user.name }}</span>
             </button>
-            <span class="badge rounded-pill px-3 py-2 fw-medium" :class="getNameRoles().color">
-                <i class="bi bi-shield-check me-1 opacity-75"></i> {{
+            <span class="badge rounded-pill px-3 py-2 fw-bold" :class="getNameRoles().color">
+                <i class="bi bi-shield-check me-1"></i> {{
                     getNameRoles().label
                 }}
             </span>
