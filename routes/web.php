@@ -13,6 +13,7 @@ use App\Http\Controllers\Branch\BranchController;
 use App\Http\Controllers\Channel\ChannelController;
 use App\Http\Controllers\Leads\LeadActivityController;
 use App\Http\Controllers\Leads\LeadConversionController;
+use App\Http\Controllers\Notification\NotificationController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Profile\ProfileController;
 use App\Http\Controllers\Sales\SaleController;
@@ -96,6 +97,13 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/profile/detail/{id}', 'show')->name('profile.detail');
         Route::put('/profile/update/{id}', 'update')->name('profile.update');
+    });
+    Route::controller(NotificationController::class)->group(function () {
+        Route::get('/notification', 'index')->name('notification.index');
+        // Route untuk menandai SATU notifikasi
+        Route::post('/notifications/read/{id}', 'markAsRead')->name('notifications.read');
+        // Route untuk menandai SEMUA notifikasi
+        Route::post('/notifications/read-all', 'markAllRead')->name('notifications.readAll');
     });
 });
 

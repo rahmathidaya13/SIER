@@ -76,8 +76,7 @@ class SaleController extends Controller
                 'paymentHistory.user.roles',
                 'salesProduct.product:id_product,name,image_link,image_path'
             ]
-        )
-            ->find($id);
+        )->find($id);
         return response()->json($sales);
     }
     public function payRemaining(Request $request, string $id)

@@ -1,12 +1,17 @@
 <script setup>
-import { ref, watch, onUnmounted } from 'vue';
+import { ref, watch, onUnmounted, onMounted, provide } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import Sidebar from './Sidebar.vue';
 import Header from './Header.vue';
 import { useConfirm } from "@/Composables/useConfirm"
 import FormModalProfile from '../Pages/Profile/FormModalProfile.vue';
 const { state } = useConfirm();
 
+const page = usePage();
+const userId = page.props.auth.user.id
 const sideBarOpen = ref(window.innerWidth >= 992);
+const unreadCount = ref(page.props.auth.unread_notifications_count || 0);
+provide('unreadCount', unreadCount)
 const toggleSidebar = () => {
     sideBarOpen.value = !sideBarOpen.value;
 };
@@ -26,6 +31,21 @@ onUnmounted(() => {
 });
 
 const isProfileModalOpen = ref(false);
+
+onMounted(() => {
+    if (window.Echo) {
+        window.Echo.private(`App.Models.User.${userId}`)
+            .notification((notification) => {
+
+                // 1. Munculkan Toast/Snackbar di pojok layar
+                console.log("NOTIFIKASI BARU MASUK:", notification);
+                // alert(notification.message); // Ganti dengan library Toast Anda (misal: vue-toastification)
+                unreadCount.value++
+                // 2. Update angka badge merah (jumlah notif belum dibaca) di Sidebar secara reaktif
+                // ...
+            });
+    }
+})
 </script>
 <template>
     <!-- Confirm Modal -->
@@ -78,7 +98,7 @@ const isProfileModalOpen = ref(false);
             </main>
         </div>
     </div>
-    <FormModalProfile v-model:show="isProfileModalOpen"/>
+    <FormModalProfile v-model:show="isProfileModalOpen" />
 </template>
 <style scoped>
 .wrapper {

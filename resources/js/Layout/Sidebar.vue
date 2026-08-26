@@ -1,17 +1,25 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { hasRole, hasPermission } from "@/Composables/useAuth";
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 defineProps({
     isOpen: Boolean
 })
 const emit = defineEmits(['close', 'openProfileModal']);
 const currentPath = usePage().props.path;
+const unreadCount = inject('unreadCount');
 const isSelectedActive = (pattern) => {
     const regex = new RegExp("^" + pattern.replace("*", ".*") + "$");
     return regex.test(currentPath);
 };
 const menuItems = [
+    {
+        title: 'Notifikasi',
+        icon: 'bi bi-bell-fill',
+        route: 'notification.index',
+        prefixUrl: 'notification*',
+        badge: unreadCount > 99 ? '99+' : unreadCount
+    },
     {
         title: 'Home',
         icon: 'bi bi-speedometer2',

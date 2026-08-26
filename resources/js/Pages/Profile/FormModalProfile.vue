@@ -248,7 +248,7 @@ const genderCheck = (value) => {
                                     <h6 class="text-primary fw-bold small mb-2"><i
                                             class="bi bi-person-lines-fill me-1"></i>
                                         INFORMASI DASAR</h6>
-                                    <div style="font-size: 13px;" class="text-muted cursor-pointer"
+                                    <div style="font-size: 13px;" class="text-muted cursor-pointer "
                                         @click="isEdit = !isEdit" title="Edit Profile">
                                         <i
                                             :class="` me-1 fas ${isEdit ? 'fa-times-circle text-danger' : 'fa-edit text-primary'}`"></i>
