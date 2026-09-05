@@ -1,17 +1,51 @@
 <script setup>
 import { Head, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useFilter } from '@/Composables/useFilter';
 import { hasRole, hasPermission } from '@/Composables/useAuth';
 import { formatDate } from '@/Helpers/formatDate';
 
 const props = defineProps({
-    notifications: Object
+    notifications: Object,
+    filters: Object
 })
+
+const selectedRow = ref([]);
+const {
+    filters,
+    isLoading,
+} = useFilter({
+    routeName: "notification.index",
+    initialFilters: {
+        status: props.filters.status ?? 'unread',
+        limit: props.filters.limit ?? 10,
+        order_by: props.filters.order_by ?? 'latest',
+    },
+    watchFields: [
+        'status',
+        'limit',
+        'order_by',
+    ],
+    only: ['notifications', 'filters'],
+    debounceTime: 500,
+});
+const hasUnreadInPage = computed(() => {
+    if (!props.notifications?.data) return false;
+    return props.notifications.data.some(item => item.read_at === null);
+});
+
 // Fungsi untuk klik "Tandai Semua"
-const markAllAsRead = () => {
-    router.post(route('notifications.readAll'), {}, {
-        preserveScroll: true, // Layar tidak akan lompat ke atas saat tombol diklik
+const markSelectedAsRead = () => {
+    if (!selectedRow.value.length) {
+        alert('Pilih item terlebih dahulu');
+        return;
+    };
+    const ids = selectedRow.value.map(item => item.id);
+    router.post(route('notifications.readAll'), { ids: ids }, {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+        onSuccess: () => selectedRow.value = [],
     });
 };
 
@@ -22,9 +56,10 @@ const markAsRead = (notification) => {
     console.log(notification);
     router.post(route('notifications.read', notification.id), {}, {
         preserveScroll: true,
+        preserveState: true,
+        replace: true,
     });
 };
-console.log(props.notifications.data);
 const header = [
     {
         label: "No",
@@ -34,7 +69,7 @@ const header = [
         },
     },
     {
-        label: "Judul",
+        label: "Title",
         key: "title",
         attrs: {
             style: {
@@ -44,7 +79,7 @@ const header = [
         },
     },
     {
-        label: "Notifikasi",
+        label: "Message",
         key: "message",
         attrs: {
             style: {
@@ -54,7 +89,7 @@ const header = [
         },
     },
     {
-        label: "Aksi",
+        label: "Action",
         key: "action",
         attrs: {
             class: 'text-center',
@@ -63,9 +98,9 @@ const header = [
 
 ];
 const rowClasses = (item) => ({
-    'tr-dimmed': item.read_at !== null,
-    'tr-highlight-primary': item.read_at === null,
+    'tr-highlight-info': item.read_at === null,
 })
+
 </script>
 <template>
 
@@ -73,7 +108,10 @@ const rowClasses = (item) => ({
     <app-layout>
         <template #content>
             <div class="row g-3 view-section">
+
                 <div class="col-12">
+                    <callout />
+
                     <div class="card border-0 rounded-4 overflow-hidden">
                         <div class="card-header p-4 bg-white">
                             <div
@@ -81,15 +119,51 @@ const rowClasses = (item) => ({
                                 <div>
                                     <h5 class="fw-bold mb-1">Daftar Notifikasi</h5>
                                 </div>
-                                <button v-if="!notifications.data.length > 0" @click.prevent="markAllAsRead"
-                                    class="btn btn-sm btn-c-slate px-4 py-2">
-                                    <i class="bi bi-check2-all me-1"></i> Tandai Semua Dibaca
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center p-3 flex-wrap">
+                            <div class="row g-1 flex-grow-1">
+                                <div class="col-2">
+                                    <select-input selectClass="rounded-4" :isValid="false" name="limit"
+                                        v-model="filters.limit" text="Pilih Batas Data" :options="[
+                                            { label: '☰ 10 Data', value: 10 },
+                                            { label: '☰ 25 Data', value: 25 },
+                                            { label: '☰ 50 Data', value: 50 },
+                                            { label: '☰ 100 Data', value: 100 },
+                                        ]" />
+                                </div>
+                                <div class="col-2">
+                                    <select-input selectClass="rounded-4" :isValid="false" name="status"
+                                        v-model="filters.status" text="Semua Status" :options="[
+                                            { label: 'Semua Status', value: 'all' },
+                                            { label: 'Belum dibaca', value: 'unread' },
+                                            { label: 'Sudah dibaca', value: 'read' },
+                                        ]" />
+                                </div>
+                                <div class="col-2">
+                                    <select-input selectClass="rounded-4" :isValid="false" name="order_by"
+                                        v-model="filters.order_by" :options="[
+                                            { label: '🔼 Terbaru', value: 'latest' },
+                                            { label: '🔽 Terlama', value: 'oldest' }
+                                        ]" />
+                                </div>
+                            </div>
+                            <div>
+                                <button :disabled="!hasUnreadInPage || !selectedRow.length" type="button"
+                                    @click.prevent="markSelectedAsRead"
+                                    class="btn btn-sm btn-c-slate px-4 py-2 shadow-sm rounded-4">
+                                    <i class="bi bi-check2-all me-1"></i> Tandai {{ selectedRow.length }} Dibaca
                                 </button>
                             </div>
                         </div>
+
+
+
                         <div class="card-body p-0">
-                            <table-wrapper :rowClass="rowClasses" :headers="header" :items="notifications?.data"
-                                rowKey="id">
+                            <table-wrapper v-model:selected="selectedRow" :loader="isLoading" :markAll="true"
+                                :rowClass="rowClasses" :headers="header" :items="notifications?.data" rowKey="id"
+                                :disableRowCheck="(item) => item.read_at !== null">
 
                                 <template #empty>
                                     <div class="text-center py-5">
@@ -106,7 +180,7 @@ const rowClasses = (item) => ({
                                     </td>
 
                                     <td>
-                                        <div class="text-muted">
+                                        <div class="text-muted fw-semibold">
                                             {{ item.data.title }}
                                         </div>
                                     </td>
@@ -114,19 +188,19 @@ const rowClasses = (item) => ({
                                         <div class="fw-bold d-flex flex-column">
                                             {{ item.data.message }}
                                             <small class="text-muted" style="font-size: 11px;">
-                                                {{ new Date(item.created_at).toLocaleString() }}
+                                                {{ formatDate(item.created_at) }}
                                             </small>
                                         </div>
                                     </td>
 
                                     <td class="text-center">
                                         <button v-if="!item.read_at" @click.prevent="markAsRead(item)" type="button"
-                                            class="btn btn-c-slate" title="Tandai Dibaca">
-                                            <i class="bi bi-check"></i>
+                                            class="btn btn-c-primary btn-sm" title="Tandai Dibaca">
+                                            <i class="bi bi-check2-all me-1"></i> Tandai Dibaca
                                         </button>
                                         <span v-else class="text-success fw-semibold">
                                             <i class="bi bi-check-circle"></i>
-                                            Ditandai
+                                            Sudah Dibaca
                                         </span>
                                     </td>
 
@@ -143,12 +217,12 @@ const rowClasses = (item) => ({
                                                     ?? 0
                                                 }}</strong>
                                         </small>
-                                        <!-- <pagination size="pagination-sm" :links="notifications?.links"
+                                        <pagination size="pagination-sm" :links="notifications?.links"
                                             routeName="notification.index" :additionalQuery="{
-                                                keyword: filters.keyword,
+                                                status: filters.status,
                                                 limit: filters.limit,
                                                 order_by: filters.order_by,
-                                            }" :only="['notifications']" /> -->
+                                            }" :only="['notifications', 'filters']" />
                                     </div>
                                 </template>
 

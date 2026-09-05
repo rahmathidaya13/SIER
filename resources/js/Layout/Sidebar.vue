@@ -140,7 +140,7 @@ const getImageUrl = (item) => {
     if (item.photo !== null && item.photo !== undefined) {
         return `/storage/${item.photo}`; // load gambar dari storage jika ada
     }
-    return '/storage/no_image/no-image.png'; // Fallback jika tidak ada gambar
+    return '/storage/no_image/user-icon.png'; // Fallback jika tidak ada gambar
 };
 </script>
 <template>

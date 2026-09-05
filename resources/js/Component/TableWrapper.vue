@@ -8,8 +8,8 @@ const props = defineProps({
         default: () => [],
     },
     rowKey: {
-        type: String,
-        default: 'id',
+        type: [String, Number, Object, Array, Function],
+        default: () => 'id',
     },
     rowClass: {
         type: Function,
@@ -26,6 +26,10 @@ const props = defineProps({
     loaderText: {
         type: String,
         default: '',
+    },
+    disableRowCheck: {
+        type: Function,
+        default: () => false,
     }
 })
 
@@ -42,15 +46,18 @@ const getRowId = (row) => {
 
 // Fungsi untuk memeriksa apakah semua baris terpilih
 const isAllSelected = computed(() => {
-    if (rows.value.length === 0) return false;
-    return rows.value.every(r => selectedRow.value.includes(getRowId(r)));
+    const selectableRows = rows.value.filter(r => !props.disableRowCheck(r));
+    if (selectableRows.length === 0) return false;
+    return selectableRows.every(r => selectedRow.value.includes(getRowId(r)));
 })
 
 // Fungsi untuk memilih semua baris
 const toggleAll = (evt) => {
     const isChecked = evt.target.checked;
     // Ambil semua ID yang ada di HALAMAN INI saja
-    const currentPageIds = rows.value.map(r => getRowId(r));
+    const currentPageIds = rows.value
+        .filter(r => !props.disableRowCheck(r))
+        .map(r => getRowId(r));
     // Copy array lama
     let newSelection = [...selectedRow.value];
     if (isChecked) {
@@ -66,9 +73,14 @@ const toggleAll = (evt) => {
 
 // Emit perubahan ke parent
 watch(selectedRow, (val) => {
-    emit('update:selected', val);
+    const selectDataObject = rows.value.filter(item => val.includes(getRowId(item)));
+    emit('update:selected', selectDataObject);
 });
-
+watch(() => props.modelValue, (newVal) => {
+    if (newVal && newVal.length === 0) {
+        selectedRow.value = [];
+    }
+}, { deep: true });
 // Fungsi untuk menggabungkan class internal (selected) dengan class dari luar
 const computeRowClass = (item) => {
     const externalClass = props.rowClass(item); // Panggil fungsi dari luar
@@ -88,11 +100,11 @@ const visibleHeaders = computed(() => props.headers.filter(col => col.visible !=
         <slot name="filter-action" />
         <div class="table-responsive custom-scroll">
             <table class="table table-hover align-middle">
-                <thead class="sticky-top" >
+                <thead class="sticky-top">
                     <tr>
                         <th v-if="markAll" class="text-center" style="width: 50px;">
                             <div class="form-check d-flex justify-content-center">
-                                <input :disabled="!rows.length" type="checkbox"
+                                <input :disabled="!rows.length || rows.every(r => disableRowCheck(r))" type="checkbox"
                                     class="form-check-input custom-checkbox cursor-pointer" :checked="isAllSelected"
                                     @change="toggleAll($event)" />
                             </div>
@@ -127,8 +139,9 @@ const visibleHeaders = computed(() => props.headers.filter(col => col.visible !=
 
                             <td v-if="markAll" class="text-center">
                                 <div class="form-check d-flex justify-content-center">
-                                    <input type="checkbox" class="form-check-input custom-checkbox"
-                                        :value="getRowId(item)" v-model="selectedRow" />
+                                    <input :disabled="disableRowCheck(item)" type="checkbox"
+                                        class="form-check-input custom-checkbox" :value="getRowId(item)"
+                                        v-model="selectedRow" />
                                 </div>
                             </td>
 

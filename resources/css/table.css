@@ -73,6 +73,10 @@
     background-color: var(--c-danger-subtle) !important;
 }
 
+.tr-highlight-info>td {
+    background-color: var(--c-info-subtle) !important;
+}
+
 /* Kelas untuk membuat baris yang non-aktif/terhapus terlihat pudar */
 .tr-dimmed {
     opacity: 0.55;

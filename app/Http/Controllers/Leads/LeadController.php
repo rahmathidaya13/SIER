@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Leads;
 
 use App\Models\User;
 use App\Models\LeadModel;
-use App\Notifications\LeadCreatedNotification;
 use App\Traits\UserScope;
 use App\Models\ChannelModel;
 use App\Models\ProductModel;
@@ -13,7 +12,8 @@ use App\Traits\LeadsValidation;
 use App\Services\Lead\LeadServices;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\LeadResource;
-use App\Notifications\LeadDeleteNotification;
+use App\Notifications\Lead\LeadCreateNotification;
+use App\Notifications\Lead\LeadDeleteNotification;
 use App\Traits\BranchMutationHelper;
 use Illuminate\Support\Facades\Gate;
 use App\Repository\Sale\SaleRepository;
@@ -110,11 +110,13 @@ class LeadController extends Controller
 
             $admins = User::role(['super_admin', 'developer'])->get();
             $recipients = $branchUsers->merge($admins)->unique('id');
-            Notification::send($recipients, new LeadCreatedNotification($leads, $user->name));
+            Notification::send($recipients, new LeadCreateNotification($leads, $user->name));
+
             $this->invalidateCaches(
                 [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
                 ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
             );
+
             return redirect()->back()->with([
                 'message' => 'Lead dari ' . strtoupper($request['name']) . ' berhasil ditambahkan',
             ]);

@@ -1,14 +1,13 @@
 <?php
 
-namespace App\Notifications;
+namespace App\Notifications\Lead;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 
-class LeadDeleteNotification extends Notification implements ShouldBroadcast
+class LeadCreateNotification extends Notification implements ShouldBroadcast
 {
     use Queueable;
     public $lead;
@@ -21,27 +20,17 @@ class LeadDeleteNotification extends Notification implements ShouldBroadcast
         $this->lead = $lead;
         $this->actor = $actor;
     }
-
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @return array<int, string>
-     */
     public function via(object $notifiable): array
     {
         return ['database', 'broadcast'];
     }
 
-    /**
-     * Get the array representation of the notification.
-     *
-     * @return array<string, mixed>
-     */
+    // 1. Data yang disimpan ke database (Tabel 'notifications')
     public function toArray($notifiable)
     {
         return [
-            'title'   => 'Lead Dihapuskan',
-            'message' => "Baru saja {$this->actor} menghapus data lead: {$this->lead->name}",
+            'title'   => 'Lead Baru',
+            'message' => ucwords($this->actor) . " membuat lead baru pelanggan " . ucwords($this->lead->name),
             'lead_id' => $this->lead->id_lead,
         ];
     }
@@ -49,8 +38,8 @@ class LeadDeleteNotification extends Notification implements ShouldBroadcast
     public function toBroadcast($notifiable)
     {
         return new BroadcastMessage([
-            'title'   => 'Lead Dihapuskan',
-            'message' => "Baru saja {$this->actor} menghapus data lead: {$this->lead->name}",
+            'title'   => 'Lead Baru',
+            'message' => ucwords($this->actor) . " membuat lead baru pelanggan  " . ucwords($this->lead->name),
             'lead_id' => $this->lead->id_lead,
         ]);
     }
