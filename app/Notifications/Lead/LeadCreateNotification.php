@@ -2,45 +2,30 @@
 
 namespace App\Notifications\Lead;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Notifications\Messages\BroadcastMessage;
-
-class LeadCreateNotification extends Notification implements ShouldBroadcast
+class LeadCreateNotification extends BaseLeadNotification
 {
-    use Queueable;
-    public $lead;
-    public $actor;
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct($lead, $actor)
+    protected function type(): string
     {
-        $this->lead = $lead;
-        $this->actor = $actor;
+        return 'lead_created';
     }
-    public function via(object $notifiable): array
+    protected function title(): string
     {
-        return ['database', 'broadcast'];
+        return 'Lead Baru';
     }
 
-    // 1. Data yang disimpan ke database (Tabel 'notifications')
-    public function toArray($notifiable)
+    protected function message(): string
+    {
+        return ucwords($this->actor->name)
+            . " membuat lead baru atas nama pelanggan "
+            . ucwords($this->lead->name);
+    }
+
+    protected function action(): ?array
     {
         return [
-            'title'   => 'Lead Baru',
-            'message' => ucwords($this->actor) . " membuat lead baru pelanggan " . ucwords($this->lead->name),
-            'lead_id' => $this->lead->id_lead,
+            'label' => 'Lihat Lead',
+            'icon' => 'bi bi-box-arrow-up-right',
+            'route' => route('leads.index', ['keyword' => $this->lead->name]),
         ];
-    }
-    // 2. Data yang ditembakkan secara Real-time via Pusher ke Vue
-    public function toBroadcast($notifiable)
-    {
-        return new BroadcastMessage([
-            'title'   => 'Lead Baru',
-            'message' => ucwords($this->actor) . " membuat lead baru pelanggan  " . ucwords($this->lead->name),
-            'lead_id' => $this->lead->id_lead,
-        ]);
     }
 }

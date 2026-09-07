@@ -123,6 +123,18 @@ class LeadServices
             throw $error;
         }
     }
+    public function delete(LeadModel $leads, $user)
+    {
+        DB::beginTransaction();
+        try {
+            $leads->delete();
+            DB::commit();
+        } catch (\Exception $error) {
+            DB::rollBack();
+            Log::error("Gagal menghapus Lead: " . $error);
+            throw $error;
+        }
+    }
     private function convertLeadToSales(LeadModel $leads, array $validated)
     {
         return DB::transaction(function () use ($leads, $validated) {

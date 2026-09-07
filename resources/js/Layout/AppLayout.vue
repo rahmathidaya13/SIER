@@ -1,51 +1,67 @@
 <script setup>
-import { ref, watch, onUnmounted, onMounted, provide } from 'vue';
-import { usePage } from '@inertiajs/vue3';
-import Sidebar from './Sidebar.vue';
-import Header from './Header.vue';
-import { useConfirm } from "@/Composables/useConfirm"
-import FormModalProfile from '../Pages/Profile/FormModalProfile.vue';
+import { ref, watch, onUnmounted, onMounted, provide } from "vue";
+import { usePage } from "@inertiajs/vue3";
+import Sidebar from "./Sidebar.vue";
+import Header from "./Header.vue";
+import { useConfirm } from "@/Composables/useConfirm";
+import { useNotification } from "@/Composables/useNotification";
+import FormModalProfile from "../Pages/Profile/FormModalProfile.vue";
 const { state } = useConfirm();
 
 const page = usePage();
-const userId = page.props.auth.user.id
+const userId = page.props.auth.user.id;
+
 const sideBarOpen = ref(window.innerWidth >= 992);
-const unreadCount = ref(page.props.auth.unread_notifications_count || 0);
-provide('unreadCount', unreadCount)
+
+const {
+    unreadCount,
+    setUnreadCount,
+    incrementUnread
+} = useNotification();
+
 const toggleSidebar = () => {
     sideBarOpen.value = !sideBarOpen.value;
 };
 const closeSideBar = () => {
-    sideBarOpen.value = false
-}
+    sideBarOpen.value = false;
+};
 watch(sideBarOpen, (value) => {
     if (window.innerWidth < 992) {
-        document.body.style.overflow = value ? 'hidden' : '';
+        document.body.style.overflow = value ? "hidden" : "";
     } else {
         // Jika di PC/Desktop, pastikan halaman selalu bisa di-scroll
-        document.body.style.overflow = '';
+        document.body.style.overflow = "";
     }
-})
+});
 onUnmounted(() => {
-    document.body.style.overflow = ''
+    if (window.Echo) {
+        window.Echo?.leave(`App.Models.User.${userId}`);
+    }
+    document.body.style.overflow = "";
 });
 
 const isProfileModalOpen = ref(false);
 
+let notificationChannel = null;
 onMounted(() => {
-    if (window.Echo) {
-        window.Echo.private(`App.Models.User.${userId}`)
-            .notification((notification) => {
 
-                // 1. Munculkan Toast/Snackbar di pojok layar
-                console.log("NOTIFIKASI BARU MASUK:", notification);
-                // alert(notification.message); // Ganti dengan library Toast Anda (misal: vue-toastification)
-                unreadCount.value++
-                // 2. Update angka badge merah (jumlah notif belum dibaca) di Sidebar secara reaktif
-                // ...
-            });
+    setUnreadCount(page.props.auth.unread_notifications_count || 0);
+
+    if (!window.Echo) {
+        return;
     }
-})
+
+    notificationChannel = window.Echo.private(
+        `App.Models.User.${userId}`
+    );
+
+    notificationChannel.notification((notification) => {
+        // 1. Munculkan Toast/Snackbar di pojok layar
+        console.log("NOTIFIKASI BARU MASUK:", notification);
+        // alert(notification.message); // Ganti dengan library Toast Anda (misal: vue-toastification)
+        incrementUnread();
+    });
+});
 </script>
 <template>
     <!-- Confirm Modal -->
@@ -53,18 +69,20 @@ onMounted(() => {
         <div v-if="state.show" class="confirm-overlay d-flex align-items-center justify-content-center">
             <div class="confirm-card bg-white rounded-4 shadow-lg p-4">
                 <div class="text-center mb-4">
-                    <div
-                        :class="`icon-circle bg-${state.variantIcon ?? state.variant} bg-opacity-10 text-${state.variantIcon ?? state.variant} mb-3`">
+                    <div :class="`icon-circle bg-${state.variantIcon ?? state.variant
+                        } bg-opacity-10 text-${state.variantIcon ?? state.variant} mb-3`">
                         <i :class="` ${state.icon ?? 'fas fa-exclamation-triangle'} fa-2x`"></i>
                     </div>
                     <h5 class="fw-bold">{{ state.title }}</h5>
-                    <p class="text-muted mb-0 px-2" :style="{ fontSize: state.messageFontSize }">{{ state.message }}</p>
+                    <p class="text-muted mb-0 px-2" :style="{ fontSize: state.messageFontSize }">
+                        {{ state.message }}
+                    </p>
                 </div>
 
                 <div v-if="state.requireCheckbox" class="bg-light p-3 rounded-3 mb-4 border border-light-subtle">
                     <div class="form-check d-flex align-items-center gap-2">
                         <input class="form-check-input mt-0 custom-checkbox" type="checkbox" v-model="state.isChecked"
-                            id="confirmCheck" style="width: 1.2rem; height: 1.2rem; cursor: pointer;">
+                            id="confirmCheck" style="width: 1.2rem; height: 1.2rem; cursor: pointer" />
                         <label class="form-check-label small fw-medium text-dark cursor-pointer" for="confirmCheck">
                             {{ state.checkboxText }}
                         </label>
@@ -77,21 +95,20 @@ onMounted(() => {
                         {{ state.cancelText }}
                     </button>
                     <button @click="state.onConfirm" v-if="state.showButtonConfirm"
-                        :disabled="state.requireCheckbox && !state.isChecked"
-                        :class="`btn btn-${state.variantButton ?? state.variant} rounded-pill btn-sm flex-fill py-2 fw-semibold shadow-sm`">
+                        :disabled="state.requireCheckbox && !state.isChecked" :class="`btn btn-${state.variantButton ?? state.variant
+                            } rounded-pill btn-sm flex-fill py-2 fw-semibold shadow-sm`">
                         {{ state.confirmText }}
                     </button>
                 </div>
             </div>
         </div>
     </Teleport>
-    <div class="sidebar-backdrop" :class="{ 'show': sideBarOpen }" role="presentation" @click="closeSideBar"></div>
+    <div class="sidebar-backdrop" :class="{ show: sideBarOpen }" role="presentation" @click="closeSideBar"></div>
 
     <div class="d-flex wrapper">
-
         <Sidebar @openProfileModal="isProfileModalOpen = true" :isOpen="sideBarOpen" @close="closeSideBar" />
 
-        <div class="page-content-wrapper " :class="{ 'expanded': !sideBarOpen }">
+        <div class="page-content-wrapper" :class="{ expanded: !sideBarOpen }">
             <Header @close="toggleSidebar" />
             <main class="container-fluid px-3 py-4">
                 <slot name="content" />
@@ -107,7 +124,8 @@ onMounted(() => {
 }
 
 .page-content-wrapper {
-    transition: margin-left 0.35s cubic-bezier(0.2, 0, 0, 1), width 0.35s cubic-bezier(0.2, 0, 0, 1);
+    transition: margin-left 0.35s cubic-bezier(0.2, 0, 0, 1),
+        width 0.35s cubic-bezier(0.2, 0, 0, 1);
     width: 100%;
 }
 

@@ -154,7 +154,7 @@ const branchOptions = computed(() => [
                                 class="form-select form-select-sm focus-none fw-semibold">
                                 <option v-for="month in months" :key="month.value" :value="month.value">{{
                                     month.label
-                                    }}
+                                }}
                                 </option>
                             </select>
                             <div class="vr my-1"></div>
@@ -342,7 +342,7 @@ const branchOptions = computed(() => [
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <div>
                                 <h6 class="fw-bold mb-1">Statistik Konversi Funnel</h6>
-                                <p class="text-muted small">Tren prospek masuk vs closing dalam 7 hari terakhir</p>
+                                <p class="text-muted small">Tren prospek masuk vs closing selama 1 bulan</p>
                             </div>
                             <div class="badge bg-light text-dark border">Harian</div>
                         </div>

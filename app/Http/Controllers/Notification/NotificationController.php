@@ -31,9 +31,9 @@ class NotificationController extends Controller
     public function markAsRead(Request $request, $id)
     {
         $notification = auth()->user()->notifications()->findOrFail($id);
-        $notification->markAsRead(); // Fungsi bawaan Laravel
+        $notification->markAsRead();
 
-        return redirect()->back(); // Kembali ke halaman, Inertia akan mengurus sisanya!
+        return redirect()->back()->with('message', 'Notifikasi telah ditandai sudah dibaca.');
     }
 
     public function markAllRead(Request $request)
@@ -47,7 +47,7 @@ class NotificationController extends Controller
             ->whereNull('read_at')
             ->get()
             ->markAsRead();
-        // Tandai SEMUA notifikasi yang belum dibaca milik user ini menjadi sudah dibaca
+        // Tandai SEMUA notif~ikasi yang belum dibaca milik user ini menjadi sudah dibaca
         // $request->user()->unreadNotifications->markAsRead();
 
         return redirect()->back()->with('message', 'Semua notifikasi telah ditandai sudah dibaca.');

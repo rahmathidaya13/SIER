@@ -69,7 +69,6 @@ const loadUser = async () => {
 
 }
 const fillForm = (data) => {
-    console.log(data);
     form.defaults({
         name: data.name || '-',
         email: data.email || '-',

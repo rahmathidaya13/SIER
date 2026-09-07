@@ -4,20 +4,23 @@ namespace App\Notifications\Lead;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 
-class LeadDeleteNotification extends Notification implements ShouldBroadcast
+class LeadDeleteNotification extends Notification implements ShouldBroadcast, ShouldQueue
 {
     use Queueable;
-    public $lead;
+    public $leadId;
+    public $leadName;
     public $actor;
     /**
      * Create a new notification instance.
      */
-    public function __construct($lead, $actor)
+    public function __construct($leadId, $leadName, $actor)
     {
-        $this->lead = $lead;
+        $this->leadId = $leadId;
+        $this->leadName = $leadName;
         $this->actor = $actor;
     }
 
@@ -31,26 +34,30 @@ class LeadDeleteNotification extends Notification implements ShouldBroadcast
         return ['database', 'broadcast'];
     }
 
-    /**
-     * Get the array representation of the notification.
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray($notifiable)
+    protected function notificationData(): array
     {
         return [
-            'title'   => 'Lead Dihapus',
-            'message' => $this->actor . " menghapus lead pelanggan " . $this->lead->name,
-            'lead_id' => $this->lead->id_lead,
+            'type' => 'lead_deleted',
+            'title' => 'Lead Dihapus',
+            'message' => ucwords($this->actor->name)
+                . ' menghapus lead atas nama pelanggan '
+                . ucwords($this->leadName),
+            'lead_id' => $this->leadId,
+            'lead_name' => $this->leadName,
+            'action' => null,
+            'actor' => [
+                'id' => $this->actor->id,
+                'name' => $this->actor->name,
+            ],
         ];
     }
-    // 2. Data yang ditembakkan secara Real-time via Pusher ke Vue
-    public function toBroadcast($notifiable)
+
+    public function toArray($notifiable): array
     {
-        return new BroadcastMessage([
-            'title'   => 'Lead Dihapus',
-            'message' => $this->actor . " menghapus lead pelanggan " . $this->lead->name,
-            'lead_id' => $this->lead->id_lead,
-        ]);
+        return $this->notificationData();
+    }
+    public function toBroadcast($notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage($this->notificationData());
     }
 }

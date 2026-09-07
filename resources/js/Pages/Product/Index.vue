@@ -182,8 +182,7 @@ const canAccess = (permission, role = []) => {
 
                         <div class="card-body p-0">
                             <table-wrapper :loader="isLoading" loaderText="Sedang memuat data..." :headers="header"
-                                :items="products?.data" rowKey="id_product"
-                                @update:selected="(val) => selectedId = val">
+                                :items="products?.data" rowKey="id_product">
 
                                 <template #empty>
                                     <div class="text-center py-5">
@@ -279,7 +278,7 @@ const canAccess = (permission, role = []) => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.creator_name || 'N/A'
-                                                }}
+                                                    }}
                                                 </span>
                                                 <div class="text-muted d-flex flex-column" style="font-size: 0.7rem;">
                                                     <span><i class="fas fa-plus-circle me-1 opacity-50"></i>

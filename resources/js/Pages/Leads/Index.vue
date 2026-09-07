@@ -323,7 +323,7 @@ const canAccess = (permission, role = []) => {
 
                         <div class="card-body p-0">
                             <table-wrapper :loader="isLoading" loaderText="Sedang memuat data..." :headers="header"
-                                :items="leads?.data" rowKey="id_lead" @update:selected="(val) => selectedId = val">
+                                :items="leads?.data" rowKey="id_lead">
 
                                 <template #empty>
                                     <div class="text-center py-5">
@@ -345,7 +345,7 @@ const canAccess = (permission, role = []) => {
                                             v-html="highlight(item.name, filters.keyword)"></div>
                                         <div v-if="item.email" class="text-muted small mb-2">
                                             <a :href="getEmail(item.email)" class="text-decoration-none">{{ item.email
-                                                }}</a>
+                                            }}</a>
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
                                             <a :href="getWaLink(item.phone)" target="_blank"
@@ -382,10 +382,10 @@ const canAccess = (permission, role = []) => {
                                                 </template>
 
                                                 <span v-if="item.lead_product.length > 2"
-                                                    class="badge bg-light text-secondary border py-1 px-2 rounded-pill shadow-sm"
-                                                    style="font-size: 11px; cursor: help;"
-                                                    :title="'Ada ' + (item.lead_product.length - 2) + ' produk lainnya di dalam form'">
-                                                    +{{ item.lead_product.length - 2 }}
+                                                    class="badge bg-light text-secondary border py-1 px-3 rounded-pill shadow-sm"
+                                                    style="font-size: 11px;"
+                                                    :title="'Ada ' + (item.lead_product.length - 2) + ' Produk lainnya'">
+                                                    +{{ item.lead_product.length - 2 }} Produk lainnya
                                                 </span>
 
                                             </div>
@@ -424,7 +424,7 @@ const canAccess = (permission, role = []) => {
                                                 style="font-size: 11.5px;">
                                                 <i class="bi bi-play-circle-fill text-primary me-1"></i>
                                                 Mulai: <span class="ms-1 fw-medium">{{ formatDate(item.follow_up_date)
-                                                }}</span>
+                                                    }}</span>
                                             </div>
 
                                             <div class="d-flex align-items-center text-muted" style="font-size: 11.5px;"
@@ -474,7 +474,7 @@ const canAccess = (permission, role = []) => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.creator_name || 'Sistem'
-                                                }} - {{ `${getRoleName(item.role_name).label}`
+                                                    }} - {{ `${getRoleName(item.role_name).label}`
                                                     }}
                                                 </span>
                                                 <span class="small mb-1 fw-semibold">

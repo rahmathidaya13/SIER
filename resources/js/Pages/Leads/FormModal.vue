@@ -460,7 +460,7 @@ const dpAmount = computed(() => {
                     'bi bi-pencil-square text-primary': isEdit,
                     'bi bi-plus-circle-fill text-primary': !isEdit
                 }
-            ]" :show="props.show" :title="isEdit ? 'Manajemen Prospek & Follow-Up' : ' Input Prospek Baru'"
+            ]" :show="props.show" :title="isEdit ? 'Ubah Data Prospek' : ' Input Prospek Baru'"
                 :mobileFullscreen="false" @closed="close">
 
                 <template #body>
@@ -754,8 +754,7 @@ const dpAmount = computed(() => {
                             @click.prevent="close">Batal</button>
 
                         <button @click.prevent="submit" type="button" :disabled="form.processing || isLoading"
-                            class="btn btn-height-1 fw-semibold"
-                            :class="isEdit ? 'btn-c-success' : 'btn-c-primary'">
+                            class="btn btn-height-1 fw-semibold" :class="isEdit ? 'btn-c-success' : 'btn-c-primary'">
                             <span v-if="form.processing" class="spinner-border spinner-border-sm me-2"></span>
                             <i v-else :class="isEdit ? 'bi bi-check-circle me-1' : 'bi bi-save me-1'"></i>
                             {{ submitTextButton }}

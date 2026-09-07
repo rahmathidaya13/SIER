@@ -17,7 +17,6 @@ const props = defineProps({
     stats: Object,
     branch: Array
 });
-console.log(props.sales.data);
 const {
     filters,
     isLoading,
@@ -294,7 +293,7 @@ onMounted(() => {
 
                         <div class="card-body p-0">
                             <table-wrapper :loader="isLoading" loaderText="Sedang memuat data..." :headers="header"
-                                :items="sales?.data" rowKey="id_sales" @update:selected="(val) => selectedIdSale = val">
+                                :items="sales?.data" rowKey="id_sales">
 
                                 <template #empty>
                                     <div class="text-center py-5">
@@ -412,7 +411,7 @@ onMounted(() => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.sales_name || 'Sistem'
-                                                    }} - {{ `${getRoleName(item.role_name).label ?? 'Unknown'}` }}
+                                                }} - {{ `${getRoleName(item.role_name).label ?? 'Unknown'}` }}
                                                 </span>
                                                 <span class="small mb-1 fw-semibold">
                                                     <i class="bi bi-geo-alt-fill text-danger"></i>

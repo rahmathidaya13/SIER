@@ -76,10 +76,17 @@ watch(selectedRow, (val) => {
     const selectDataObject = rows.value.filter(item => val.includes(getRowId(item)));
     emit('update:selected', selectDataObject);
 });
+
+// Jika props.modelValue berubah dari luar, sinkronkan dengan selectedRow secara otomatis
 watch(() => props.modelValue, (newVal) => {
     if (newVal && newVal.length === 0) {
         selectedRow.value = [];
     }
+}, { deep: true });
+
+// Bersihkan ceklis secara otomatis jika pindah halaman pagination
+watch(() => props.items, () => {
+    selectedRow.value = [];
 }, { deep: true });
 // Fungsi untuk menggabungkan class internal (selected) dengan class dari luar
 const computeRowClass = (item) => {

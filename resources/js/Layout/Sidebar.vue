@@ -1,13 +1,15 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { hasRole, hasPermission } from "@/Composables/useAuth";
-import { computed, inject } from 'vue';
+import { useNotification } from "@/Composables/useNotification"
+import { computed } from 'vue';
 defineProps({
     isOpen: Boolean
 })
 const emit = defineEmits(['close', 'openProfileModal']);
 const currentPath = usePage().props.path;
-const unreadCount = inject('unreadCount');
+
+const { unreadCount } = useNotification();
 const isSelectedActive = (pattern) => {
     const regex = new RegExp("^" + pattern.replace("*", ".*") + "$");
     return regex.test(currentPath);
@@ -18,7 +20,9 @@ const menuItems = [
         icon: 'bi bi-bell-fill',
         route: 'notification.index',
         prefixUrl: 'notification*',
-        badge: unreadCount > 99 ? '99+' : unreadCount
+        badge: unreadCount.value > 99
+            ? '99+'
+            : unreadCount.value,
     },
     {
         title: 'Home',
@@ -95,6 +99,16 @@ const menus = computed(() => {
         }
 
         return roleAllowed && permissionAllowed;
+    }).map(menu => {
+        if (menu.route === 'notification.index') {
+            return {
+                ...menu,
+                badge: unreadCount.value > 99
+                    ? '99+'
+                    : unreadCount.value
+            };
+        }
+        return menu;
     });
 });
 const rolesName = (role) => {

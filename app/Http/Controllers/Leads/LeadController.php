@@ -12,8 +12,6 @@ use App\Traits\LeadsValidation;
 use App\Services\Lead\LeadServices;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\LeadResource;
-use App\Notifications\Lead\LeadCreateNotification;
-use App\Notifications\Lead\LeadDeleteNotification;
 use App\Traits\BranchMutationHelper;
 use Illuminate\Support\Facades\Gate;
 use App\Repository\Sale\SaleRepository;
@@ -23,6 +21,9 @@ use Illuminate\Support\Facades\Notification;
 use App\Repository\Channel\ChannelRepository;
 use App\Services\Lead\LeadConversionServices;
 use Illuminate\Validation\ValidationException;
+use App\Notifications\Lead\LeadCreateNotification;
+use App\Notifications\Lead\LeadDeleteNotification;
+use App\Notifications\Lead\LeadUpdateNotification;
 use App\Services\Authorization\ScopeResolverService;
 
 class LeadController extends Controller
@@ -104,13 +105,8 @@ class LeadController extends Controller
         try {
             $leads = $this->leadServices->store($validated, $user);
 
-            $branchUsers = User::where('id_branch', $leads->id_branch)
-                ->where('id', '!=', $user->id)
-                ->get();
-
-            $admins = User::role(['super_admin', 'developer'])->get();
-            $recipients = $branchUsers->merge($admins)->unique('id');
-            Notification::send($recipients, new LeadCreateNotification($leads, $user->name));
+            $recipients = $this->getLeadNotificationRecipients($leads, $user);
+            Notification::send($recipients, new LeadCreateNotification($leads, $user));
 
             $this->invalidateCaches(
                 [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
@@ -150,16 +146,30 @@ class LeadController extends Controller
         }
 
         try {
-            $this->leadServices->update($leads, $validated, $user);
+            $leads = $this->leadServices->update($leads, $validated, $user);
+            $recipients = $this->getLeadNotificationRecipients(
+                $leads,
+                $user
+            );
+            Notification::send(
+                $recipients,
+                new LeadUpdateNotification(
+                    $leads,
+                    $user
+                )
+            );
             $this->invalidateCaches(
                 [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
                 ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
             );
             return redirect()->back()->with('message', 'Lead ' . $leads->name . ' berhasil diperbarui!');
         } catch (\Exception $error) {
+            $errorMessage = config('app.debug')
+                ? $error->getMessage()
+                : 'Terjadi kesalahan pada server. Silakan coba lagi.';
             return redirect()->back()
                 ->withInput()
-                ->withErrors(['error' => 'Gagal memperbarui data: ' . $error->getMessage()]);
+                ->withErrors(['error' => 'Gagal memperbarui data: ' . $errorMessage]);
         }
     }
 
@@ -194,14 +204,12 @@ class LeadController extends Controller
             'activity.userUpdate.roles:id,name',
         ])->findOrFail($id);
 
-        return new LeadResource($leads);
+        return new LeadResource($leads); // Gunakan LeadResource untuk mengubah data menjadi format JSON yang sesuai
     }
     public function destroy(string $id)
     {
         $user = auth()->user();
         $leads = LeadModel::find($id);
-
-
 
         if (!$leads) {
             throw ValidationException::withMessages([
@@ -216,20 +224,39 @@ class LeadController extends Controller
             ]);
         }
 
-        $leads->delete();
+        try {
+            $leadId = $leads->id_lead;
+            $leadName = $leads->name;
+            $recipients = $this->getLeadNotificationRecipients($leads, $user);
+            $this->leadServices->delete($leads, $user);
+            Notification::send($recipients, new LeadDeleteNotification($leadId, $leadName, $user));
+            $this->invalidateCaches(
+                [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
+                ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+            );
+            return redirect()->back()->with('message', 'Lead ' . ucwords($leads->name) . ' berhasil dihapus');
+        } catch (\Exception $error) {
+            $errorMessage = config('app.debug')
+                ? $error->getMessage()
+                : 'Terjadi kesalahan pada server. Silakan coba lagi.';
 
-        $branchUsers = User::where('id_branch', $leads->id_branch)
-            ->where('id', '!=', auth()->id())
+            return redirect()
+                ->back()
+                ->withErrors([
+                    'error' => $errorMessage
+                ]);
+        }
+    }
+
+    private function getLeadNotificationRecipients(LeadModel $lead, User $actor)
+    {
+        $branchUsers = User::query()
+            ->where('id_branch', $lead->id_branch)
+            ->where('id', '!=', $actor->id)
             ->get();
+
         $admins = User::role(['super_admin', 'developer'])->get();
 
-        $recipients = $branchUsers->merge($admins)->unique('id');
-        Notification::send($recipients, new LeadDeleteNotification($leads, $user->name));
-
-        $this->invalidateCaches(
-            [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
-            ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
-        );
-        return redirect()->back()->with('message', 'Lead ' . $leads->name . ' berhasil dihapus');
+        return $branchUsers->merge($admins)->unique('id');
     }
 }

@@ -1,7 +1,8 @@
 <script setup>
-import { Head, router } from '@inertiajs/vue3';
-import { computed, onMounted, ref, watch } from 'vue';
+import { Head, router, Link } from '@inertiajs/vue3';
+import { computed, ref, inject } from 'vue';
 import { useFilter } from '@/Composables/useFilter';
+import { useNotification } from "@/Composables/useNotification"
 import { hasRole, hasPermission } from '@/Composables/useAuth';
 import { formatDate } from '@/Helpers/formatDate';
 
@@ -11,6 +12,14 @@ const props = defineProps({
 })
 
 const selectedRow = ref([]);
+
+const {
+    unreadCount,
+    setUnreadCount,
+    resetUnread,
+    decrementUnread
+} = useNotification();
+
 const {
     filters,
     isLoading,
@@ -41,11 +50,17 @@ const markSelectedAsRead = () => {
         return;
     };
     const ids = selectedRow.value.map(item => item.id);
+    resetUnread();
     router.post(route('notifications.readAll'), { ids: ids }, {
         preserveScroll: true,
-        preserveState: true,
         replace: true,
-        onSuccess: () => selectedRow.value = [],
+        onSuccess: () => {
+            selectedRow.value = []
+            resetUnread()
+        },
+        onError: () => {
+            alert('Gagal menandai notifikasi sebagai dibaca. Silakan coba lagi.');
+        }
     });
 };
 
@@ -53,11 +68,19 @@ const markSelectedAsRead = () => {
 const markAsRead = (notification) => {
     // Jika sudah dibaca, tidak perlu panggil backend lagi
     if (notification.read_at !== null) return;
-    console.log(notification);
+    // decrementUnread();
     router.post(route('notifications.read', notification.id), {}, {
         preserveScroll: true,
-        preserveState: true,
         replace: true,
+        onSuccess: () => {
+            // Jika berhasil, update read_at di frontend
+            selectedRow.value = []
+            notification.read_at = new Date().toISOString();
+            decrementUnread();
+        },
+        onError: () => {
+            alert('Gagal menandai notifikasi sebagai dibaca. Silakan coba lagi.');
+        },
     });
 };
 const header = [
@@ -100,7 +123,7 @@ const header = [
 const rowClasses = (item) => ({
     'tr-highlight-info': item.read_at === null,
 })
-
+console.log(props.notifications.data);
 </script>
 <template>
 
@@ -167,7 +190,7 @@ const rowClasses = (item) => ({
 
                                 <template #empty>
                                     <div class="text-center py-5">
-                                        <i class="bi bi-funnel fa-3x text-muted opacity-25 mb-3 d-block"></i>
+                                        <i class="bi bi-bell-slash-fill fa-3x text-muted opacity-25 mb-3 d-block"></i>
                                         <h6 class="text-muted fw-bold">
                                             Data Notifikasi Masih Kosong
                                         </h6>
@@ -184,6 +207,7 @@ const rowClasses = (item) => ({
                                             {{ item.data.title }}
                                         </div>
                                     </td>
+
                                     <td>
                                         <div class="fw-bold d-flex flex-column">
                                             {{ item.data.message }}
@@ -191,6 +215,14 @@ const rowClasses = (item) => ({
                                                 {{ formatDate(item.created_at) }}
                                             </small>
                                         </div>
+                                        <Link :href="item.data.action?.route"
+                                            class="btn btn-link p-0 text-decoration-none"
+                                            v-if="item.data.action?.route">
+                                            <span class="small">
+                                                {{ item.data.action.label }} <i
+                                                    :class="item.data.action.icon || 'bi bi-box-arrow-up-right'"></i>
+                                            </span>
+                                        </Link>
                                     </td>
 
                                     <td class="text-center">

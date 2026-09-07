@@ -44,7 +44,6 @@ const loadTimeline = async () => {
         products.value = data.sales_product || null;
         paymentHistories.value = data.payment_history || [];
         sales.value = data;
-        console.log(data);
     } catch (error) {
         console.error("Gagal mengambil riwayat:", error);
     } finally {

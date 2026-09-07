@@ -168,8 +168,7 @@ onMounted(() => {
 
                         <div class="card-body p-0">
                             <table-wrapper :loader="isLoading" loaderText="Sedang memuat data..." :headers="header"
-                                :items="branches?.data" row-key="id_branch"
-                                @update:selected="(val) => selectedData = val">
+                                :items="branches?.data" row-key="id_branch">
 
                                 <template #empty>
                                     <div

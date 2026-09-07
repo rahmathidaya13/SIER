@@ -33,8 +33,8 @@ const goToPage = (url) => {
     const page = params.get('page')
 
     const payload = {
-        page,
         ...props.additionalQuery,
+        page,
     }
     router.get(route(props.routeName), cleanFilters(payload), {
         preserveScroll: true,

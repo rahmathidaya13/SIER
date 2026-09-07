@@ -50,7 +50,7 @@ class LeadConversionServices
                 'updated_by' => auth()->id(),
             ]);
 
-            $message = '💰 Transaksi ' . $validated['payment_method'] === 'LUNAS' ? 'lunas' : 'Dana Awal (Dp)' . ' dari pelanggan ' . ucwords($leads->name) . ' sebesar Rp ' . number_format($validated['paid_amount'], 0, ',', '.') . ' (' . $validated['payment_status'] . ').';
+            $message = '💰 Transaksi ' . $validated['payment_status'] === 'LUNAS' ? 'Lunas' : 'Dana Awal (Dp)' . ' dari pelanggan ' . ucwords($leads->name) . ' sebesar Rp ' . number_format($validated['paid_amount'], 0, ',', '.') . ' (' . $validated['payment_status'] . ').';
             $sales->paymentHistory()->create([
                 'id_sales' => $sales->id_sales,
                 'id_user' => $sales->id_user,
@@ -62,14 +62,12 @@ class LeadConversionServices
                 'payment_at' => now()->toDateTimeString()
             ]);
 
-            if ($sales->lead) {
-                $leads->activity()->create([
-                    'id_user'     =>  $leads->id_user,
-                    'id_lead'     =>  $leads->id_lead,
-                    'source'      => 'transaction',
-                    'description' => '🎉 Pelanggan DEAL! Transaksi disahkan dengan nilai Rp ' . number_format($validated['deal_price'], 0, ',', '.') . ' (' . $validated['payment_status'] . ').'
-                ]);
-            }
+            $leads->activity()->create([
+                'id_user'     =>  $leads->id_user,
+                'id_lead'     =>  $leads->id_lead,
+                'source'      => 'transaction',
+                'description' => '🎉 Pelanggan DEAL! Transaksi disahkan dengan nilai Rp ' . number_format($validated['deal_price'], 0, ',', '.') . ' (' . $validated['payment_status'] . ').'
+            ]);
 
             return $sales;
         });
