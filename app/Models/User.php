@@ -8,11 +8,13 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable, HasRoles, HasUuids, SoftDeletes;
 
@@ -50,6 +52,13 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
     protected $dates    = ["deleted_at"];
+
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(
+            new ResetPasswordNotification($token)
+        );
+    }
 
     public function scopeAllowedForUser($query)
     {

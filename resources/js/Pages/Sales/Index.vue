@@ -8,6 +8,7 @@ import axios from 'axios';
 import { formatDate } from '@/Helpers/formatDate';
 import { currencyFormat } from '@/Helpers/currencyFormat';
 import PaymentModal from './PaymentModal.vue';
+import PaymentCancelModal from './PaymentCancelModal.vue';
 import ActivityTimelineModal from './ActivityTimelineModal.vue';
 import { hasRole, hasPermission } from '@/Composables/useAuth';
 
@@ -40,6 +41,7 @@ const {
 });
 
 const showPaymentModal = ref(false);
+const showPaymentCancelModal = ref(false);
 const showActivityModal = ref(false);
 const selectedIdSale = ref(null);
 const openPaymentModal = (data) => {
@@ -50,10 +52,10 @@ const openActivityModal = (data) => {
     selectedIdSale.value = data.id_sales;
     showActivityModal.value = true;
 }
+
 const cancelClosing = (data) => {
     selectedIdSale.value = data.id_sales;
-    showPaymentModal.value = true;
-
+    showPaymentCancelModal.value = true;
 }
 const header = [
     {
@@ -465,6 +467,8 @@ onMounted(() => {
                 </div>
 
             </div>
+            <PaymentCancelModal :idSales="selectedIdSale" :show="showPaymentCancelModal"
+                @update:show="showPaymentCancelModal = $event" />
             <PaymentModal :idSales="selectedIdSale" :show="showPaymentModal" @update:show="showPaymentModal = $event" />
             <ActivityTimelineModal :idSales="selectedIdSale" :show="showActivityModal"
                 @update:show="showActivityModal = $event" />

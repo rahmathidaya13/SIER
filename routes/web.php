@@ -6,17 +6,18 @@ use App\Http\Controllers\Home\HomeController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Leads\LeadController;
+use App\Http\Controllers\Sales\SaleController;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\Auth\ResetPasswordController;
-use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Branch\BranchController;
 use App\Http\Controllers\Channel\ChannelController;
-use App\Http\Controllers\Leads\LeadActivityController;
-use App\Http\Controllers\Leads\LeadConversionController;
-use App\Http\Controllers\Notification\NotificationController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Profile\ProfileController;
-use App\Http\Controllers\Sales\SaleController;
+use App\Http\Controllers\Auth\VerificationController;
+use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\Leads\LeadActivityController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Leads\LeadConversionController;
+use App\Http\Controllers\Notification\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -85,6 +86,7 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
         Route::get('/sales/list', 'index')->name('sales.index');
         Route::get('/sales/show/{id}', 'show')->name('sales.show');
         Route::post('/sales/pay/{id}', 'payRemaining')->name('sales.pay');
+        Route::post('/sales/cancel/{id}', 'payCancel')->name('sales.cancel');
     });
     Route::controller(BranchController::class)->group(function () {
         Route::get('/branch/list', 'index')->name('branch.index');
@@ -107,6 +109,13 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
     });
 });
 
+// akun yang sudah login dan diverifikasi emailnya
+Route::controller(VerificationController::class)->group(function () {
+    Route::get('/email/verify', 'notice')->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}', 'verify')->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
+    Route::post('/email/verification-notification', 'resend')->middleware(['throttle:6,1'])->name('verification.send');
+});
+
 // akun yang belum login dan akan register
 Route::middleware(['guest'])->group(function () {
     Route::controller(LoginController::class)->group(function () {
@@ -120,11 +129,11 @@ Route::middleware(['guest'])->group(function () {
     });
 
     Route::controller(ForgotPasswordController::class)->group(function () {
-        Route::get('/forgot-password', 'create')->name('forgot.create');
+        Route::get('/forgot-password', 'showForgotPasswordForm')->name('forgot.create');
         Route::post('/forgot-password/store', 'store')->name('forgot.store');
     });
     Route::controller(ResetPasswordController::class)->group(function () {
-        Route::get('/reset-password/{token}', 'create')->name('password.reset');
-        Route::post('/reset-password/store', 'store')->name('password.store');
+        Route::get('/reset-password/{token}', 'showResetPasswordForm')->name('password.reset');
+        Route::post('/reset-password/store', 'resetPassword')->name('password.store');
     });
 });

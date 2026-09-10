@@ -32,7 +32,6 @@ class RegisterService
 
             $user->assignRole($validated['role']);
             $this->assignUserPermission($user, $validated['role']);
-
             event(new Registered($user));
             DB::commit();
             return $user;

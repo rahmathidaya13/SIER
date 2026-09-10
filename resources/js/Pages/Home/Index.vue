@@ -11,6 +11,7 @@ const props = defineProps({
     },
     filters: Object
 })
+console.log(props.stats);
 const {
     filters,
 } = useFilter({
@@ -147,9 +148,11 @@ const branchOptions = computed(() => [
                         </span>
                         <div class="d-flex gap-2 bg-white p-2 rounded-3 border text-dark align-items-center ms-auto">
 
-                            <select-input v-if="branches.length > 0 && hasRole('super_admin')" :isValid="false"
-                                text="Pilih Cabang" name="branch" :options="branchOptions" v-model="filters.branch" />
-                            <div v-if="branches.length > 0 && hasRole('super_admin')" class="vr my-1"></div>
+                            <select-input v-if="branches.length > 0 && hasRole(['super_admin', 'developer'])"
+                                :isValid="false" text="Pilih Cabang" name="branch" :options="branchOptions"
+                                v-model="filters.branch" />
+                            <div v-if="branches.length > 0 && hasRole(['super_admin', 'developer'])" class="vr my-1">
+                            </div>
                             <select name="month" id="month" v-model="filters.month"
                                 class="form-select form-select-sm focus-none fw-semibold">
                                 <option v-for="month in months" :key="month.value" :value="month.value">{{
@@ -167,8 +170,10 @@ const branchOptions = computed(() => [
                 </div>
 
 
+
+
                 <div class="col-sm-6 col-xl-3">
-                    <div class="card p-3 h-100 border-0 shadow-sm">
+                    <div class="card p-3 h-100 custom-card">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <p class="text-muted mb-1 small fw-medium">Total Prospek (Leads)</p>
@@ -185,7 +190,7 @@ const branchOptions = computed(() => [
                     </div>
                 </div>
                 <div class="col-sm-6 col-xl-3">
-                    <div class="card p-3 h-100">
+                    <div class="card p-3 h-100 custom-card">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <p class="text-muted mb-1 small fw-medium">Berhasil Closing</p>
@@ -204,7 +209,7 @@ const branchOptions = computed(() => [
                     </div>
                 </div>
                 <div class="col-sm-6 col-xl-3">
-                    <div class="card p-3 h-100 border border-primary">
+                    <div class="card p-3 h-100 custom-card">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <p class="text-muted mb-1 small fw-medium">Rata-rata Closing</p>
@@ -219,7 +224,7 @@ const branchOptions = computed(() => [
                     </div>
                 </div>
                 <div class="col-sm-6 col-xl-3">
-                    <div class="card p-3 h-100">
+                    <div class="card p-3 h-100 custom-card">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <p class="text-muted mb-1 small fw-medium">Nominal Closing</p>
@@ -234,8 +239,26 @@ const branchOptions = computed(() => [
                     </div>
                 </div>
 
-                <div class="col-lg-4">
+                <div class="col-12">
                     <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div>
+                                <h6 class="fw-bold mb-1">Statistik Konversi Funnel</h6>
+                                <p class="text-muted small">Tren prospek masuk vs closing selama 1 bulan</p>
+                            </div>
+                            <!-- <div class="badge bg-light text-dark border">Harian</div> -->
+                        </div>
+
+                        <div class="py-2 mt-auto" style="height: 400px;">
+                            <chart-bar type="pie" :height="400" :labels="funnelLabels" :datasets="funnelChartData"
+                                tooltip-suffix=" Leads" />
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="col-lg-4">
+                    <div class="card rounded-4 p-4 h-100 custom-card">
                         <h6 class="fw-bold mb-4">Sebaran Status Prospek</h6>
 
                         <div class="mb-3">
@@ -277,34 +300,34 @@ const branchOptions = computed(() => [
                 </div>
 
                 <div class="col-lg-4">
-                    <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                    <div class="card rounded-4 p-4 h-100 custom-card">
                         <h6 class="fw-bold mb-4">Kualitas Leads (Temperature)</h6>
 
-                        <div class="d-flex align-items-center gap-3 mb-3 p-2 bg-danger bg-opacity-10 rounded-3">
+                        <div class="d-flex border border-danger align-items-center gap-3 mb-3 p-2 bg-danger bg-opacity-10 rounded-3">
                             <div class="fs-4 text-danger"><i class="bi bi-fire"></i></div>
                             <div class="flex-grow-1">
                                 <div class="d-flex justify-content-between mb-1">
-                                    <span class="small fw-bold text-danger">HOT (Siap Beli)</span>
+                                    <span class="small fw-bold text-danger">HOT (Siap Closing)</span>
                                     <span class="small fw-bold text-danger">{{ stats.temperature?.hot || 0 }}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="d-flex align-items-center gap-3 mb-3 p-2 bg-warning bg-opacity-10 rounded-3">
+                        <div class="d-flex border border-warning align-items-center gap-3 mb-3 p-2 bg-warning bg-opacity-10 rounded-3">
                             <div class="fs-4 text-warning"><i class="bi bi-sun"></i></div>
                             <div class="flex-grow-1">
                                 <div class="d-flex justify-content-between mb-1">
-                                    <span class="small fw-bold text-warning">WARM (Pikir-pikir)</span>
+                                    <span class="small fw-bold text-warning">WARM (Masih Mempertimbangkan)</span>
                                     <span class="small fw-bold text-warning">{{ stats.temperature?.warm || 0 }}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="d-flex align-items-center gap-3 p-2 bg-info bg-opacity-10 rounded-3">
+                        <div class="d-flex border border-info align-items-center gap-3 p-2 bg-info bg-opacity-10 rounded-3">
                             <div class="fs-4 text-info"><i class="bi bi-snow"></i></div>
                             <div class="flex-grow-1">
                                 <div class="d-flex justify-content-between mb-1">
-                                    <span class="small fw-bold text-info">COLD (Hanya Tanya)</span>
+                                    <span class="small fw-bold text-info">COLD (Minat Rendah)</span>
                                     <span class="small fw-bold text-info">{{ stats.temperature?.cold || 0 }}</span>
                                 </div>
                             </div>
@@ -314,18 +337,18 @@ const branchOptions = computed(() => [
 
                 <div class="col-lg-4">
                     <div
-                        class="card border-0 shadow-sm rounded-4 p-4 h-100 text-center d-flex flex-column justify-content-center">
-                        <h6 class="fw-bold mb-4 text-start">Status Pembayaran</h6>
+                        class="card  rounded-4 p-4 h-100 text-center d-flex flex-column justify-content-center custom-card">
+                        <h6 class="fw-bold mb-4 text-start">Status Transaksi</h6>
 
                         <div class="d-flex justify-content-around">
                             <div>
                                 <h2 class="fw-bold text-success mb-0">{{ stats.payment?.lunas || 0 }}</h2>
-                                <p class="text-muted small">Transaksi Lunas</p>
+                                <p class="text-muted small">Lunas</p>
                             </div>
                             <div class="border-end"></div>
                             <div>
                                 <h2 class="fw-bold text-primary mb-0">{{ stats.payment?.dp || 0 }}</h2>
-                                <p class="text-muted small">Pembayaran DP</p>
+                                <p class="text-muted small">Dana Awal (DP)</p>
                             </div>
                         </div>
 
@@ -337,25 +360,26 @@ const branchOptions = computed(() => [
                 </div>
 
 
-                <div class="col-12">
-                    <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <div>
-                                <h6 class="fw-bold mb-1">Statistik Konversi Funnel</h6>
-                                <p class="text-muted small">Tren prospek masuk vs closing selama 1 bulan</p>
-                            </div>
-                            <div class="badge bg-light text-dark border">Harian</div>
-                        </div>
 
-                        <div class="py-2 mt-auto" style="height: 400px;">
-                            <chart-bar type="pie" :height="400" :labels="funnelLabels" :datasets="funnelChartData"
-                                tooltip-suffix=" Leads" />
-                        </div>
-                    </div>
-                </div>
             </div>
 
 
         </template>
     </app-layout>
 </template>
+<style scoped>
+.custom-card {
+    cursor: pointer;
+    border: 1px solid #dee2e6;
+    transition:
+        border-color 0.25s ease,
+        box-shadow 0.25s ease,
+        transform 0.25s ease;
+}
+
+.custom-card:hover {
+    border-color: #0d6efd;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.08);
+}
+</style>

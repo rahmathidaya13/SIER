@@ -285,7 +285,7 @@ const canAccess = (permission, role = []) => {
                                     <i class="bi bi-search input-icon-left"></i>
                                     <input-text ref="keywordRef" :isValid="false" v-model="filters.keyword"
                                         inputClass="input-fixed-height input-height-1 rounded-pill"
-                                        placeholder="Cari nama...." />
+                                        placeholder="Cari nama pelanggan...." />
                                 </div>
                             </div>
                             <div class="col-xl-2 col-3 col-md-3 col-lg-3">

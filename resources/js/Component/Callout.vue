@@ -3,7 +3,7 @@ import { Link, usePage } from "@inertiajs/vue3";
 import { onBeforeUnmount, ref, watch } from "vue";
 const props = defineProps({
     icon: {
-        type: Object,
+        type: [Boolean, Object],
         default: {
             success: "fas fa-check-circle text-success",
             danger: "fas fa-times-circle text-danger",
@@ -178,7 +178,7 @@ onBeforeUnmount(() => {
         <div :class="['callout rounded-3 align-items-center d-flex justify-content-between', `callout-${localFlash.type}`]"
             v-if="localFlash && visible">
             <div class="d-flex align-items-center gap-2 fw-semibold flex-wrap">
-                <i v-if="localFlash.type" :class="icon[localFlash.type]"></i>
+                <i v-if="localFlash.type || props.icon" :class="icon[localFlash.type]"></i>
                 <span>
                     {{ localFlash.msg }}
                 </span>

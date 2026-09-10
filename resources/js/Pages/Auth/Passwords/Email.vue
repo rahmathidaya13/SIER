@@ -1,26 +1,31 @@
 <script setup>
 import { useForm, Head, Link, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 const form = useForm({
     email: "",
 });
 const submit = () => {
     form.post(route("forgot.store"), {
-        onFinish: () => form.reset("email")
+        preserveScroll: true,
+        onSuccess: () => form.reset("email"),
     });
 };
 const page = usePage();
 const message = computed(() => page.props.flash.message);
+const emailInput = ref(null);
+onMounted(() => {
+    emailInput.value.focus();
+});
 </script>
 
 <template>
 
-    <Head title="Forgot Password" />
+    <Head title="Lupa Kata Sandi" />
 
     <div class="container">
         <div class="row justify-content-center min-vh-100 align-items-center">
-            <div class="col-xl-6">
+            <div class="col-xl-6 col-12">
 
                 <div class="card shadow-sm rounded-3 rounded overflow-hidden">
                     <div class="card-header text-bg-primary">
@@ -33,30 +38,34 @@ const message = computed(() => page.props.flash.message);
                             didaftarkan
                         </p>
                         <hr />
-                        <alert :duration="15" :variant="$page.props.flash.error ? 'danger' : 'success'"
-                            :message="$page.props.flash.error || message" />
-
+                        <callout :icon="false" :duration="0" />
                         <form-wrapper @submit="submit">
                             <div class="mb-3">
-                                <input-label for="email" value="Alamat Email" />
+                                <input-label for="email_input" value="Alamat Email" labelClass="mb-2" />
                                 <div class="position-relative">
                                     <i class="fas fa-envelope input-icon-left"></i>
-                                    <text-input autofocus class="input-fixed-height input-height-2"
-                                        placeholder="nama@email.com" name="email" v-model="form.email" />
+                                    <input-text ref="emailInput" :error="form.errors.email"
+                                        inputClass="input-fixed-height" placeholder="nama@email.com" name="email"
+                                        v-model="form.email" />
                                 </div>
                                 <input-error :message="form.errors.email" />
                             </div>
 
                             <div class="d-grid">
-                                <base-button type="submit" label="Kirim Link Reset Password" waiting="Memproses..."
-                                    :loading="form.processing" class="bg-gradient" />
+                                <button type="submit"
+                                    class="btn btn-primary bg-gradient py-2 shadow-sm d-flex justify-content-center align-items-center"
+                                    :disabled="form.processing">
+                                    <span v-if="form.processing" class="spinner-border spinner-border-sm me-2"
+                                        role="status"></span>
+                                    <i v-else class="fas fa-paper-plane me-2"></i> Kirim Link
+                                </button>
                             </div>
                         </form-wrapper>
                     </div>
                     <div class="card-footer">
                         <div class="text-center p-2">
                             <Link :href="route('login')" class="text-decoration-none">
-                            &larr; Kembali ke halaman masuk
+                                &larr; Kembali ke halaman masuk
                             </Link>
                         </div>
                     </div>

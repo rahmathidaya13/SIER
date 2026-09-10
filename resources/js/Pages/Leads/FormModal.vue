@@ -340,15 +340,15 @@ const isLocked = computed(() => {
 
 const tempOptions = computed(() => {
     let options = [
-        { label: '🔥 HOT (Siap Bayar)', value: 'HOT' },
-        { label: '⏳ WARM (Tanya-tanya)', value: 'WARM' },
-        { label: '❄️ COLD (Sekedar Lewat)', value: 'COLD' },
+        { label: '🔥 HOT (Siap Closing)', value: 'HOT' },
+        { label: '⏳ WARM (Masih Mempertimbangkan)', value: 'WARM' },
+        { label: '❄️ COLD (Minat Rendah)', value: 'COLD' },
     ];
     if (isEdit.value) {
         options =
             [
-                { label: '⏳ WARM (Tanya-tanya)', value: 'WARM' },
-                { label: '❄️ COLD (Sekedar Lewat)', value: 'COLD' },
+                { label: '⏳ WARM (Masih Mempertimbangkan)', value: 'WARM' },
+                { label: '❄️ COLD (Minat Rendah)', value: 'COLD' },
             ]
     }
     return options;
@@ -643,7 +643,7 @@ const dpAmount = computed(() => {
                                                     KHUSUS (Opsional)</label>
                                                 <text-area :error="form.errors.notes" name="notes" v-model="form.notes"
                                                     :rows="2"
-                                                    placeholder="Contoh: Pelanggan minta dihubungi di atas jam 5 sore..." />
+                                                    placeholder="Contoh: Pelanggan minta dihubungi di atas jam 2 siang..." />
                                                 <input-error :message="form.errors.notes" />
                                             </div>
                                         </div>

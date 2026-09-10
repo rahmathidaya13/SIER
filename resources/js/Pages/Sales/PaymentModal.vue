@@ -2,9 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useForm, router, usePage } from "@inertiajs/vue3";
 import { hasRole } from '@/Composables/useAuth';
-import { useRowAlert } from '@/Composables/useAlert';
 import { currencyFormat } from "@/Helpers/currencyFormat";
-const { show, __alert, hide } = useRowAlert();
 import axios from "axios";
 const props = defineProps({
     idSales: {
@@ -86,8 +84,7 @@ watch(() => props.show, async (isOpen) => {
                     <alert-error-all :errors="form.errors" @close="form.clearErrors()" />
 
                     <form-wrapper @submit.prevent="submit">
-                        <div
-                            class="card bg-c-slate text-white border-0 shadow-lg mb-4 overflow-hidden position-relative">
+                        <div class="card bg-c-slate text-white border-0 mb-4 overflow-hidden position-relative">
                             <div class="card-body p-4">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>

@@ -8,10 +8,11 @@ use Illuminate\Http\Request;
 use App\Traits\RegisterValidation;
 use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Controller;
-use App\Repository\Branches\BranchRepository;
 use App\Traits\BranchMutationHelper;
+use Illuminate\Support\Facades\Auth;
 use App\Services\Auth\RegisterService;
 use App\Repository\User\UserRepository;
+use App\Repository\Branches\BranchRepository;
 use Illuminate\Validation\ValidationException;
 
 class RegisterController extends Controller
@@ -40,7 +41,7 @@ class RegisterController extends Controller
     {
         $validated = $this->validateRegister($request->all());
 
-        // validasi kode cabang
+        // validasi kode cabang sebelum membuat akun
         $branch = BranchModel::where('id_branch', $validated['id_branch'])->first();
         if (!$branch || $branch->branch_code !== $validated['branch_code']) {
             throw ValidationException::withMessages([
@@ -54,8 +55,10 @@ class RegisterController extends Controller
             $user = $this->services->store($validated);
 
             // bersihkan cache
+            $user->sendEmailVerificationNotification(); // kirim email verifikasi
+            Auth::login($user); // login user baru
             $this->invalidateCaches([UserRepository::class, BranchRepository::class], ['global', 'global_super_admin', 'branch_' . $validated['id_branch'], 'user_' . $user->id]);
-            return redirect()->route('login')->with('message', 'Pendaftaran Akun baru berhasil. Silahkan login.');
+            return redirect()->route('verification.notice')->with('message',  'Akun berhasil dibuat. Silakan verifikasi email Anda.');
         } catch (\Exception $error) {
             return redirect()->back()
                 ->withInput()

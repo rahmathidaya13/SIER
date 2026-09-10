@@ -12,6 +12,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:show"]);
+
 const isLoading = ref(false);
 const form = useForm({
     deal_price: 0,

@@ -17,16 +17,26 @@ return new class extends Migration
 
             $table->foreignUuid('id_lead')->constrained('leads', 'id_lead')->cascadeOnDelete(); // Menautkan data closing ke riwayat prospeknya
             $table->foreignUuid('id_user')->constrained('users', 'id')->cascadeOnDelete(); // CS yang berhasil closing
-            // $table->foreignUuid('id_product')->constrained('products', 'id_product')->cascadeOnDelete();
 
             $table->unsignedBigInteger('deal_price')->default(0); // Harga deal (bisa beda dengan base_price kalau dikasih diskon)
             $table->unsignedBigInteger('paid_amount')->default(0); // Berapa duit yang udah masuk ke rekening?
             $table->unsignedBigInteger('remaining_bill')->default(0); // Berapa duit yang udah masuk ke rekening?
             $table->integer('quantity')->default(0);
+
+            $table->enum('status', ['ACTIVE', 'CANCELLED',])->default('ACTIVE');
             $table->enum('payment_status', ['LUNAS', 'DP'])->default('LUNAS');
 
             $table->dateTime('deal_at');
             $table->text('notes')->nullable();
+
+            // cancel closing
+            $table->dateTime('cancelled_at')->nullable();
+            $table->foreignUuid('cancelled_by')
+                ->nullable()
+                ->constrained('users', 'id')
+                ->nullOnDelete();
+            $table->enum('cancelled_reason', ['CUSTOMER_CANCELLED', 'PAYMENT_FAILED', 'ORDER_UNFULFILLABLE', 'DATA_ERROR', 'DUPLICATE', 'OTHER'])->nullable();
+            $table->text('cancelled_notes')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });

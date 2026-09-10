@@ -96,13 +96,14 @@ class SaleController extends Controller
         return redirect()->back()->with('message', 'Pelunasan berhasil dilakukan');
     }
 
-    public function cancelClosing()
+    public function payCancel(Request $request, string $id)
     {
-        $user = auth()->user();
-        $this->invalidateCaches(
-            [SaleRepository::class, LeadsRepository::class, ChannelRepository::class],
-            ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
-        );
-        return redirect()->back()->with('message', 'Closing berhasil dibatalkan');
+        dd($request->all(), $id);
+        // $user = auth()->user();
+        // $this->invalidateCaches(
+        //     [SaleRepository::class, LeadsRepository::class, ChannelRepository::class],
+        //     ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+        // );
+        // return redirect()->back()->with('message', 'Closing berhasil dibatalkan');
     }
 }

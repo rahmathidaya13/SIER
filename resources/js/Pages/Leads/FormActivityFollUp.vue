@@ -145,7 +145,7 @@ const close = () => {
 
 const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
-    return isEdit.value ? 'Simpan Perubahan' : 'Simpan';
+    return isEdit.value ? 'Simpan' : 'Ubah';
 });
 const getRoleName = (data, mode = 'create') => {
     let role;

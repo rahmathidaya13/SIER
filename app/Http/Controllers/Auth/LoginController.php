@@ -38,6 +38,11 @@ class LoginController extends Controller
         $this->authenticate($request);
         $request->session()->regenerate();
 
+        if (!$request->user()->hasVerifiedEmail()) {
+            return redirect()
+                ->route('verification.notice');
+        }
+
         return redirect(RouteServiceProvider::HOME)->with('message', 'Login berhasil. Selamat datang kembali.');
     }
     public function authenticate(Request $request): void

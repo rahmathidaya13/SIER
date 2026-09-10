@@ -150,7 +150,7 @@ class LeadServices
                 'payment_status' => $validated['payment_status'],
                 'quantity'       => $validated['quantity'],
                 'deal_at'        => now()->toDateTimeString(),
-                'notes'          => $validated['notes']
+                'notes'          => $validated['notes_sales']
             ]);
 
             // masukan banyak product kedalam database

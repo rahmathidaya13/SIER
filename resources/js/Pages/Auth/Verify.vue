@@ -1,5 +1,5 @@
 <script setup>
-import { useForm, Head, Link, usePage } from '@inertiajs/vue3';
+import { useForm, Head, usePage, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
 const props = defineProps({
     email: {
@@ -9,25 +9,30 @@ const props = defineProps({
 });
 const form = useForm();
 const submit = () => {
-    form.post(route("verification.send"));
+    form.post(route("verification.send"), {}, {
+        preserveScroll: true,
+    });
 };
 const page = usePage();
 const message = computed(() => page.props.flash.message);
+const logout = () => {
+    router.get(route('logout'));
+};
 </script>
 
 <template>
 
-    <Head title="Verify Email" />
+    <Head title="Verifikasi Email" />
 
     <div class="container">
         <div class="row justify-content-center min-vh-100 align-items-center">
-            <div class="col-xl-8 col-12">
+            <div class="col-xl-6 col-12">
                 <div class="card shadow-sm rounded-3 rounded overflow-hidden">
                     <div class="card-header text-bg-primary">
                         <h1 class="card-title text-center h4 mb-0 p-2 gap-2"> <i class="fas fa-envelope"></i>
                             Verifikasi email</h1>
                     </div>
-                    <div class="card-body p-4">
+                    <div class="card-body">
                         <alert :duration="15" :variant="$page.props.flash.error ? 'danger' : 'success'"
                             :message="$page.props.flash.error || message" />
 
@@ -43,6 +48,11 @@ const message = computed(() => page.props.flash.message);
                                     :loading="form.processing" class="bg-gradient" />
                             </div>
                         </form-wrapper>
+                    </div>
+                    <div class="text-center mb-3">
+                        <button type="button" class="btn btn-link text-danger" @click="logout">
+                            Keluar
+                        </button>
                     </div>
                 </div>
             </div>
