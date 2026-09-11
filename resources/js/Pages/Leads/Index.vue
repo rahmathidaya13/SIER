@@ -191,7 +191,7 @@ const getStatusBadge = (status) => {
 
         },
         'CLOSED_LOST': {
-            class: 'badge-soft-dark border border-danger',
+            class: 'badge-soft-danger border border-danger',
             label: '✖ Batal / Lost'
         }
     };
@@ -345,7 +345,7 @@ const canAccess = (permission, role = []) => {
                                             v-html="highlight(item.name, filters.keyword)"></div>
                                         <div v-if="item.email" class="text-muted small mb-2">
                                             <a :href="getEmail(item.email)" class="text-decoration-none">{{ item.email
-                                            }}</a>
+                                                }}</a>
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
                                             <a :href="getWaLink(item.phone)" target="_blank"
@@ -424,7 +424,7 @@ const canAccess = (permission, role = []) => {
                                                 style="font-size: 11.5px;">
                                                 <i class="bi bi-play-circle-fill text-primary me-1"></i>
                                                 Mulai: <span class="ms-1 fw-medium">{{ formatDate(item.follow_up_date)
-                                                    }}</span>
+                                                }}</span>
                                             </div>
 
                                             <div class="d-flex align-items-center text-muted" style="font-size: 11.5px;"
@@ -474,7 +474,7 @@ const canAccess = (permission, role = []) => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.creator_name || 'Sistem'
-                                                    }} - {{ `${getRoleName(item.role_name).label}`
+                                                }} - {{ `${getRoleName(item.role_name).label}`
                                                     }}
                                                 </span>
                                                 <span class="small mb-1 fw-semibold">
@@ -496,7 +496,8 @@ const canAccess = (permission, role = []) => {
                                     </td>
 
                                     <td class="text-center">
-                                        <div class="d-flex justify-content-center gap-1">
+                                        <div v-if="item.status !== 'CLOSED_LOST'"
+                                            class="d-flex justify-content-center gap-1">
                                             <button v-if="hasPermission('lead-edit') && item.status !== 'CLOSED_WON'"
                                                 @click="openEditModal(item)"
                                                 :class="`btn btn-c-success ${item.status === 'CLOSED_WON' ? 'disabled' : ''}`"
@@ -525,6 +526,10 @@ const canAccess = (permission, role = []) => {
                                                 <i class="bi bi-trash"></i>
                                             </button>
 
+                                        </div>
+                                        <div v-else class="d-flex justify-content-center gap-1">
+                                            <span class="small fw-semibold badge badge-soft-info rounded-5">No Action
+                                            </span>
                                         </div>
                                     </td>
 

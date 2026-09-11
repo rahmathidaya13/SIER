@@ -42,18 +42,16 @@ class SalePaymentService
                 'payment_at' => now()->toDateTimeString()
             ]);
 
-            if ($sales->lead) {
-                $sales->lead->activity()->create([
-                    'id_lead'     => $sales->lead->id_lead,
-                    'id_user'     => $sales->id_user,
-                    'description' => $this->msgPaymentActivity(
-                        $paidAmount,
-                        $validated['payment_method'],
-                        $validated['bank_name'] ?? null,
-                        $remaining
-                    )
-                ]);
-            }
+            $sales->lead->activity()->create([
+                'id_lead'     => $sales->lead->id_lead,
+                'id_user'     => $sales->id_user,
+                'description' => $this->msgPaymentActivity(
+                    $paidAmount,
+                    $validated['payment_method'],
+                    $validated['bank_name'] ?? null,
+                    $remaining
+                )
+            ]);
 
             return $sales->fresh();
         });

@@ -22,10 +22,15 @@ class SalesModel extends Model
         'deal_price',
         'remaining_bill',
         'paid_amount',
+        'status',
         'payment_status',
         'quantity',
         'deal_at',
         'notes',
+        'cancelled_at',
+        'cancelled_by',
+        'cancelled_reason',
+        'cancelled_notes',
     ];
     protected $dates    = ["deleted_at"];
     protected $casts = [

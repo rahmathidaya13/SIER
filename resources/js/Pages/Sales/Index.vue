@@ -29,12 +29,14 @@ const {
         order_by: props.filters.order_by ?? 'latest',
         branch: props.filters.branch ?? 'all',
         page: props.filters.page ?? 1,
+        status: props.filters.status ?? 'closing',
     },
     watchFields: [
         'keyword',
         'limit',
         'order_by',
-        'branch'
+        'branch',
+        'status'
     ],
     only: ['sales', 'filters', 'stats', 'branch'],
     debounceTime: 500,
@@ -180,6 +182,10 @@ const keywordRef = ref(null);
 onMounted(() => {
     keywordRef.value.focus();
 })
+
+const rowClasses = (item) => ({
+    'tr-highlight-danger': item.status === 'CANCELLED',
+})
 </script>
 <template>
 
@@ -276,6 +282,14 @@ onMounted(() => {
                                     text="Pilih Cabang" :options="branchOptions" />
                             </div>
                             <div class="col-xl-1 col-3 col-md-3 col-lg-3">
+                                <select-input :isValid="false" name="limit" v-model="filters.status" text="Pilih Status"
+                                    :options="[
+                                        { label: 'Tampilkan Semua', value: 'all' },
+                                        { label: 'Transaksi Closing', value: 'closing' },
+                                        { label: 'Transaksi Dibatalkan', value: 'cancelled' },
+                                    ]" />
+                            </div>
+                            <div class="col-xl-1 col-3 col-md-3 col-lg-3">
                                 <select-input :isValid="false" name="limit" v-model="filters.limit"
                                     text="Pilih Batas Data" :options="[
                                         { label: '☰ 10 Data', value: 10 },
@@ -294,8 +308,9 @@ onMounted(() => {
                         </div>
 
                         <div class="card-body p-0">
-                            <table-wrapper :loader="isLoading" loaderText="Sedang memuat data..." :headers="header"
-                                :items="sales?.data" rowKey="id_sales">
+                            <table-wrapper :rowClass="rowClasses" :loader="isLoading"
+                                loaderText="Sedang memuat data..." :headers="header" :items="sales?.data"
+                                rowKey="id_sales">
 
                                 <template #empty>
                                     <div class="text-center py-5">
@@ -434,8 +449,23 @@ onMounted(() => {
                                     </td>
 
                                     <td class="text-center">
-                                        <action-button @cancelClosing="cancelClosing(item)" :item="item"
-                                            :actions="payActions" @pay="openPaymentModal(item)" />
+                                        <div v-if="item.status !== 'CANCELLED'" class="d-flex justify-content-center align-items-center gap-1">
+                                            <button @click="openPaymentModal(item)" class="btn btn-c-success"
+                                                title="Sahkan Closing">
+                                                <i class="bi bi-check-circle-fill"></i>
+                                            </button>
+                                            <button @click="cancelClosing(item)" class="btn btn-c-danger"
+                                                title="Batalkan Closing">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+
+                                        </div>
+                                        <div v-else class="d-flex flex-column">
+                                            <span
+                                                class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1">
+                                                <i class="bi bi-x-circle-fill me-1"></i> DIBATALKAN
+                                            </span>
+                                        </div>
                                     </td>
 
                                 </template>
@@ -456,6 +486,7 @@ onMounted(() => {
                                                 limit: filters.limit,
                                                 order_by: filters.order_by,
                                                 branch: filters.branch,
+                                                status: filters.status
                                             }" :only="['sales', 'filters', 'stats', 'branch']" />
                                     </div>
                                 </template>

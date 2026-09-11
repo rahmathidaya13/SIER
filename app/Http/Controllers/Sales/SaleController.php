@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Sales;
 
+use App\Services\Sales\PaymentCancelled;
 use App\Traits\UserScope;
 use App\Models\SalesModel;
 use App\Models\BranchModel;
@@ -22,12 +23,14 @@ class SaleController extends Controller
     protected $saleRepository;
     protected $paymentValidationService;
     protected $salePaymentService;
+    protected $paymentCancelledService;
 
     public function __construct(SaleRepository $saleRepository)
     {
         $this->saleRepository = $saleRepository;
         $this->paymentValidationService = new PaymentValidationService();
         $this->salePaymentService = new SalePaymentService();
+        $this->paymentCancelledService = new PaymentCancelled();
     }
     public function index(Request $request)
     {
@@ -38,6 +41,7 @@ class SaleController extends Controller
             'order_by' => 'nullable|string|in:oldest,latest',
             'page' => 'nullable|integer|min:1',
             'branch' => 'nullable|string|in:all,' . implode(',', BranchModel::pluck('name')->toArray()),
+            'status' => 'nullable|string|in:all,closing,cancelled'
         ]);
 
         $filters = $request->only([
@@ -46,6 +50,7 @@ class SaleController extends Controller
             'branch',
             'order_by',
             'page',
+            'status'
         ]);
 
         // inject id_branch and id_user untuk unique cache
@@ -98,12 +103,15 @@ class SaleController extends Controller
 
     public function payCancel(Request $request, string $id)
     {
-        dd($request->all(), $id);
-        // $user = auth()->user();
-        // $this->invalidateCaches(
-        //     [SaleRepository::class, LeadsRepository::class, ChannelRepository::class],
-        //     ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
-        // );
-        // return redirect()->back()->with('message', 'Closing berhasil dibatalkan');
+        $user = auth()->user();
+        $validated = $this->validateSales($request->all(), 'payment_cancel');
+
+        $sales = SalesModel::find($id);
+        $this->paymentCancelledService->__invoke($sales, $validated);
+        $this->invalidateCaches(
+            [SaleRepository::class, LeadsRepository::class, ChannelRepository::class],
+            ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+        );
+        return redirect()->back()->with('message', 'Closing berhasil dibatalkan');
     }
 }

@@ -28,6 +28,7 @@ class SaleRepository extends BaseCacheRepository
                 'sales.deal_price',
                 'sales.remaining_bill',
                 'sales.paid_amount',
+                'sales.status',
                 'sales.payment_status',
                 'sales.deal_at',
                 'sales.created_at',
@@ -63,6 +64,7 @@ class SaleRepository extends BaseCacheRepository
     {
 
         $query = $this->buildBaseQuery($branchId, $filters);
+        $this->resolveStatus($filters, $query);
         [$column, $direction] = $this->resolveSorting($filters);
         $limit = min((int) ($filters['limit'] ?? 10), 100);
         return $query
@@ -77,6 +79,14 @@ class SaleRepository extends BaseCacheRepository
             'oldest' => ['sales.created_at', 'asc'],
 
             default => ['sales.created_at', 'desc'],
+        };
+    }
+    protected function resolveStatus(array $filters, $query)
+    {
+        return match ($filters['status'] ?? 'closing') {
+            'closing' => $query->where('sales.status', 'ACTIVE'),
+            'cancelled' => $query->where('sales.status', 'CANCELLED'),
+            default => $query,
         };
     }
 

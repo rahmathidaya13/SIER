@@ -4,17 +4,18 @@ import { computed } from 'vue';
 const props = defineProps({
     email: {
         type: String,
-        required: true
     }
 });
+const page = usePage();
+const message = computed(() => page.props?.flash?.message);
+
 const form = useForm();
+const user = computed(() => page.props?.auth?.user);
 const submit = () => {
     form.post(route("verification.send"), {}, {
         preserveScroll: true,
     });
 };
-const page = usePage();
-const message = computed(() => page.props.flash.message);
 const logout = () => {
     router.get(route('logout'));
 };
@@ -40,7 +41,7 @@ const logout = () => {
                             <span class="text-muted">
                                 Tautan verifikasi telah dikirim ke email anda.
                             </span>
-                            <p class="text-primary mb-0">{{ props.email }}</p>
+                            <p class="text-primary mb-0">{{ user?.email }}</p>
                         </div>
                         <form-wrapper @submit="submit">
                             <div class="d-grid">

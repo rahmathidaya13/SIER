@@ -90,7 +90,8 @@ class DashboardService
         |--------------------------------------------------------------------------
         */
 
-        $salesQuery = SalesModel::query();
+        $salesQuery = SalesModel::query()
+            ->where('status', 'ACTIVE'); // Hanya ambil sales yang aktif (CLOSING)
 
         $this->scope($salesQuery, $branchId);
 
