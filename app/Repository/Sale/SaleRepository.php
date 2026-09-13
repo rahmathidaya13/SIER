@@ -31,6 +31,11 @@ class SaleRepository extends BaseCacheRepository
                 'sales.status',
                 'sales.payment_status',
                 'sales.deal_at',
+                'sales.notes',
+                'sales.cancelled_at',
+                'sales.cancelled_by',
+                'sales.cancelled_reason',
+                'sales.cancelled_notes',
                 'sales.created_at',
                 'sales.updated_at',
                 'leads.name as lead_customer_name',
@@ -92,13 +97,13 @@ class SaleRepository extends BaseCacheRepository
 
     public function getSalesStats(string|int|null $branchId, array $filters = []): array
     {
-        // Panggil pabrik kueri yang sama, jadi filternya tetap akurat
+        // Panggil query yang sama, jadi filternya tetap akurat
         $query = $this->buildBaseQuery($branchId, $filters);
 
         return [
-            'omset_lunas' => (clone $query)->sum('sales.paid_amount'),
+            'omset_lunas' => (clone $query)->where('sales.status', '!=', 'CANCELLED')->sum('sales.paid_amount'),
             'piutang'     => (clone $query)->sum('sales.remaining_bill'),
-            'avg_deal'    => (clone $query)->avg('sales.deal_price') ?? 0,
+            'avg_deal'    => (clone $query)->where('sales.status', '!=', 'CANCELLED')->avg('sales.deal_price') ?? 0,
         ];
     }
 }

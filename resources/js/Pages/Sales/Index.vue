@@ -18,6 +18,7 @@ const props = defineProps({
     stats: Object,
     branch: Array
 });
+console.log(props.sales.data);
 const {
     filters,
     isLoading,
@@ -308,9 +309,8 @@ const rowClasses = (item) => ({
                         </div>
 
                         <div class="card-body p-0">
-                            <table-wrapper :rowClass="rowClasses" :loader="isLoading"
-                                loaderText="Sedang memuat data..." :headers="header" :items="sales?.data"
-                                rowKey="id_sales">
+                            <table-wrapper :rowClass="rowClasses" :loader="isLoading" loaderText="Sedang memuat data..."
+                                :headers="header" :items="sales?.data" rowKey="id_sales">
 
                                 <template #empty>
                                     <div class="text-center py-5">
@@ -428,7 +428,7 @@ const rowClasses = (item) => ({
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.sales_name || 'Sistem'
-                                                }} - {{ `${getRoleName(item.role_name).label ?? 'Unknown'}` }}
+                                                    }} - {{ `${getRoleName(item.role_name).label ?? 'Unknown'}` }}
                                                 </span>
                                                 <span class="small mb-1 fw-semibold">
                                                     <i class="bi bi-geo-alt-fill text-danger"></i>
@@ -449,9 +449,10 @@ const rowClasses = (item) => ({
                                     </td>
 
                                     <td class="text-center">
-                                        <div v-if="item.status !== 'CANCELLED'" class="d-flex justify-content-center align-items-center gap-1">
-                                            <button @click="openPaymentModal(item)" class="btn btn-c-success"
-                                                title="Sahkan Closing">
+                                        <div v-if="item.status !== 'CANCELLED'"
+                                            class="d-flex justify-content-center align-items-center gap-1">
+                                            <button v-if="item.payment_status !== 'LUNAS'" @click="openPaymentModal(item)"
+                                                class="btn btn-c-success" title="Sahkan Closing">
                                                 <i class="bi bi-check-circle-fill"></i>
                                             </button>
                                             <button @click="cancelClosing(item)" class="btn btn-c-danger"

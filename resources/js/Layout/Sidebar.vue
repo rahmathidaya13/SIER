@@ -160,9 +160,9 @@ const getImageUrl = (item) => {
 <template>
     <aside class="sidebar custom-slim-scroll" :class="{ 'show': isOpen, 'hide-desktop': !isOpen }">
 
-        <div class="sidebar-brand">
+        <!-- <div class="sidebar-brand">
             <i class="bi bi-funnel-fill me-2"></i> {{ $page.props.app.name ?? 'Aplikasi' }}
-        </div>
+        </div> -->
 
         <section class="p-3 border-bottom mx-3 mb-3 d-flex flex-column justify-content-center align-items-center"
             aria-label="User Info">

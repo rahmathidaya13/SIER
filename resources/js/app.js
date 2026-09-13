@@ -9,11 +9,12 @@ import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 
 import GlobalComponent from "./GlobalComponent";
 import select2 from "select2";
+const appName = import.meta.env.VITE_APP_NAME || "";
 select2();
 
 // setup to app
 createInertiaApp({
-    title: (title) => `${title}`,
+    title: (title) => `${appName} - ${title}`,
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.vue`,

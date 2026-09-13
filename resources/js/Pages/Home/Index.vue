@@ -137,40 +137,41 @@ const branchOptions = computed(() => [
             <div class="row g-3 view-section">
                 <callout />
 
-                <div class="card p-2 d-flex border overflow-hidden">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="d-grid px-3">
-                            <h5 class="fw-bold mb-1">
-                                <i class="bi bi-funnel-fill"></i>
-                                Saring Prospek
-                            </h5>
-                            <small class="px-4 text-muted">Filter berdasarkan Bulan dan Tahun</small>
-                        </span>
-                        <div class="d-flex gap-2 bg-white p-2 rounded-3 border text-dark align-items-center ms-auto">
+                <div class="col-12">
+                    <div class="card p-2 d-flex border overflow-hidden">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="d-grid px-3">
+                                <h5 class="fw-bold mb-1">
+                                    <i class="bi bi-funnel-fill"></i>
+                                    Saring Prospek
+                                </h5>
+                                <small class="px-4 text-muted">Filter berdasarkan Bulan dan Tahun</small>
+                            </span>
+                            <div
+                                class="d-flex gap-2 bg-white p-2 rounded-3 border text-dark align-items-center ms-auto">
 
-                            <select-input v-if="branches.length > 0 && hasRole(['super_admin', 'developer'])"
-                                :isValid="false" text="Pilih Cabang" name="branch" :options="branchOptions"
-                                v-model="filters.branch" />
-                            <div v-if="branches.length > 0 && hasRole(['super_admin', 'developer'])" class="vr my-1">
+                                <select-input v-if="branches.length > 0 && hasRole(['super_admin', 'developer'])"
+                                    :isValid="false" text="Pilih Cabang" name="branch" :options="branchOptions"
+                                    v-model="filters.branch" />
+                                <div v-if="branches.length > 0 && hasRole(['super_admin', 'developer'])"
+                                    class="vr my-1">
+                                </div>
+                                <select name="month" id="month" v-model="filters.month"
+                                    class="form-select form-select-sm focus-none fw-semibold">
+                                    <option v-for="month in months" :key="month.value" :value="month.value">{{
+                                        month.label
+                                        }}
+                                    </option>
+                                </select>
+                                <div class="vr my-1"></div>
+                                <select name="year" id="year" v-model="filters.year"
+                                    class="form-select form-select-sm focus-none fw-semibold">
+                                    <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
+                                </select>
                             </div>
-                            <select name="month" id="month" v-model="filters.month"
-                                class="form-select form-select-sm focus-none fw-semibold">
-                                <option v-for="month in months" :key="month.value" :value="month.value">{{
-                                    month.label
-                                }}
-                                </option>
-                            </select>
-                            <div class="vr my-1"></div>
-                            <select name="year" id="year" v-model="filters.year"
-                                class="form-select form-select-sm focus-none fw-semibold">
-                                <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
-                            </select>
                         </div>
                     </div>
                 </div>
-
-
-
 
                 <div class="col-sm-6 col-xl-3">
                     <div class="card p-3 h-100 custom-card">
@@ -303,7 +304,8 @@ const branchOptions = computed(() => [
                     <div class="card rounded-4 p-4 h-100 custom-card">
                         <h6 class="fw-bold mb-4">Kualitas Leads (Temperature)</h6>
 
-                        <div class="d-flex border border-danger align-items-center gap-3 mb-3 p-2 bg-danger bg-opacity-10 rounded-3">
+                        <div
+                            class="d-flex border border-danger align-items-center gap-3 mb-3 p-2 bg-danger bg-opacity-10 rounded-3">
                             <div class="fs-4 text-danger"><i class="bi bi-fire"></i></div>
                             <div class="flex-grow-1">
                                 <div class="d-flex justify-content-between mb-1">
@@ -313,7 +315,8 @@ const branchOptions = computed(() => [
                             </div>
                         </div>
 
-                        <div class="d-flex border border-warning align-items-center gap-3 mb-3 p-2 bg-warning bg-opacity-10 rounded-3">
+                        <div
+                            class="d-flex border border-warning align-items-center gap-3 mb-3 p-2 bg-warning bg-opacity-10 rounded-3">
                             <div class="fs-4 text-warning"><i class="bi bi-sun"></i></div>
                             <div class="flex-grow-1">
                                 <div class="d-flex justify-content-between mb-1">
@@ -323,7 +326,8 @@ const branchOptions = computed(() => [
                             </div>
                         </div>
 
-                        <div class="d-flex border border-info align-items-center gap-3 p-2 bg-info bg-opacity-10 rounded-3">
+                        <div
+                            class="d-flex border border-info align-items-center gap-3 p-2 bg-info bg-opacity-10 rounded-3">
                             <div class="fs-4 text-info"><i class="bi bi-snow"></i></div>
                             <div class="flex-grow-1">
                                 <div class="d-flex justify-content-between mb-1">
