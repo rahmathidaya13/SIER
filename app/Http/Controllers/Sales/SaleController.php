@@ -75,7 +75,7 @@ class SaleController extends Controller
         $sales = SalesModel::with(
             [
                 'lead',
-                'user',
+                'user.roles',
                 'branch',
                 'lead.activity.user.roles',
                 'paymentHistory.user.roles',
@@ -109,8 +109,17 @@ class SaleController extends Controller
         $sales = SalesModel::find($id);
         $this->paymentCancelledService->__invoke($sales, $validated);
         $this->invalidateCaches(
-            [SaleRepository::class, LeadsRepository::class, ChannelRepository::class],
-            ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+            [
+                SaleRepository::class,
+                LeadsRepository::class,
+                ChannelRepository::class
+            ],
+            [
+                'global',
+                'global_super_admin',
+                'branch_' . $user->id_branch,
+                'user_' . $user->id
+            ]
         );
         return redirect()->back()->with('message', 'Closing berhasil dibatalkan');
     }

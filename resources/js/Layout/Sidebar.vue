@@ -154,7 +154,7 @@ const getImageUrl = (item) => {
     if (item.photo !== null && item.photo !== undefined) {
         return `/storage/${item.photo}`; // load gambar dari storage jika ada
     }
-    return '/storage/no_image/user-icon.png'; // Fallback jika tidak ada gambar
+    // return '/storage/no_image/user-icon.png'; // Fallback jika tidak ada gambar
 };
 </script>
 <template>
@@ -166,9 +166,13 @@ const getImageUrl = (item) => {
 
         <section class="p-3 border-bottom mx-3 mb-3 d-flex flex-column justify-content-center align-items-center"
             aria-label="User Info">
-            <img :src="getImageUrl($page.props.auth.user.profile)"
+            <img v-if="$page.props.auth.user.profile.photo" :src="getImageUrl($page.props.auth.user.profile)"
                 class="rounded-circle mb-2 object-fit-cover shadow-sm border shadow" width="80" height="80"
                 :alt="$page.props.auth.user.name">
+            <span v-else class="icon">
+                <i class="bi bi-person text-secondary"></i>
+            </span>
+
             <button @click.prevent="emit('openProfileModal')" class="btn nav-link text-primary">
                 <span class="mb-1 fw-bold text-capitalize">{{ $page.props.auth.user.name }}</span>
             </button>
@@ -287,5 +291,17 @@ const getImageUrl = (item) => {
     .sidebar.hide-desktop {
         transform: translateX(-100%);
     }
+}
+
+.icon {
+    font-size: 4rem;
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #e9ecef;
+    border: 1px solid #cfcfcf;
 }
 </style>

@@ -25,9 +25,11 @@ class PaymentCancelled
                 'cancelled_reason' => $validated['cancelled_reason'],
                 'cancelled_notes' => $validated['cancelled_notes'] ?? null,
             ]);
+
             $sales->lead->update([
                 'status' => 'CLOSED_LOST',
             ]);
+
             $sales->lead->activity()->create([
                 'id_user' => auth()->id(),
                 'source' => 'updated',

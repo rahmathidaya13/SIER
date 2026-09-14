@@ -99,8 +99,7 @@ const getImageUrl = (item) => {
     if (item.photo !== null && item.photo !== undefined) {
         return `/storage/${item.photo}`; // load gambar dari storage jika ada
     }
-
-    return '/storage/no_image/user-icon.png'; // Fallback jika tidak ada gambar
+    // return '/storage/no_image/user-icon.png'; // Fallback jika tidak ada gambar
 };
 
 watch(
@@ -210,7 +209,7 @@ const genderCheck = (value) => {
                                         alt="Preview">
                                     <img v-else-if="users?.profile.photo" :src="users?.profile.photo"
                                         class="w-100 h-100 object-fit-cover" alt="Profile">
-                                    <i v-else class="bi bi-person text-secondary" style="font-size: 3rem;"></i>
+                                    <i v-else class="bi bi-person text-secondary" style="font-size: 9rem;"></i>
                                 </div>
 
                                 <button v-if="isEdit" type="button" @click="selectNewPhoto"
