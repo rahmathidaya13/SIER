@@ -38,6 +38,7 @@ class LeadServices
                 'temperature' => $validated['temperature'],
                 'customer_type' => $validated['customer_type'],
                 'notes' => $validated['notes'],
+                'closed_at' => $validated['status'] === 'CLOSED_WON' ? now()->toDateTimeString() : null
             ]);
 
             // masukan banyak product kedalam database
@@ -106,6 +107,7 @@ class LeadServices
                 'status' => $validated['status'],
                 'temperature' => $validated['temperature'],
                 'notes' => $validated['notes'],
+                'closed_at' => $validated['status'] === 'CLOSED_WON' ? now()->toDateTimeString() : null
             ]);
 
             if (isset($validated['id_product']) && is_array($validated['id_product'])) {
@@ -162,6 +164,7 @@ class LeadServices
             $leads->update([
                 'status' => 'CLOSED_WON',
                 'temperature' => 'HOT',
+                'closed_at' => now()->toDateTimeString(),
                 'updated_by' => auth()->id(),
             ]);
 

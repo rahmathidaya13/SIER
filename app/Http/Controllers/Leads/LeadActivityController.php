@@ -10,13 +10,13 @@ use App\Traits\BranchMutationHelper;
 use App\Repository\Sale\SaleRepository;
 use App\Repository\Lead\LeadsRepository;
 use App\Repository\Channel\ChannelRepository;
+use App\Repository\User\UserRepository;
 
 class LeadActivityController extends Controller
 {
     use BranchMutationHelper;
     public function store(Request $request, string $id)
     {
-
         $request->validate(
             [
                 'description' => 'required'
@@ -25,6 +25,7 @@ class LeadActivityController extends Controller
                 'description.required' => 'Aktivitas Follow Up tidak boleh kosong'
             ]
         );
+        $user = auth()->user();
 
         DB::beginTransaction();
         try {
@@ -51,12 +52,11 @@ class LeadActivityController extends Controller
             }
 
             DB::commit();
-
-            $user = auth()->user();
             $this->invalidateCaches(
-                [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
+                [UserRepository::class, LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
                 ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
             );
+
 
             return redirect()->back()->with('modal_message', 'Aktivitas Follow Up berhasil ditambahkan!');
         } catch (\Exception $error) {
@@ -85,7 +85,7 @@ class LeadActivityController extends Controller
 
         $user = auth()->user();
         $this->invalidateCaches(
-            [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
+            [UserRepository::class, LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
             ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
         );
         return redirect()->back();

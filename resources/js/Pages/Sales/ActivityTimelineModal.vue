@@ -61,7 +61,7 @@ const loadTimeline = async () => {
                 role_name: data.user?.roles[0].name,
             }
             : null;
-
+        console.log(data);
     } catch (error) {
         console.error("Gagal mengambil riwayat:", error);
     } finally {
@@ -194,58 +194,7 @@ const getCancellationReasonLabel = (reason) => {
             title="Riwayat Transaksi & Aktivitas" @closed="close" :mobileFullscreen="false">
             <template #body>
 
-                <div class="card mb-3 overflow-hidden shadow-sm border bg-primary-subtle">
-                    <div class="row g-0">
-                        <div class="col-md-2 d-flex align-items-center justify-content-center">
-                            <span style="font-size: 6rem;"><i class="bi bi-person-bounding-box"></i></span>
-                        </div>
-                        <div class="col-md-10">
-                            <div class="card-body">
-                                <h6 class="card-title text-muted small">
-                                    Timeline Konsumen
-                                </h6>
-                                <h5 class="mb-1 fw-bold text-truncate" style="max-width: 100%;">
-                                    {{ customerName }}
-                                </h5>
-                                <div class="small fw-medium text-white-75 mb-3">
-                                    <i class="bi bi-telephone-fill me-1"></i> {{ phoneNumber }}
-                                </div>
 
-                                <div v-if="products && products.length > 0" class="d-flex flex-wrap gap-2">
-                                    <!-- Menampilkan maksimal 5 produk saja -->
-                                    <template v-for="(prod, index) in products.slice(0, 5)"
-                                        :key="prod.id_product || index">
-                                        <span
-                                            class="badge bg-white text-dark fw-normal d-flex align-items-center py-2 px-2 rounded-pill"
-                                            style="font-size: 12px;">
-                                            <i class="bi bi-box-seam me-2"></i>
-                                            <span class="text-truncate" style="max-width: 200px;"
-                                                :title="prod.product.name">
-                                                {{ prod.product.name }}
-                                            </span>
-                                        </span>
-                                    </template>
-
-                                    <!-- Badge sisa produk (Muncul jika lebih dari 3) -->
-                                    <span v-if="products.length > 5"
-                                        class="badge bg-white text-dark fw-bold d-flex align-items-center py-1 px-3 rounded-pill shadow-sm transition-all"
-                                        style="font-size: 12px;"
-                                        :title="products.slice(5).map(p => p.product.name).join('\n')">
-                                        +{{ products.length - 5 }} Lainnya
-                                    </span>
-                                </div>
-
-                                <div v-else>
-                                    <span
-                                        class="badge bg-white bg-opacity-10 text-white-50 border border-white border-opacity-10 fw-normal py-1 px-3 rounded-pill fst-italic"
-                                        style="font-size: 11px;">
-                                        Belum ada produk
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <div v-if="isLoading" class="text-center py-5">
                     <div class="spinner-border text-primary" role="status">
@@ -255,6 +204,63 @@ const getCancellationReasonLabel = (reason) => {
                 </div>
 
                 <div v-else class="pb-3">
+
+                    <div class="card mb-3 overflow-hidden shadow-sm border bg-c-slate border-secondary">
+                        <div class="row g-0">
+                            <div class="col-md-2 d-flex align-items-center justify-content-center">
+                                <span style="font-size: 5rem;"><i
+                                        class="bi bi-person-bounding-box text-muted"></i></span>
+                            </div>
+                            <div class="col-md-10">
+                                <div class="card-body">
+                                    <h6 class="card-title text-muted small text-uppercase">
+                                        Timeline Konsumen
+                                    </h6>
+                                    <h5 class="mb-2 fw-bold text-truncate" style="max-width: 100%;">
+                                        {{ customerName }}
+                                    </h5>
+                                    <div class="small fw-medium text-white-75 mb-3">
+                                        <i class="bi bi-telephone-fill me-1"></i> {{ phoneNumber }}
+                                    </div>
+
+                                    <div v-if="products && products.length > 0" class="d-flex flex-wrap gap-2">
+                                        <template v-for="(prod, index) in products.slice(0, 5)"
+                                            :key="prod.id_product || index">
+                                            <span
+                                                class="badge bg-white text-dark fw-normal d-flex align-items-center py-2 px-2 rounded-pill"
+                                                style="font-size: 12px;">
+                                                <i class="bi bi-box-seam me-2"></i>
+                                                <span class="text-truncate" style="max-width: 200px;"
+                                                    :title="prod.product.name">
+                                                    {{ prod.product.name }}
+                                                </span>
+                                            </span>
+                                        </template>
+
+                                        <!-- Badge sisa produk (Muncul jika lebih dari 3) -->
+                                        <span v-if="products.length > 5"
+                                            class="badge bg-white text-dark fw-bold d-flex align-items-center py-1 px-3 rounded-pill shadow-sm transition-all"
+                                            style="font-size: 12px;"
+                                            :title="products.slice(5).map(p => p.product.name).join('\n')">
+                                            +{{ products.length - 5 }} Lainnya
+                                        </span>
+                                    </div>
+
+                                    <div v-else>
+                                        <span
+                                            class="badge bg-white bg-opacity-10 text-white-50 border border-white border-opacity-10 fw-normal py-1 px-3 rounded-pill fst-italic"
+                                            style="font-size: 11px;">
+                                            Belum ada produk
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+
                     <div class="history-tabs mb-4">
                         <div class="nav nav-pills nav-fill gap-2">
                             <button type="button" class="nav-link" :class="{
@@ -320,7 +326,9 @@ const getCancellationReasonLabel = (reason) => {
                                                             <div>
                                                                 <div class="fw-bolder text-dark text-uppercase"
                                                                     style="font-size: 13px; letter-spacing: 0.5px">
-                                                                    {{ pay.payment_method }}
+                                                                    {{ pay.payment_method }} {{ pay.payment_method ===
+                                                                        'transfer' || pay.payment_method === 'debit' ?
+                                                                        '- ' + pay.bank_name : '' }}
                                                                 </div>
                                                                 <div class="text-muted fw-medium"
                                                                     style="font-size: 11px">

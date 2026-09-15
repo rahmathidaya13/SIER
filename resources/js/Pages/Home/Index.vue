@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/vue3';
 import { useFilter } from '@/Composables/useFilter';
 import { hasRole } from '@/Composables/useAuth';
 import { computed, ref } from 'vue';
+import { plugins } from 'chart.js';
 const props = defineProps({
     stats: Object,
     branches: {
@@ -49,57 +50,74 @@ const funnelLabels = computed(() => {
 });
 
 // 2. Dataset Multiple Bar (Prospek vs Closing)
+const funnelChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'top',
+        },
+        tooltip: {
+            callbacks: {
+                afterBody: (context) => {
+                    if (!context.length) {
+                        return '';
+                    }
+
+                    const index = context[0].dataIndex;
+                    const item = props.stats?.monthly_trend?.[index];
+
+                    if (!item) {
+                        return '';
+                    }
+
+                    const total = Number(item.total) || 0;
+                    const closed = Number(item.closed) || 0;
+
+                    const conversion = total > 0
+                        ? ((closed / total) * 100).toFixed(1)
+                        : 0;
+                    return `Conversion Rate: ${conversion}%`;
+                },
+            },
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    precision: 0,
+                },
+            },
+        },
+    }
+}
 const funnelChartData = computed(() => {
     const trend = props.stats?.monthly_trend || [];
-    const countNumber = props.stats?.monthly_trend.map(val => Number(val) || 0);
 
-    const colorPalette = [
-        'rgba(59, 130, 246, 0.8)',   // Biru
-        'rgba(16, 185, 129, 0.8)',   // Hijau
-        'rgba(245, 158, 11, 0.8)',   // Oranye
-        'rgba(239, 68, 68, 0.8)',    // Merah
-        'rgba(139, 92, 246, 0.8)',   // Ungu
-        'rgba(236, 72, 153, 0.8)',   // Pink
-        'rgba(20, 184, 166, 0.8)',   // Teal
-    ];
-
-    const hoverPalette = [
-        'rgba(37, 99, 235, 1)',
-        'rgba(5, 150, 105, 1)',
-        'rgba(217, 119, 6, 1)',
-        'rgba(220, 38, 38, 1)',
-        'rgba(124, 58, 237, 1)',
-        'rgba(219, 39, 119, 1)',
-        'rgba(13, 148, 136, 1)',
-    ];
-
-    const backgroundColors = countNumber.map((_, index) =>
-        colorPalette[index % colorPalette.length]
-    );
-
-    const hoverColors = countNumber.map((_, index) =>
-        hoverPalette[index % hoverPalette.length]
-    );
     return [
         {
             label: 'Prospek Masuk',
-            data: trend.map(item => item.total),
-            backgroundColor: backgroundColors,
-            hoverBackgroundColor: hoverColors,
-            borderRadius: 4,
-            barPercentage: 0.6,
+            data: trend.map(item => Number(item.total) || 0),
+            backgroundColor: 'rgba(59, 130, 246, 0.75)',
+            hoverBackgroundColor: 'rgba(37, 99, 235, 1)',
+            borderColor: 'rgba(59, 130, 246, 1)',
+            borderRadius: 1,
+            barPercentage: 1,
+            categoryPercentage: 1.2,
         },
+
         {
             label: 'Berhasil Closing',
-            data: trend.map(item => item.closed),
-            backgroundColor: backgroundColors,
-            hoverBackgroundColor: hoverColors,
-            borderRadius: 4,
-            barPercentage: 0.6,
-        }
+            data: trend.map(item => Number(item.closed) || 0),
+            backgroundColor: 'rgba(16, 185, 129, 0.75)',
+            hoverBackgroundColor: 'rgba(5, 150, 105, 1)',
+            borderColor: 'rgba(16, 185, 129, 1)',
+            borderRadius: 1,
+            barPercentage: 1,
+            categoryPercentage: 1.2,
+        },
     ];
 });
-
 // List bulan untuk dropdown
 const months = [
     { value: 1, label: 'Januari' },
@@ -131,7 +149,7 @@ const branchOptions = computed(() => [
 </script>
 <template>
 
-    <Head title="Home" />
+    <Head title="Dashboard" />
     <app-layout>
         <template #content>
             <div class="row g-3 view-section">
@@ -160,7 +178,7 @@ const branchOptions = computed(() => [
                                     class="form-select form-select-sm focus-none fw-semibold">
                                     <option v-for="month in months" :key="month.value" :value="month.value">{{
                                         month.label
-                                        }}
+                                    }}
                                     </option>
                                 </select>
                                 <div class="vr my-1"></div>
@@ -251,8 +269,8 @@ const branchOptions = computed(() => [
                         </div>
 
                         <div class="py-2 mt-auto" style="height: 400px;">
-                            <chart-bar type="pie" :height="400" :labels="funnelLabels" :datasets="funnelChartData"
-                                tooltip-suffix=" Leads" />
+                            <chart-bar type="bar" :height="400" :labels="funnelLabels" :datasets="funnelChartData"
+                                tooltip-suffix=" Leads" :options="funnelChartOptions" />
                         </div>
                     </div>
                 </div>

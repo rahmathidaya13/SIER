@@ -18,10 +18,10 @@ class LeadsRepository extends BaseCacheRepository
                 // 'activity:id_lead,created_at',
                 'leadProduct.product:id_product,name,image_link,image_path',
                 'activity' => function ($query) {
-                $query->select('id_lead', 'created_at')
-                    ->latest()
-                    ->limit(10);
-            },
+                    $query->select('id_lead', 'created_at')
+                        ->latest()
+                        ->limit(10);
+                },
             ])
             ->allowedForUser()
             ->joinUserRole()

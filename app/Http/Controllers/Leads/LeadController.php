@@ -15,6 +15,7 @@ use App\Http\Resources\LeadResource;
 use App\Traits\BranchMutationHelper;
 use Illuminate\Support\Facades\Gate;
 use App\Repository\Sale\SaleRepository;
+use App\Repository\User\UserRepository;
 use App\Repository\Lead\LeadsRepository;
 use App\Traits\ActivityMessageFormatter;
 use Illuminate\Support\Facades\Notification;
@@ -64,6 +65,7 @@ class LeadController extends Controller
             'page',
 
         ]);
+
         $filters = app(ScopeResolverService::class)->filters($filters);
 
         $leads = $this->repository->getCached($filters['scope'], $filters);
@@ -109,8 +111,18 @@ class LeadController extends Controller
             Notification::send($recipients, new LeadCreateNotification($leads, $user));
 
             $this->invalidateCaches(
-                [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
-                ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+                [
+                    UserRepository::class,
+                    LeadsRepository::class,
+                    SaleRepository::class,
+                    ChannelRepository::class
+                ],
+                [
+                    'global',
+                    'global_super_admin',
+                    'branch_' . $user->id_branch,
+                    'user_' . $user->id
+                ]
             );
 
             return redirect()->back()->with([
@@ -159,8 +171,18 @@ class LeadController extends Controller
                 )
             );
             $this->invalidateCaches(
-                [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
-                ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+                [
+                    UserRepository::class,
+                    LeadsRepository::class,
+                    SaleRepository::class,
+                    ChannelRepository::class
+                ],
+                [
+                    'global',
+                    'global_super_admin',
+                    'branch_' . $user->id_branch,
+                    'user_' . $user->id
+                ]
             );
             return redirect()->back()->with('message', 'Lead ' . $leads->name . ' berhasil diperbarui!');
         } catch (\Exception $error) {
@@ -186,13 +208,15 @@ class LeadController extends Controller
             'temperature',
             'customer_type',
             'notes',
-            'follow_up_date'
+            'follow_up_date',
+            'closed_at'
         ])->with([
             'user:id,name',
-            'leadProduct.product:id_product,name,image_link,image_path',
             'channel:id_channel,name,icon',
 
-            // Batasi aktivitas maksimal 10 agar memori server tidak meledak
+            'leadProduct:id_lead,id_product',
+            'leadProduct.product:id_product,name,image_link,image_path',
+
             'activity' => function ($query) {
                 $query->select('id_lead_activity', 'id_lead', 'id_user', 'updated_by', 'description', 'created_at', 'updated_at')
                     ->latest()
@@ -231,8 +255,18 @@ class LeadController extends Controller
             $this->leadServices->delete($leads, $user);
             Notification::send($recipients, new LeadDeleteNotification($leadId, $leadName, $user));
             $this->invalidateCaches(
-                [LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
-                ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+                [
+                    UserRepository::class,
+                    LeadsRepository::class,
+                    SaleRepository::class,
+                    ChannelRepository::class
+                ],
+                [
+                    'global',
+                    'global_super_admin',
+                    'branch_' . $user->id_branch,
+                    'user_' . $user->id,
+                ]
             );
             return redirect()->back()->with('message', 'Lead ' . ucwords($leads->name) . ' berhasil dihapus');
         } catch (\Exception $error) {

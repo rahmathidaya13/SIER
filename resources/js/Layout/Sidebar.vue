@@ -25,7 +25,7 @@ const menuItems = [
             : unreadCount.value,
     },
     {
-        title: 'Home',
+        title: 'Dashboard',
         icon: 'bi bi-speedometer2',
         route: 'home',
         prefixUrl: 'home*'

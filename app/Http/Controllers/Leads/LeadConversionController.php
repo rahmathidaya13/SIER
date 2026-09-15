@@ -17,6 +17,7 @@ use App\Repository\Channel\ChannelRepository;
 use App\Services\Lead\LeadConversionServices;
 use Illuminate\Validation\ValidationException;
 use App\Notifications\Lead\LeadConversionNotification;
+use App\Repository\User\UserRepository;
 
 class LeadConversionController extends Controller
 {
@@ -51,6 +52,7 @@ class LeadConversionController extends Controller
 
             // cache optimization
             $this->invalidateCaches([
+                UserRepository::class,
                 LeadsRepository::class,
                 SaleRepository::class,
                 ChannelRepository::class

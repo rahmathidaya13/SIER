@@ -27,12 +27,14 @@ class LeadModel extends Model
         'status',
         'follow_up_date',
         'notes',
+        'closed_at',
     ];
     protected $dates    = ["deleted_at"];
     protected $casts = [
         'follow_up_date' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'closed_at' => 'datetime',
     ];
 
     public function scopeAllowedForUser($query)

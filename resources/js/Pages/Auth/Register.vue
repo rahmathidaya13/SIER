@@ -128,7 +128,7 @@ const passwordStrength = computed(() => {
 
                 <callout :duration="0" />
 
-                <div class="card overflow-auto shadow-sm rounded rounded-4 p-xl-4 p-0">
+                <div class="card overflow-auto border shadow-sm rounded rounded-4 p-xl-4 p-0">
                     <div class="card-title text-center mb-0 py-3">
                         <h2 class="fw-bold text-capitalize">Pendaftaran</h2>
                         <p class="text-muted small">Silakan lengkapi data diri dan penempatan cabang Anda.</p>

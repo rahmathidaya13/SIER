@@ -47,6 +47,8 @@ class LeadConversionServices
             $leads->update([
                 'status' => 'CLOSED_WON',
                 'temperature' => 'HOT',
+                'closed_at' => now()->toDateTimeString(),
+                'updated_at' => now()->toDateTimeString(),
                 'updated_by' => auth()->id(),
             ]);
 

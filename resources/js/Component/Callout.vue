@@ -177,7 +177,7 @@ onBeforeUnmount(() => {
     <transition name="fade-alert" appear>
         <div :class="['callout rounded-3 align-items-center d-flex justify-content-between', `callout-${localFlash.type}`]"
             v-if="localFlash && visible">
-            <div class="d-flex align-items-center gap-2 fw-semibold flex-wrap">
+            <div class="d-flex align-items-center fw-semibold flex-wrap" :class="[props.icon ? 'gap-2' : 'gap-0']">
                 <i v-if="localFlash.type || props.icon" :class="icon[localFlash.type]"></i>
                 <span>
                     {{ localFlash.msg }}

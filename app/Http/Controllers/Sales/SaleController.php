@@ -72,16 +72,97 @@ class SaleController extends Controller
 
     public function show(string $id)
     {
-        $sales = SalesModel::with(
-            [
-                'lead',
-                'user.roles',
-                'branch',
-                'lead.activity.user.roles',
-                'paymentHistory.user.roles',
-                'salesProduct.product:id_product,name,image_link,image_path'
-            ]
-        )->find($id);
+        $sales = SalesModel::query()
+            ->select([
+                'id_sales',
+                'invoice',
+                'id_lead',
+                'id_user',
+                'id_branch',
+                'deal_price',
+                'paid_amount',
+                'remaining_bill',
+                'quantity',
+                'payment_status',
+                'status',
+                'deal_at',
+                'notes',
+                'cancelled_at',
+                'cancelled_by',
+                'cancelled_reason',
+                'cancelled_notes',
+                'created_at',
+                'updated_at',
+            ])
+            ->with([
+                'lead' => function ($query) {
+                    $query->select([
+                        'id_lead',
+                        'name',
+                        'phone',
+                    ]);
+                },
+
+                // User Sales
+                'user' => function ($query) {
+                    $query->select([
+                        'id',
+                        'name',
+                    ]);
+                },
+                'user.roles:id,name',
+                'branch' => function ($query) {
+                    $query->select([
+                        'id_branch',
+                        'name',
+                    ]);
+                },
+                'lead.activity' => function ($query) {
+                    $query
+                        ->select([
+                            'id_lead_activity',
+                            'id_lead',
+                            'id_user',
+                            'description',
+                            'created_at',
+                        ])
+                        ->latest('created_at');
+                },
+                'lead.activity.user:id,name',
+                'lead.activity.user.roles:id,name',
+
+                'paymentHistory' => function ($query) {
+                    $query
+                        ->select([
+                            'id_payment_history',
+                            'id_sales',
+                            'id_user',
+                            'payment_method',
+                            'bank_name',
+                            'paid_amount',
+                            'payment_at',
+                            'notes_payment',
+                            'created_at',
+                        ])
+                        ->latest('created_at');
+                },
+
+                'paymentHistory.user:id,name',
+                'paymentHistory.user.roles:id,name',
+
+                'salesProduct' => function ($query) {
+                    $query->select([
+                        'id_sales',
+                        'id_product',
+                    ]);
+                },
+
+                'salesProduct.product:id_product,name',
+                'cancelledBy:id,name',
+                'cancelledBy.roles:id,name',
+            ])
+            ->findOrFail($id);
+
         return response()->json($sales);
     }
     public function payRemaining(Request $request, string $id)

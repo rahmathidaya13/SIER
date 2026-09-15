@@ -111,4 +111,8 @@ class SalesModel extends Model
     {
         return $this->belongsTo(BranchModel::class, 'id_branch', 'id_branch');
     }
+    public function cancelledBy()
+    {
+        return $this->belongsTo(User::class, 'cancelled_by', 'id');
+    }
 }

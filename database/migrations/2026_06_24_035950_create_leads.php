@@ -30,9 +30,12 @@ return new class extends Migration
 
             $table->timestamp('follow_up_date')->nullable();
             $table->text('notes')->nullable();
+            $table->datetime('closed_at')->nullable();
 
             $table->softDeletes();
             $table->timestamps();
+            $table->index('closed_at');
+            $table->index('created_at');
         });
     }
 

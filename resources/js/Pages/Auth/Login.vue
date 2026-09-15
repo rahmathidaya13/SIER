@@ -29,8 +29,8 @@ onMounted(() => {
     <div class="container-fluid vh-100 overflow-hidden">
         <div class="row vh-100 justify-content-center align-items-center">
             <div class="col-12 col-xl-4 col-md-6 col-lg-6">
-                <callout />
-                <div class="card p-3 p-3 p-xl-4 shadow-sm">
+                <callout :icon="false" :duration="0" />
+                <div class="card p-3 p-3 p-xl-4 shadow-sm border">
                     <div class="text-center mb-0">
                         <h2 class="fw-bold mb-1">Selamat Datang</h2>
                         <p class="text-muted small">Silakan masuk menggunakan akun internal Anda</p>
