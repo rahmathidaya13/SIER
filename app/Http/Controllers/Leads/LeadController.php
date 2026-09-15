@@ -219,7 +219,7 @@ class LeadController extends Controller
 
             'activity' => function ($query) {
                 $query->select('id_lead_activity', 'id_lead', 'id_user', 'updated_by', 'description', 'created_at', 'updated_at')
-                    ->latest()
+                    ->latest('created_at')
                     ->limit(10);
             },
             'activity.user:id,name',
