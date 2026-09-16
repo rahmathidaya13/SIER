@@ -14,7 +14,7 @@ class LeadResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // $this merujuk pada instance model LeadModel  
+        // $this merujuk pada instance model LeadModel
         return [
             // 1. Data Dasar
             'id_lead'        => $this->id_lead,
@@ -26,6 +26,7 @@ class LeadResource extends JsonResource
             'customer_type'  => $this->customer_type,
             'notes'          => $this->notes,
             'follow_up_date' => $this->follow_up_date,
+            'closed_at'      => $this->closed_at,
 
             // 2. Manipulasi Alias Langsung (Tidak perlu "as creator_name" di query DB)
             // whenLoaded() memastikan data ini HANYA dirender jika relasinya dipanggil (menghindari error N+1)
@@ -52,31 +53,6 @@ class LeadResource extends JsonResource
                 });
             }),
 
-            'activity' => $this->whenLoaded('activity', function () {
-                return $this->activity->map(function ($act) {
-                    return [
-                        'id_lead_activity' => $act->id_lead_activity,
-                        'description'      => $act->description,
-                        'id_user'           => $act->id_user,
-                        'created_at'       => $act->created_at,
-                        'updated_at'       => $act->updated_at,
-                        'updated_by'       => $act->updated_by ?? null,
-
-                        'user' => $act->relationLoaded('user') ? [
-                            'activity_creator_name' => $act->user->name ?? 'Sistem',
-                            // Ekstrak nama role pertama saja agar Vue tidak perlu melooping array role
-                            'roles' => $act->user->roles->first()->name ?? 'No Role'
-
-                        ] : null,
-
-                        'user_update' => $act->relationLoaded('userUpdate') && $act->userUpdate ? [
-                            'name' => $act->userUpdate->name,
-                            'roles' => $act->userUpdate->roles->first()->name ?? 'No Role'
-                        ] : null,
-
-                    ];
-                });
-            }),
         ];
     }
 }

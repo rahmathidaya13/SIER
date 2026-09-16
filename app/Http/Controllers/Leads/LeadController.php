@@ -12,6 +12,7 @@ use App\Traits\LeadsValidation;
 use App\Services\Lead\LeadServices;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\LeadResource;
+use App\Models\LeadActivityModel;
 use App\Traits\BranchMutationHelper;
 use Illuminate\Support\Facades\Gate;
 use App\Repository\Sale\SaleRepository;
@@ -217,18 +218,36 @@ class LeadController extends Controller
             'leadProduct:id_lead,id_product',
             'leadProduct.product:id_product,name,image_link,image_path',
 
-            'activity' => function ($query) {
-                $query->select('id_lead_activity', 'id_lead', 'id_user', 'updated_by', 'description', 'created_at', 'updated_at')
-                    ->latest('created_at')
-                    ->limit(10);
-            },
-            'activity.user:id,name',
-            'activity.user.roles:id,name',
-            'activity.userUpdate:id,name',
-            'activity.userUpdate.roles:id,name',
         ])->findOrFail($id);
 
         return new LeadResource($leads); // Gunakan LeadResource untuk mengubah data menjadi format JSON yang sesuai
+    }
+
+    public function activities(string $id)
+    {
+        $activities = LeadActivityModel::query()
+            ->where('id_lead', $id)
+            ->select([
+                'id_lead_activity',
+                'id_lead',
+                'id_user',
+                'updated_by',
+                'description',
+                'source',
+                'created_at',
+                'updated_at',
+            ])
+            ->with([
+                'user:id,name',
+                'user.roles:id,name',
+
+                'userUpdate:id,name',
+                'userUpdate.roles:id,name',
+            ])
+            ->latest('created_at')
+            ->paginate(10);
+
+        return response()->json($activities);
     }
     public function destroy(string $id)
     {

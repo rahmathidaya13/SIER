@@ -19,7 +19,7 @@ const props = defineProps({
 
 const isEdit = computed(() => !!props.idLead);
 const isLoading = ref(false);
-const dataLead = ref(null);
+const activities = ref([]);
 
 const form = useForm({
     description: '',
@@ -30,7 +30,7 @@ const fillForm = (data) => {
         description: '',
     });
 
-    dataLead.value = data
+    activities.value = data
     form.reset();
 }
 
@@ -40,11 +40,11 @@ const resetForm = () => {
     })
     form.reset();
     form.clearErrors();
-    dataLead.value = null
+    activities.value = [];
 }
 
 
-const loadLead = async () => {
+const loadActivity = async () => {
     isLoading.value = true
 
     if (!props.idLead) {
@@ -53,9 +53,10 @@ const loadLead = async () => {
     }
 
     try {
-        const { data } = await axios.get(`/leads/show/${props.idLead}`);
+        const { data } = await axios.get(route('leads.activities', props.idLead));
         const cleanData = data.data;
         fillForm(cleanData);
+        console.log(cleanData);
     } catch (error) {
         console.error("Gagal mengambil data:", error);
         alert("Terjadi kesalahan saat memuat data.");
@@ -84,8 +85,9 @@ const updateActivity = () => {
         }, {
         preserveScroll: true,
         preserveState: true,
+        replace: true,
         onSuccess: () => {
-            const activity = dataLead.value.activity.find(
+            const activity = activities.value.find(
                 actv => actv.id_lead_activity === activityEdit.id
             );
             if (activity) {
@@ -117,17 +119,18 @@ const submit = () => {
         replace: true,
         onSuccess: async () => {
             // close();
-            await loadLead();
+            await loadActivity();
+
         },
     });
 };
-// watch untuk kondisi buka modal, jika props.show berubah menjadi true, maka loadLead akan dijalankan
+// watch untuk kondisi buka modal, jika props.show berubah menjadi true, maka loadActivity akan dijalankan
 watch(
     () => props.show,
     async (isOpen) => {
         if (!isOpen) return;
         if (props.idLead) {
-            await loadLead();
+            await loadActivity();
         } else {
             resetForm();
         }
@@ -150,12 +153,11 @@ const submitTextButton = computed(() => {
 const getRoleName = (data, mode = 'create') => {
     let role;
     if (mode === 'create') {
-        role = data.user.roles
+        role = data.user.roles[0].name
     }
     if (mode === 'edit') {
-        role = data.user_update.roles
+        role = data.user_update.roles[0].name
     }
-    // const role = data.user.roles.map(role => role.name)
     const roles = {
         'super_admin': {
             label: 'Head Office',
@@ -233,108 +235,114 @@ const getRoleName = (data, mode = 'create') => {
                                     </div>
                                 </div>
 
-                                <div v-if="dataLead?.activity && dataLead?.activity.length > 0"
-                                    class="col-12 mt-4 pt-2">
+                                <div v-if="activities && activities.length > 0" class="col-12 mt-4 pt-2">
 
                                     <h6 class="fw-bold text-muted mb-4 pb-2 border-bottom d-flex align-items-center"
                                         style="font-size: 13px; letter-spacing: 0.5px;">
                                         <i class="bi bi-clock-history me-2 fs-5"></i> JEJAK REKAM KONSUMEN (TIMELINE)
                                     </h6>
 
-                                    <div class="timeline-container position-relative ps-4 pe-2"
+                                    <div class="timeline-scroll-container pe-2"
                                         style="max-height: 480px; overflow-y: auto;">
 
-                                        <div class="position-absolute vh-100 border-start border-2 border-secondary-subtle"
-                                            style="left: 8px; top: 8px; z-index: 1;"></div>
+                                        <div class="position-relative pt-2 pb-4 ms-3">
 
-                                        <div class="position-relative mb-4" v-for="act in dataLead.activity"
-                                            :key="act.id_lead_activity">
+                                            <div class="position-absolute border-start border-2 border-secondary-subtle"
+                                                style="left: 0; top: 24px; bottom: 0; z-index: 1;"></div>
 
-                                            <div class="position-absolute bg-primary rounded-circle border border-3 border-white shadow-sm"
-                                                style="width: 18px; height: 18px; left: -25px; top: 5px; z-index: 2;">
-                                            </div>
+                                            <div class="position-relative mb-4 ps-4" v-for="act in activities"
+                                                :key="act.id_lead_activity">
 
-                                            <div class="card border shadow-sm rounded-4 overflow-hidden">
-
-                                                <div
-                                                    class="card-header bg-primary-subtle border-bottom-0 py-2 px-3 d-flex justify-content-between align-items-center">
-                                                    <div class="d-flex align-items-center gap-3">
-                                                        <div class="badge bg-primary text-white rounded-circle d-flex justify-content-center align-items-center shadow-sm"
-                                                            style="width: 36px; height: 36px;">
-                                                            <i class="bi bi-person-fill fs-5"></i>
-                                                        </div>
-                                                        <div class="d-flex flex-column">
-                                                            <span class="fw-bold text-dark text-capitalize"
-                                                                style="font-size: 13.5px;">
-                                                                {{ act.user?.activity_creator_name || 'Sistem' }}
-                                                                <span
-                                                                    class="badge bg-secondary-subtle text-secondary ms-1 fw-medium border border-secondary-subtle"
-                                                                    style="font-size: 10px;">
-                                                                    {{ getRoleName(act, 'create').label }}
-                                                                </span>
-                                                            </span>
-                                                            <span class="text-muted mt-1 d-flex align-items-center"
-                                                                style="font-size: 11px;">
-                                                                <i class="bi bi-calendar-event me-1"></i> {{
-                                                                    formatDate(act.created_at) }}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div v-if="act.created_at !== act.updated_at && act.id_user !== act.updated_by"
-                                                        class="text-end">
-                                                        <span
-                                                            class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill fw-medium px-2 py-1"
-                                                            style="font-size: 10px;">
-                                                            <i class="bi bi-pencil-square me-1"></i> Diubah: {{
-                                                                act.user_update?.name }}
-                                                        </span>
-                                                    </div>
+                                                <div class="position-absolute bg-primary rounded-circle border border-3 border-white shadow-sm"
+                                                    style="width: 18px; height: 18px; left: -9px; top: 15px; z-index: 2;">
                                                 </div>
 
-                                                <div class="card-body p-3">
+                                                <!-- CARD KONTEN -->
+                                                <div class="card border shadow-sm rounded-4 overflow-hidden">
+                                                    <div
+                                                        class="card-header bg-primary-subtle border-bottom-0 py-2 px-3 d-flex justify-content-between align-items-center">
+                                                        <div class="d-flex align-items-center gap-3">
+                                                            <div class="badge bg-primary text-white rounded-circle d-flex justify-content-center align-items-center shadow-sm"
+                                                                style="width: 36px; height: 36px;">
+                                                                <i class="bi bi-person-fill fs-5"></i>
+                                                            </div>
+                                                            <div class="d-flex flex-column align-items-start">
+                                                                <span class="fw-bold text-dark text-capitalize"
+                                                                    style="font-size: 13.5px;">
+                                                                    {{ act.user?.name || 'Sistem' }}
+                                                                    <span
+                                                                        class="badge bg-secondary-subtle text-secondary ms-1 fw-medium border border-secondary-subtle"
+                                                                        style="font-size: 10px;">
+                                                                        {{ getRoleName(act, 'create').label }}
+                                                                    </span>
+                                                                </span>
+                                                                <span class="text-muted mt-1 d-flex align-items-center"
+                                                                    style="font-size: 11px;">
+                                                                    <i class="bi bi-calendar-event me-1"></i> {{
+                                                                        formatDate(act.created_at) }}
+                                                                </span>
+                                                            </div>
+                                                        </div>
 
-                                                    <div v-if="__alert.visible && __alert.id === act.id_lead_activity"
-                                                        class="alert py-2 px-3 mb-3 d-flex align-items-center rounded-3"
-                                                        :class="`alert-${__alert.type}`" style="font-size: 13px;">
-                                                        <i :class="{ 'bi bi-check-circle-fill text-success': __alert.type === 'success', 'bi bi-exclamation-triangle-fill text-danger': __alert.type === 'danger' }"
-                                                            class="me-2 fs-5"></i>
-                                                        <span class="fw-medium">{{ __alert.message }}</span>
+                                                        <div v-if="act.created_at !== act.updated_at && act.id_user !== act.updated_by"
+                                                            class="text-end">
+                                                            <span
+                                                                class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill fw-medium px-2 py-1"
+                                                                style="font-size: 10px;">
+                                                                <i class="bi bi-pencil-square me-1"></i> Diubah: {{
+                                                                    act.user_update?.name }}
+                                                            </span>
+                                                        </div>
                                                     </div>
 
-                                                    <p v-if="!activityEdit.id" class="mb-0 text-dark"
-                                                        style="font-size: 14px; white-space: pre-line; line-height: 1.6;">
-                                                        {{ act.description }}
-                                                    </p>
+                                                    <div class="card-body p-3">
 
-                                                    <div v-if="activityEdit.id === act.id_lead_activity" class="mb-2">
-                                                        <text-area
-                                                            :error="__alert.visible && __alert.id === act.id_lead_activity"
-                                                            :maxChar="2500" name="activity"
-                                                            inputClass="border-secondary-subtle rounded-3"
-                                                            v-model="activityEdit.new_value" :rows="5" />
-                                                    </div>
+                                                        <div v-if="__alert.visible && __alert.id === act.id_lead_activity"
+                                                            class="alert py-2 px-3 mb-3 d-flex align-items-center rounded-3"
+                                                            :class="`alert-${__alert.type}`" style="font-size: 13px;">
+                                                            <i :class="{ 'bi bi-check-circle-fill text-success': __alert.type === 'success', 'bi bi-exclamation-triangle-fill text-danger': __alert.type === 'danger' }"
+                                                                class="me-2 fs-5"></i>
+                                                            <span class="fw-medium">{{ __alert.message }}</span>
+                                                        </div>
 
-                                                    <div class="d-flex gap-2 justify-content-end mt-3 border-top pt-2">
-                                                        <button v-if="!activityEdit.id"
-                                                            @click.prevent="editActivity(act)"
-                                                            class="btn btn-sm btn-light text-primary fw-medium rounded-pill px-3 shadow-none transition-all hover-bg-primary-subtle"
-                                                            style="font-size: 12px;">
-                                                            <i class="bi bi-pencil me-1"></i> Edit
-                                                        </button>
+                                                        <p v-if="!activityEdit.id || activityEdit.id !== act.id_lead_activity"
+                                                            class="mb-0 text-dark"
+                                                            style="font-size: 14px; white-space: pre-line; line-height: 1.6;">
+                                                            {{ act.description }}
+                                                        </p>
 
-                                                        <template v-else-if="activityEdit.id === act.id_lead_activity">
-                                                            <button @click.prevent="cancelEditActivity"
-                                                                class="btn btn-sm btn-light text-danger fw-medium rounded-pill px-3 shadow-none"
+                                                        <div v-if="activityEdit.id === act.id_lead_activity"
+                                                            class="mb-2">
+                                                            <text-area
+                                                                :error="__alert.visible && __alert.id === act.id_lead_activity"
+                                                                :maxChar="2500" name="activity"
+                                                                inputClass="border-secondary-subtle rounded-3"
+                                                                v-model="activityEdit.new_value" :rows="5" />
+                                                        </div>
+
+                                                        <div
+                                                            class="d-flex gap-2 justify-content-end mt-3 border-top pt-2">
+                                                            <button v-if="!activityEdit.id"
+                                                                @click.prevent="editActivity(act)"
+                                                                class="btn btn-sm btn-light text-primary fw-medium rounded-pill px-3 shadow-none transition-all hover-bg-primary-subtle"
                                                                 style="font-size: 12px;">
-                                                                Batal
+                                                                <i class="bi bi-pencil me-1"></i> Edit
                                                             </button>
-                                                            <button @click.prevent="updateActivity"
-                                                                class="btn btn-sm btn-primary fw-medium rounded-pill px-3 shadow-sm"
-                                                                style="font-size: 12px;">
-                                                                <i class="bi bi-save me-1"></i> Simpan
-                                                            </button>
-                                                        </template>
+
+                                                            <template
+                                                                v-else-if="activityEdit.id === act.id_lead_activity">
+                                                                <button @click.prevent="cancelEditActivity"
+                                                                    class="btn btn-sm btn-light text-danger fw-medium rounded-pill px-3 shadow-none"
+                                                                    style="font-size: 12px;">
+                                                                    Batal
+                                                                </button>
+                                                                <button @click.prevent="updateActivity"
+                                                                    class="btn btn-sm btn-primary fw-medium rounded-pill px-3 shadow-sm"
+                                                                    style="font-size: 12px;">
+                                                                    <i class="bi bi-save me-1"></i> Simpan
+                                                                </button>
+                                                            </template>
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -343,7 +351,7 @@ const getRoleName = (data, mode = 'create') => {
                                     </div>
                                 </div>
 
-                                <div v-if="!dataLead?.activity || dataLead?.activity.length === 0"
+                                <div v-if="!activities || activities.length === 0"
                                     class="col-12 text-center text-muted py-5">
                                     <i class="bi bi-chat-square-dots fs-1 opacity-25 d-block mb-2"></i>
                                     <small class="fw-medium">Belum ada riwayat percakapan pada prospek ini.</small>

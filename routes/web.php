@@ -46,6 +46,7 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
     Route::controller(LeadController::class)->group(function () {
         Route::get('/leads/list', 'index')->name('leads.index');
         Route::get('/leads/show/{id}', 'show')->name('leads.show');
+        Route::get('/leads/activity/{id}', 'activities')->name('leads.activities');
         Route::post('/leads/store', 'store')->name('leads.store');
         Route::put('/leads/update/{id}', 'update')->name('leads.update');
         Route::delete('/leads/delete/{leads}', 'destroy')->name('leads.delete');

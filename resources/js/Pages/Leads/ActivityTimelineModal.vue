@@ -36,9 +36,9 @@ const loadTimeline = async () => {
         const cleanData = data.data;
         customerName.value = cleanData?.name || 'Konsumen';
         phoneNumber.value = cleanData?.phone || '';
-        activities.value = cleanData?.activity || [];
+        // activities.value = cleanData?.activity || [];
         products.value = cleanData?.products || null;
-
+        // console.log(cleanData);
     } catch (error) {
         console.error("Gagal mengambil riwayat:", error);
     } finally {
@@ -46,11 +46,33 @@ const loadTimeline = async () => {
     }
 };
 
+const loadActivities = async (page = 1) => {
+    if (!props.idLead) return;
+    isLoading.value = true;
+    try {
+        const { data } = await axios.get(
+            route('leads.activities', props.idLead),
+            {
+                params: {
+                    page,
+                },
+            }
+        );
+        activities.value = data.data;
+    } catch (error) {
+        console.error("Gagal mengambil riwayat:", error);
+    } finally {
+        isLoading.value = false;
+    }
+
+};
+
 watch(
     () => props.show,
     (isOpen) => {
         if (isOpen) {
             loadTimeline();
+            loadActivities();
         }
     }
 );
@@ -187,8 +209,8 @@ const customerType = (type) => {
                                         <div class="badge bg-light text-dark border small">
                                             <i class="bi bi-person-fill me-1"></i>
                                             <span class="text-capitalize">
-                                                {{ act.user?.activity_creator_name || 'Sistem' }} {{
-                                                    `(${getRoleName(act.user?.roles).label})` }}
+                                                {{ act.user?.name || 'Sistem' }} {{
+                                                    `(${getRoleName(act.user?.roles[0]?.name).label})` }}
                                             </span>
                                         </div>
                                     </div>
