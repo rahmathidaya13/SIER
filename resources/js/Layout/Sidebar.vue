@@ -73,7 +73,7 @@ const menuItems = [
         icon: 'bi bi-person-fill',
         route: 'employee.index',
         prefixUrl: 'employee*',
-        roles: ['developer', 'super_admin', 'supervisor']
+        roles: ['developer', 'super_admin']
     },
     {
         title: 'Keluar',

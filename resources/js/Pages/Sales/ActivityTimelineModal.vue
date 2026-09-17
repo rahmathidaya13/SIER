@@ -61,7 +61,7 @@ const loadTimeline = async () => {
                 role_name: data.user?.roles[0].name,
             }
             : null;
-        console.log(data);
+        console.log(data.data);
     } catch (error) {
         console.error("Gagal mengambil riwayat:", error);
     } finally {

@@ -140,7 +140,7 @@ const employeeActions = [
         action: 'edit',
         protectedSelf: true,
         icon: 'bi bi-pencil-square',
-        role: ['developer', 'super_admin', 'supervisor'],
+        role: ['developer', 'super_admin'],
         title: 'Ubah Pegawai',
         buttonClass: 'btn-action',
         variant: 'edit',

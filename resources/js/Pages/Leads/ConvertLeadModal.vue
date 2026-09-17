@@ -98,58 +98,66 @@ const dpAmount = computed(() => {
             title="Sahkan Closing Transaksi" @closed="close" :mobileFullscreen="false">
 
             <template #body>
+
                 <alert-error-all :errors="form.errors" @close="form.clearErrors()" />
+
                 <div v-if="isLoading" class="text-center py-5">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
                     <p class="text-muted mt-3 small fw-medium">Sedang mengambil data...</p>
                 </div>
+
                 <div v-else>
-                    <form-wrapper @submit.prevent="submit">
 
-                        <div class="bg-primary-subtle p-3 rounded-3 mb-3 border border-primary-subtle">
+                    <div class="bg-primary-subtle p-3 rounded-3 mb-3 border border-primary-subtle">
 
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="fs-1 text-primary">
-                                    <i class="bi bi-person-bounding-box"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1 fw-bold text-dark fs-5">{{ dataLead?.name }}</h6>
-                                    <div class="text-primary fw-medium small">
-                                        <i class="bi bi-cart-check-fill me-1"></i>
-                                        Closing <strong>{{ dataLead?.products?.length || 0 }}</strong> Produk
-                                    </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="fs-1 text-primary">
+                                <i class="bi bi-person-bounding-box"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fw-bold text-dark fs-5">{{ dataLead?.name }}</h6>
+                                <div class="text-primary fw-medium small">
+                                    <i class="bi bi-cart-check-fill me-1"></i>
+                                    Closing <strong>{{ dataLead?.products?.length || 0 }}</strong> Produk
                                 </div>
                             </div>
-
-                            <div class="mt-2 pt-2 border-top border-primary border-opacity-25">
-                                <label class="form-label small fw-bold text-primary mb-2 opacity-75">
-                                    PRODUK YANG DIBELI:
-                                </label>
-                            </div>
-
-                            <div v-if="dataLead?.products && dataLead.products.length > 0"
-                                class="d-flex flex-wrap gap-2">
-                                <div v-for="(prod, index) in dataLead.products" :key="prod.id_product || index"
-                                    class="badge bg-white text-dark border border-primary-subtle shadow-sm d-flex align-items-center p-2 rounded-pill"
-                                    style="font-size: 12px;">
-
-                                    <i class="bi bi-box-seam text-primary me-2 fs-6"></i>
-
-                                    <span class="text-truncate" style="max-width: 200px;" :title="prod.product_name">
-                                        {{ prod.product_name || 'Produk Tidak Diketahui' }}
-                                    </span>
-                                </div>
-                            </div>
-                            <div v-else
-                                class="text-danger small fst-italic bg-danger-subtle p-2 rounded-2 border border-danger-subtle">
-                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Perhatian: Belum ada produk yang
-                                dikaitkan ke Lead ini.
-                            </div>
-
                         </div>
 
+                        <div class="mt-2 pt-2 border-top border-primary border-opacity-25">
+                            <label class="form-label small fw-bold text-primary mb-2 opacity-75">
+                                PRODUK YANG DIBELI:
+                            </label>
+                        </div>
+
+                        <div v-if="dataLead?.products && dataLead.products.length > 0" class="d-flex flex-wrap gap-2">
+                            <div v-for="(prod, index) in dataLead.products.slice(0, 5)" :key="prod.id_product || index"
+                                class="badge bg-white text-dark border border-primary-subtle shadow-sm d-flex align-items-center p-2 rounded-pill"
+                                style="font-size: 12px;">
+
+                                <i class="bi bi-box-seam text-primary me-2 fs-6"></i>
+
+                                <span class="text-truncate" style="max-width: 200px;" :title="prod.product_name">
+                                    {{ prod.product_name || 'Produk Tidak Diketahui' }}
+                                </span>
+                            </div>
+                            <span v-if="dataLead.products.length > 5"
+                                class="badge bg-light text-dark border border-primary-subtle shadow-sm d-flex align-items-center p-2 rounded-pill"
+                                style="font-size: 11px;"
+                                :title="'Ada ' + (dataLead.products.length - 5) + ' Produk lainnya'">
+                                +{{ dataLead.products.length - 5 }} Produk lainnya
+                            </span>
+                        </div>
+                        <div v-else
+                            class="text-danger small fst-italic bg-danger-subtle p-2 rounded-2 border border-danger-subtle">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Perhatian: Belum ada produk yang
+                            dikaitkan ke Lead ini.
+                        </div>
+
+                    </div>
+
+                    <form-wrapper @submit.prevent="submit">
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <label for="deal_price_input" class="form-label small fw-bold text-muted">HARGA
@@ -217,11 +225,10 @@ const dpAmount = computed(() => {
                             </div>
 
                             <div class="col-12 mt-3 border-top pt-3">
-                                <label for="notes_input" class="form-label small fw-bold text-muted">CATATAN TRANSAKSI
+                                <label for="notes_input" class="form-label small fw-bold text-muted">CATATAN
                                     (Opsional)</label>
                                 <text-area :maxChar="500" :error="form.errors.notes" name="notes" v-model="form.notes"
-                                    :rows="2"
-                                    placeholder="Cth: Pelanggan minta jika pembelian barang banyak ada pengurangan harga..." />
+                                    :rows="2" placeholder="Buatkan catatan tambahan jika diperlukan..." />
                                 <input-error :message="form.errors.notes" />
                             </div>
                         </div>

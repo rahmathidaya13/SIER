@@ -153,10 +153,10 @@ const submitTextButton = computed(() => {
 const getRoleName = (data, mode = 'create') => {
     let role;
     if (mode === 'create') {
-        role = data.user.roles[0].name
+        role = data.user.role_name
     }
     if (mode === 'edit') {
-        role = data.user_update.roles[0].name
+        role = data.user_update.role_name
     }
     const roles = {
         'super_admin': {

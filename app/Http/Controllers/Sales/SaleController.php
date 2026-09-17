@@ -2,17 +2,22 @@
 
 namespace App\Http\Controllers\Sales;
 
-use App\Services\Sales\PaymentCancelled;
 use App\Traits\UserScope;
 use App\Models\SalesModel;
 use App\Models\BranchModel;
 use Illuminate\Http\Request;
+use App\Models\PaymentHistory;
 use App\Traits\SalesValidation;
+use App\Models\LeadActivityModel;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Traits\BranchMutationHelper;
 use App\Repository\Sale\SaleRepository;
 use App\Repository\Lead\LeadsRepository;
+use App\Services\Sales\PaymentCancelled;
 use App\Services\Sales\SalePaymentService;
+use App\Http\Resources\LeadActivityResource;
+use App\Http\Resources\SalesResource;
 use App\Repository\Channel\ChannelRepository;
 use App\Services\Sales\PaymentValidationService;
 use App\Services\Authorization\ScopeResolverService;
@@ -27,21 +32,22 @@ class SaleController extends Controller
 
     public function __construct(SaleRepository $saleRepository)
     {
-        $this->saleRepository = $saleRepository;
+        $this->saleRepository           = $saleRepository;
         $this->paymentValidationService = new PaymentValidationService();
-        $this->salePaymentService = new SalePaymentService();
-        $this->paymentCancelledService = new PaymentCancelled();
+        $this->salePaymentService       = new SalePaymentService();
+        $this->paymentCancelledService  = new PaymentCancelled();
     }
+
     public function index(Request $request)
     {
 
         $request->validate([
-            'keyword' => 'nullable|string|max:255',
-            'limit' => 'nullable|integer|min:1|max:100',
+            'keyword'  => 'nullable|string|max:255',
+            'limit'    => 'nullable|integer|min:1|max:100',
             'order_by' => 'nullable|string|in:oldest,latest',
-            'page' => 'nullable|integer|min:1',
-            'branch' => 'nullable|string|in:all,' . implode(',', BranchModel::pluck('name')->toArray()),
-            'status' => 'nullable|string|in:all,closing,cancelled'
+            'page'     => 'nullable|integer|min:1',
+            'branch'   => 'nullable|string|in:all,' . implode(',', BranchModel::pluck('name')->toArray()),
+            'status'   => 'nullable|string|in:all,closing,cancelled',
         ]);
 
         $filters = $request->only([
@@ -50,22 +56,22 @@ class SaleController extends Controller
             'branch',
             'order_by',
             'page',
-            'status'
+            'status',
         ]);
 
         // inject id_branch and id_user untuk unique cache
         $filters = app(ScopeResolverService::class)->filters($filters);
-        $sales = $this->saleRepository->getCached($filters['scope'], $filters);
+        $sales   = $this->saleRepository->getCached($filters['scope'], $filters);
 
         $salesStats = $this->saleRepository->getSalesStats($this->scopeId(auth()->user()), $filters);
-        $branch = BranchModel::select('id_branch', 'name')->get();
+        $branch     = BranchModel::select('id_branch', 'name')->get();
         return inertia(
             'Sales/Index',
             [
-                'sales' => $sales,
-                'stats' => $salesStats,
+                'sales'   => $sales,
+                'stats'   => $salesStats,
                 'filters' => $filters,
-                'branch' => $branch
+                'branch'  => $branch,
             ]
         );
     }
@@ -95,29 +101,9 @@ class SaleController extends Controller
                 'updated_at',
             ])
             ->with([
-                'lead' => function ($query) {
-                    $query->select([
-                        'id_lead',
-                        'name',
-                        'phone',
-                    ]);
-                },
+                'lead:id_lead,name,phone',
 
-                // User Sales
-                'user' => function ($query) {
-                    $query->select([
-                        'id',
-                        'name',
-                    ]);
-                },
-                'user.roles:id,name',
-                'branch' => function ($query) {
-                    $query->select([
-                        'id_branch',
-                        'name',
-                    ]);
-                },
-                'lead.activity' => function ($query) {
+                'lead.activity'  => function ($query) {
                     $query
                         ->select([
                             'id_lead_activity',
@@ -132,25 +118,23 @@ class SaleController extends Controller
                 'lead.activity.user.roles:id,name',
 
                 'paymentHistory' => function ($query) {
-                    $query
-                        ->select([
-                            'id_payment_history',
-                            'id_sales',
-                            'id_user',
-                            'payment_method',
-                            'bank_name',
-                            'paid_amount',
-                            'payment_at',
-                            'notes_payment',
-                            'created_at',
-                        ])
-                        ->latest('created_at');
+                    $query->select([
+                        'id_payment_history',
+                        'id_sales',
+                        'id_user',
+                        'payment_method',
+                        'bank_name',
+                        'paid_amount',
+                        'payment_at',
+                        'notes_payment',
+                        'created_at',
+                    ])->latest('created_at');
                 },
 
                 'paymentHistory.user:id,name',
                 'paymentHistory.user.roles:id,name',
 
-                'salesProduct' => function ($query) {
+                'salesProduct'   => function ($query) {
                     $query->select([
                         'id_sales',
                         'id_product',
@@ -163,7 +147,46 @@ class SaleController extends Controller
             ])
             ->findOrFail($id);
 
-        return response()->json($sales);
+        return new SalesResource($sales);
+    }
+    public function activities(string $id)
+    {
+        $activities = LeadActivityModel::query()
+            ->where('id_lead', $id)
+            ->select([
+                'id_lead_activity',
+                'id_lead',
+                'id_user',
+                'updated_by',
+                'description',
+                'source',
+                'created_at',
+                'updated_at',
+            ])->with([
+                'user' => UserResource::make($this->whenLoaded('user')),
+            ])
+            ->latest('created_at')
+            ->paginate(10);
+        return LeadActivityResource::collection($activities);
+    }
+    public function paymentHistory(string $id)
+    {
+        $payHistory = PaymentHistory::query()
+            ->where('id_lead', $id)
+            ->select([
+                'id_sales',
+                'id_user',
+                'id_lead',
+                'payment_method',
+                'bank_name',
+                'paid_amount',
+                'payment_at',
+                'notes_payment',
+                'created_at',
+                'updated_at',
+            ])
+            ->latest('created_at');
+        return response()->json($payHistory);
     }
     public function payRemaining(Request $request, string $id)
     {
@@ -184,7 +207,7 @@ class SaleController extends Controller
 
     public function payCancel(Request $request, string $id)
     {
-        $user = auth()->user();
+        $user      = auth()->user();
         $validated = $this->validateSales($request->all(), 'payment_cancel');
 
         $sales = SalesModel::find($id);
@@ -193,13 +216,13 @@ class SaleController extends Controller
             [
                 SaleRepository::class,
                 LeadsRepository::class,
-                ChannelRepository::class
+                ChannelRepository::class,
             ],
             [
                 'global',
                 'global_super_admin',
                 'branch_' . $user->id_branch,
-                'user_' . $user->id
+                'user_' . $user->id,
             ]
         );
         return redirect()->back()->with('message', 'Closing berhasil dibatalkan');

@@ -46,7 +46,7 @@ class SaleRepository extends BaseCacheRepository
                 'branches.name as branch_name',
             ]);
 
-        if ($user->hasRole('super_admin')) {
+        if ($user->hasRole(['super_admin'])) {
             $branchFilter = $filters['branch'] ?? 'all';
             $query->when($branchFilter !== 'all', function ($q) use ($branchFilter) {
                 $q->where('branches.name', $branchFilter);

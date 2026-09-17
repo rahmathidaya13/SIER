@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use App\Traits\LeadsValidation;
 use App\Services\Lead\LeadServices;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\LeadActivityResource;
 use App\Http\Resources\LeadResource;
 use App\Models\LeadActivityModel;
 use App\Traits\BranchMutationHelper;
@@ -198,27 +199,28 @@ class LeadController extends Controller
 
     public function show(string $id)
     {
-        $leads = LeadModel::select([
-            'id_lead',
-            'id_user',
-            'id_channel',
-            'name',
-            'phone',
-            'email',
-            'status',
-            'temperature',
-            'customer_type',
-            'notes',
-            'follow_up_date',
-            'closed_at'
-        ])->with([
-            'user:id,name',
-            'channel:id_channel,name,icon',
+        $leads = LeadModel::query()
+            ->select([
+                'id_lead',
+                'id_user',
+                'id_channel',
+                'name',
+                'phone',
+                'email',
+                'status',
+                'temperature',
+                'customer_type',
+                'notes',
+                'follow_up_date',
+                'closed_at'
+            ])->with([
+                'user:id,name',
+                'channel:id_channel,name,icon',
 
-            'leadProduct:id_lead,id_product',
-            'leadProduct.product:id_product,name,image_link,image_path',
+                'leadProduct:id_lead,id_product',
+                'leadProduct.product:id_product,name,image_link,image_path',
 
-        ])->findOrFail($id);
+            ])->findOrFail($id);
 
         return new LeadResource($leads); // Gunakan LeadResource untuk mengubah data menjadi format JSON yang sesuai
     }
@@ -247,7 +249,7 @@ class LeadController extends Controller
             ->latest('created_at')
             ->paginate(10);
 
-        return response()->json($activities);
+        return LeadActivityResource::collection($activities);
     }
     public function destroy(string $id)
     {

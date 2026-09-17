@@ -49,7 +49,7 @@ class UserAuthorizationService
         }
 
         // Bawahan dilarang mengedit Atasan (Sekarang Developer juga dimasukkan ke daftar lindungan)
-        if ($target->hasAnyRole(['developer', 'super_admin', 'supervisor'])) {
+        if ($target->hasAnyRole(['developer', 'super_admin'])) {
             throw ValidationException::withMessages([
                 'unauthorized_action' => 'Sistem mendeteksi tindakan ilegal: Anda tidak berhak mengubah data level Atasan.'
             ]);

@@ -58,7 +58,9 @@ const loadActivities = async (page = 1) => {
                 },
             }
         );
-        activities.value = data.data;
+        const cleanData = data.data;
+        activities.value = cleanData;
+        console.log(data);
     } catch (error) {
         console.error("Gagal mengambil riwayat:", error);
     } finally {
@@ -69,12 +71,14 @@ const loadActivities = async (page = 1) => {
 
 watch(
     () => props.show,
-    (isOpen) => {
+    async (isOpen) => {
         if (isOpen) {
             loadTimeline();
             loadActivities();
         }
-    }
+    }, {
+    immediate: true
+}
 );
 
 // Filter Cerdas: Menentukan Icon dan Warna berdasarkan isi teks
@@ -141,45 +145,6 @@ const customerType = (type) => {
             title="Riwayat Jejak Rekam Aktivitas" @closed="close" :mobileFullscreen="true">
 
             <template #body>
-                <div class="bg-c-slate text-white p-3 rounded-3 mb-4 shadow-sm d-flex align-items-center gap-3">
-
-                    <div class="bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                        style="width: 45px; height: 45px;">
-                        <i class="bi bi-person-lines-fill fs-4 text-white"></i>
-                    </div>
-
-                    <div class="d-flex flex-column justify-content-center">
-                        <p class="mb-0 text-white-50 small fw-medium text-uppercase tracking-wide"
-                            style="font-size: 10.5px;">Timeline Konsumen</p>
-                        <h5 class="mb-1 fw-bold">{{ customerName }}</h5>
-                        <span class="small fw-medium">
-                            <i class="bi bi-telephone-fill me-1"></i>
-                            {{ phoneNumber }}
-                        </span>
-                        <div v-if="products && products.length > 0" class="d-flex flex-wrap gap-1 mt-1">
-
-                            <template v-for="(prod, index) in products" :key="prod.id_product || index">
-                                <span
-                                    class="badge bg-white bg-opacity-25 text-white border border-white border-opacity-25 fw-normal d-flex align-items-center py-1 px-2 rounded-pill shadow-sm"
-                                    style="font-size: 11px;">
-                                    <i class="bi bi-box-seam me-1 opacity-75"></i>
-                                    <span class="text-truncate" style="max-width: 130px;" :title="prod.product_name">
-                                        {{ prod.product_name }}
-                                    </span>
-                                </span>
-                            </template>
-                        </div>
-
-                        <div v-else class="mt-1">
-                            <span
-                                class="badge bg-white bg-opacity-10 text-white-50 border border-white border-opacity-10 fw-normal py-1 px-2 rounded-pill fst-italic"
-                                style="font-size: 10.5px;">
-                                Belum ada produk
-                            </span>
-                        </div>
-                    </div>
-
-                </div>
 
                 <div v-if="isLoading" class="text-center py-5">
                     <div class="spinner-border text-primary" role="status">
@@ -188,51 +153,99 @@ const customerType = (type) => {
                     <p class="text-muted mt-3 small fw-medium">Menarik data dari arsip...</p>
                 </div>
 
-                <div v-else-if="activities.length > 0" class="timeline-container px-2 pb-3">
+                <div v-else class="timeline-container px-2 pb-3">
 
-                    <div v-for="(act, index) in activities" :key="act.id_lead_activity"
-                        class="timeline-item position-relative mb-4">
+                    <div class="bg-c-slate text-white p-3 rounded-3 mb-4 shadow-sm d-flex align-items-center gap-3">
 
-                        <div v-if="index !== activities.length - 1" class="timeline-line"></div>
+                        <div class="bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                            style="width: 45px; height: 45px;">
+                            <i class="bi bi-person-lines-fill fs-4 text-white"></i>
+                        </div>
 
-                        <div class="d-flex gap-3">
-                            <div class="timeline-icon flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center shadow-sm z-2"
-                                :class="getTimelineStyle(act.description).bg"
-                                style="width: 40px; height: 40px; border: 3px solid #fff;">
-                                <i class="fs-5"
-                                    :class="[getTimelineStyle(act.description).icon, getTimelineStyle(act.description).text]"></i>
+                        <div class="d-flex flex-column justify-content-center">
+                            <p class="mb-0 text-white-50 small fw-medium text-uppercase tracking-wide"
+                                style="font-size: 10.5px;">Timeline Konsumen</p>
+                            <h5 class="mb-1 fw-bold">{{ customerName }}</h5>
+                            <span class="small fw-medium">
+                                <i class="bi bi-telephone-fill me-1"></i>
+                                {{ phoneNumber }}
+                            </span>
+
+                            <div v-if="products && products.length > 0" class="d-flex flex-wrap gap-1 mt-1">
+
+                                <template v-for="(prod, index) in products" :key="prod.id_product || index">
+                                    <span
+                                        class="badge bg-white bg-opacity-25 text-white border border-white border-opacity-25 fw-normal d-flex align-items-center py-1 px-2 rounded-pill shadow-sm"
+                                        style="font-size: 11px;">
+                                        <i class="bi bi-box-seam me-1 opacity-75"></i>
+                                        <span class="text-truncate" style="max-width: 130px;"
+                                            :title="prod.product_name">
+                                            {{ prod.product_name }}
+                                        </span>
+                                    </span>
+                                </template>
                             </div>
 
-                            <div class="flex-grow-1 bg-white border rounded-3 p-3 shadow-sm">
-                                <div class="d-flex justify-content-between align-items-start mb-2 border-bottom pb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="badge bg-light text-dark border small">
-                                            <i class="bi bi-person-fill me-1"></i>
-                                            <span class="text-capitalize">
-                                                {{ act.user?.name || 'Sistem' }} {{
-                                                    `(${getRoleName(act.user?.roles[0]?.name).label})` }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <span class="text-muted small fw-medium" style="font-size: 11px;">
-                                        <i class="bi bi-calendar2-event me-1"></i> {{ formatDate(act.created_at) }}
-                                    </span>
-                                </div>
-
-                                <p class="mb-0 text-dark"
-                                    style="font-size: 14px; white-space: pre-line; line-height: 1.5;">
-                                    {{ act.description }}
-                                </p>
+                            <div v-else class="mt-1">
+                                <span
+                                    class="badge bg-white bg-opacity-10 text-white-50 border border-white border-opacity-10 fw-normal py-1 px-2 rounded-pill fst-italic"
+                                    style="font-size: 10.5px;">
+                                    Belum ada produk
+                                </span>
                             </div>
                         </div>
 
                     </div>
-                </div>
 
-                <div v-else class="text-center py-5">
-                    <i class="bi bi-inbox fs-1 text-muted opacity-25 d-block mb-3"></i>
-                    <h6 class="text-muted fw-bold">Belum Ada Riwayat</h6>
-                    <p class="text-muted small">Konsumen ini belum memiliki jejak rekam atau aktivitas pembayaran.</p>
+                    <template v-if="activities.length > 0">
+                        <div v-for="(act, index) in activities" :key="act.id_lead_activity"
+                            class="timeline-item position-relative mb-4 animate-fade-in">
+
+                            <div v-if="index !== activities.length - 1" class="timeline-line"></div>
+
+                            <div class="d-flex gap-3">
+                                <div class="timeline-icon flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center shadow-sm z-2"
+                                    :class="getTimelineStyle(act.description).bg"
+                                    style="width: 40px; height: 40px; border: 3px solid #fff;">
+                                    <i class="fs-5"
+                                        :class="[getTimelineStyle(act.description).icon, getTimelineStyle(act.description).text]"></i>
+                                </div>
+
+                                <div class="flex-grow-1 bg-white border rounded-3 p-3 shadow-sm">
+                                    <div
+                                        class="d-flex justify-content-between align-items-start mb-2 border-bottom pb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="badge bg-light text-dark border small">
+                                                <i class="bi bi-person-fill me-1"></i>
+                                                <span class="text-capitalize">
+                                                    {{ act.user?.name || 'Sistem' }} {{
+                                                        `(${getRoleName(act.user?.role_name).label})` }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <span class="text-muted small fw-medium" style="font-size: 11px;">
+                                            <i class="bi bi-calendar2-event me-1"></i> {{ formatDate(act.created_at) }}
+                                        </span>
+                                    </div>
+
+                                    <p class="mb-0 text-dark"
+                                        style="font-size: 14px; white-space: pre-line; line-height: 1.5;">
+                                        {{ act.description }}
+                                    </p>
+                                </div>
+                            </div>
+
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted opacity-25 d-block mb-3"></i>
+                            <h6 class="text-muted fw-bold">Belum Ada Riwayat</h6>
+                            <p class="text-muted small">Konsumen ini belum memiliki jejak rekam atau aktivitas
+                                pembayaran.
+                            </p>
+                        </div>
+                    </template>
                 </div>
             </template>
 
@@ -249,6 +262,22 @@ const customerType = (type) => {
 </template>
 
 <style scoped>
+.animate-fade-in {
+    animation: fadeInSlideUp 0.35s ease-out forwards;
+}
+
+@keyframes fadeInSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .timeline-container {
     position: relative;
     max-height: 500px;

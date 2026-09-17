@@ -43,11 +43,11 @@ class SalesModel extends Model
     public function scopeAllowedForUser($query)
     {
         $user = auth()->user();
+        if (!$user) return $query->whereRaw('1 = 0'); // Jika user tidak ada, kembalikan query kosong
         return match (true) {
             $user->hasRole('developer') => $query,
             $user->hasRole('super_admin') => $query,
-            $user->hasRole('supervisor') => $query->where('sales.id_branch', $user->id_branch)
-                ->where('sales.id_user', $user->id),
+            $user->hasRole('supervisor') => $query->where('sales.id_branch', $user->id_branch),
             default => $query->where('sales.id_user', $user->id),
         };
     }

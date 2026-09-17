@@ -32,7 +32,7 @@ class UserController extends Controller
         $this->authorization = new UserAuthorizationService();
         $this->action = new UserService();
         $this->bussinessRule = new UserBusinessRuleService();
-        $this->middleware('role:developer|super_admin|supervisor');
+        $this->middleware('role:developer|super_admin');
     }
     public function index(Request $request)
     {
@@ -72,16 +72,7 @@ class UserController extends Controller
         return response()->json($user);
     }
 
-    private function allowedRoles(User $user): array|null|string|bool
-    {
-        $allowedRoles = match (true) {
-            $user->hasRole('developer')   => ['super_admin', 'supervisor', 'admin', 'sales', 'teknisi'],
-            $user->hasRole('super_admin') => ['supervisor', 'admin', 'sales', 'teknisi'],
-            $user->hasRole('supervisor')  => ['admin', 'sales', 'teknisi'],
-            default                                 => []
-        };
-        return $allowedRoles;
-    }
+
 
     public function store(Request $request)
     {
@@ -103,7 +94,7 @@ class UserController extends Controller
         $this->bussinessRule->ensureUniqueRolePerBranch(new User(), $data['role'], $branchId, $data['is_active']);
         $newUser = $this->action->create($data);
 
-        $this->invalidateCaches(UserRepository::class, ['global', 'global_super_admin', 'branch_' . $newUser->id_branch]);
+        $this->invalidateCaches(UserRepository::class, ['global', 'global_super_admin', 'branch_' . $newUser->id_branch, 'user_' . $newUser->id]);
         return back()->with(
             'message',
             "Akun {$newUser->name} berhasil didaftarkan sebagai " . ucwords($data['role'] . " di cabang " . ucwords($newUser->branch->name))
@@ -141,7 +132,7 @@ class UserController extends Controller
         $canChangeBranch = $currentUser->hasAnyRole(['developer', 'super_admin']);
         $this->action->update($user, $request->all(), $canChangeBranch);
 
-        $this->invalidateCaches(UserRepository::class, ['global', 'global_super_admin',  'branch_' . $oldBranchId, 'branch_' . $request->id_branch]);
+        $this->invalidateCaches(UserRepository::class, ['global', 'global_super_admin',  'branch_' . $oldBranchId, 'branch_' . $request->id_branch, 'user_' . $user->id]);
 
         return redirect()->back()->with('message', "Data {$user->name} berhasil diperbarui!");
     }
@@ -178,5 +169,16 @@ class UserController extends Controller
         $this->invalidateCaches(UserRepository::class, ['global', 'global_super_admin', 'branch_' . $branchId]);
 
         return redirect()->back()->with('message', "Pegawai atas nama {$name} telah dihapus dari sistem");
+    }
+
+    private function allowedRoles(User $user): array|null|string|bool
+    {
+        $allowedRoles = match (true) {
+            $user->hasRole('developer')   => ['super_admin', 'supervisor', 'admin', 'sales', 'teknisi'],
+            $user->hasRole('super_admin') => ['supervisor', 'admin', 'sales', 'teknisi'],
+            $user->hasRole('supervisor')  => ['admin', 'sales', 'teknisi'],
+            default                                 => []
+        };
+        return $allowedRoles;
     }
 }
