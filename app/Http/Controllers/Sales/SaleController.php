@@ -9,16 +9,19 @@ use Illuminate\Http\Request;
 use App\Models\PaymentHistory;
 use App\Traits\SalesValidation;
 use App\Models\LeadActivityModel;
+use App\Models\SalesProductModel;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Traits\BranchMutationHelper;
+use App\Http\Resources\SalesResource;
 use App\Repository\Sale\SaleRepository;
 use App\Repository\Lead\LeadsRepository;
 use App\Services\Sales\PaymentCancelled;
 use App\Services\Sales\SalePaymentService;
 use App\Http\Resources\LeadActivityResource;
-use App\Http\Resources\SalesResource;
+use App\Http\Resources\SalesProductResource;
 use App\Repository\Channel\ChannelRepository;
+use App\Http\Resources\PaymentHistoriesResource;
 use App\Services\Sales\PaymentValidationService;
 use App\Services\Authorization\ScopeResolverService;
 
@@ -102,57 +105,48 @@ class SaleController extends Controller
             ])
             ->with([
                 'lead:id_lead,name,phone',
-
-                'lead.activity'  => function ($query) {
-                    $query
-                        ->select([
-                            'id_lead_activity',
-                            'id_lead',
-                            'id_user',
-                            'description',
-                            'created_at',
-                        ])
-                        ->latest('created_at');
-                },
-                'lead.activity.user:id,name',
-                'lead.activity.user.roles:id,name',
-
-                'paymentHistory' => function ($query) {
-                    $query->select([
-                        'id_payment_history',
-                        'id_sales',
-                        'id_user',
-                        'payment_method',
-                        'bank_name',
-                        'paid_amount',
-                        'payment_at',
-                        'notes_payment',
-                        'created_at',
-                    ])->latest('created_at');
-                },
-
-                'paymentHistory.user:id,name',
-                'paymentHistory.user.roles:id,name',
-
-                'salesProduct'   => function ($query) {
-                    $query->select([
-                        'id_sales',
-                        'id_product',
-                    ]);
-                },
-
-                'salesProduct.product:id_product,name',
                 'cancelledBy:id,name',
                 'cancelledBy.roles:id,name',
             ])
             ->findOrFail($id);
 
-        return new SalesResource($sales);
+        return SalesResource::collection($sales);
+    }
+
+    public function salesProduct(string $id)
+    {
+        $sales = SalesModel::query()
+            ->select([
+                'id_sales',
+                'id_lead',
+            ])
+            ->findOrFail($id);
+
+        $salesProduct = SalesProductModel::query()
+            ->where('id_sales', $sales->id_sales)
+            ->select([
+                'id_sales',
+                'id_product',
+                'created_at',
+                'updated_at'
+            ])
+            ->with([
+                'product:id_product,name',
+            ]);
+
+        return SalesProductResource::collection($salesProduct);
     }
     public function activities(string $id)
     {
+        $sales = SalesModel::query()
+            ->select([
+                'id_sales',
+                'id_lead',
+            ])
+            ->findOrFail($id);
+
         $activities = LeadActivityModel::query()
-            ->where('id_lead', $id)
+            ->where('id_lead', $sales->id_lead)
             ->select([
                 'id_lead_activity',
                 'id_lead',
@@ -162,8 +156,12 @@ class SaleController extends Controller
                 'source',
                 'created_at',
                 'updated_at',
-            ])->with([
-                'user' => UserResource::make($this->whenLoaded('user')),
+            ])
+            ->with([
+                'user:id,name',
+                'user.roles:id,name',
+                'userUpdate:id,name',
+                'userUpdate.roles:id,name',
             ])
             ->latest('created_at')
             ->paginate(10);
@@ -171,8 +169,15 @@ class SaleController extends Controller
     }
     public function paymentHistory(string $id)
     {
+        $sales = SalesModel::query()
+            ->select([
+                'id_sales',
+                'id_lead',
+            ])
+            ->findOrFail($id);
+
         $payHistory = PaymentHistory::query()
-            ->where('id_lead', $id)
+            ->where('id_lead', $sales->id_lead)
             ->select([
                 'id_sales',
                 'id_user',
@@ -185,8 +190,13 @@ class SaleController extends Controller
                 'created_at',
                 'updated_at',
             ])
-            ->latest('created_at');
-        return response()->json($payHistory);
+            ->with([
+                'user:id,name',
+                'user.roles:id,name',
+            ])
+            ->latest('created_at')
+            ->paginate(2);
+        return PaymentHistoriesResource::collection($payHistory);
     }
     public function payRemaining(Request $request, string $id)
     {

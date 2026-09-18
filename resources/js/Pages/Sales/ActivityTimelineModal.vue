@@ -37,46 +37,110 @@ const close = () => {
     cancellation.value = null;
 };
 
-const loadTimeline = async () => {
-    if (!props.idSales) return;
-
+const request = async (callback, errorMessage) => {
     isLoading.value = true;
     try {
-        // Kita manfaatkan endpoint show yang sudah membawa relasi lead.activity
-        const { data } = await axios.get(`/sales/show/${props.idSales}`);
-        customerName.value = data.lead?.name || "Konsumen";
-        phoneNumber.value = data.lead?.phone || "Tidak Tersedia";
-        activities.value = data.lead?.activity || [];
-        products.value = data.sales_product || null;
-        paymentHistories.value = data.payment_history || [];
-        sales.value = data;
-
-        cancellation.value = data.cancelled_at
-            ? {
-                cancelled_at: data.cancelled_at,
-                cancelled_by: data.cancelled_by,
-                cancelled_reason: data.cancelled_reason,
-                cancelled_notes: data.cancelled_notes,
-                user_name: data.user?.name,
-                role_name: data.user?.roles[0].name,
-            }
-            : null;
-        console.log(data.data);
+        return await callback();
     } catch (error) {
-        console.error("Gagal mengambil riwayat:", error);
+        console.error(errorMessage, error);
     } finally {
         isLoading.value = false;
     }
-};
+}
+
+const loadSales = async () => {
+    await request(async () => {
+        const { data } = await axios.get(route('sales.show', props.idSales));
+        const salesData = data.data;
+        sales.value = salesData;
+
+        cancellation.value = salesData?.cancelled_at
+            ? {
+                cancelled_at: salesData.cancelled_at,
+                cancelled_by: salesData.cancelled_by,
+                cancelled_reason: salesData.cancelled_reason,
+                cancelled_notes: salesData.cancelled_notes,
+            }
+            : null;
+    }, "Gagal mengambil data");
+}
+// const loadTimeline = async () => {
+//     if (!props.idSales) return;
+//     isLoading.value = true;
+//     try {
+//         // Kita manfaatkan endpoint show yang sudah membawa relasi lead.activity
+//         const { data } = await axios.get(`/sales/show/${props.idSales}`);
+//         // customerName.value = data.lead?.name || "Konsumen";
+//         // phoneNumber.value = data.lead?.phone || "Tidak Tersedia";
+//         // products.value = data.sales_product || null;
+//         sales.value = data.data || {};
+
+//         cancellation.value = data.cancelled_at
+//             ? {
+//                 cancelled_at: data.cancelled_at,
+//                 cancelled_by: data.cancelled_by,
+//                 cancelled_reason: data.cancelled_reason,
+//                 cancelled_notes: data.cancelled_notes,
+//                 user_name: data.user?.name,
+//                 role_name: data.user?.roles[0].name,
+//             }
+//             : null;
+//         console.log(sales.value);
+//     } catch (error) {
+//         console.error("Gagal mengambil riwayat:", error);
+//     } finally {
+//         isLoading.value = false;
+//     }
+// };
+
+const loadActivity = async (page = 1) => {
+    if (!props.idSales) return;
+    isLoading.value = true;
+    try {
+        const { data } = await axios.get(route("sales.activities", props.idSales), {
+            params: {
+                page,
+            },
+        });
+        const cleanData = data.data;
+        activities.value = cleanData || [];
+    } catch (error) {
+        console.error("Gagal mengambil riwayat aktivitas:", error);
+    } finally {
+        isLoading.value = false;
+    }
+}
+
+const loadPaymentHistory = async (page = 1) => {
+    if (!props.idSales) return;
+    isLoading.value = true;
+    try {
+        const { data } = await axios.get(route("sales.payment.history", props.idSales), {
+            params: {
+                page,
+            },
+        });
+        const cleanData = data.data;
+        paymentHistories.value = cleanData || [];
+        console.log(cleanData);
+    } catch (error) {
+        console.error("Gagal mengambil riwayat pembayaran:", error);
+    } finally {
+        isLoading.value = false;
+    }
+}
 
 watch(
     () => props.show,
-    (isOpen) => {
+    async (isOpen) => {
         if (isOpen) {
             activeTab.value = "transactions";
-            loadTimeline();
+            loadSales();
+            loadActivity();
+            loadPaymentHistory();
         }
-    }
+    },
+    { immediate: true }
 );
 
 // Filter Cerdas: Menentukan Icon dan Warna berdasarkan isi teks
@@ -345,7 +409,7 @@ const getCancellationReasonLabel = (reason) => {
                                                                 style="font-size: 11px">
                                                                 <i class="bi bi-person-circle me-1"></i>
                                                                 {{ pay.user?.name || "Sistem" }}
-                                                                {{ `(${getRoleName(pay.user.roles[0].name).label})` }}
+                                                                {{ `(${getRoleName(pay.user.role_name).label})` }}
                                                             </span>
                                                         </div>
                                                     </td>
@@ -372,7 +436,7 @@ const getCancellationReasonLabel = (reason) => {
                                     <div class="d-flex flex-column text-end">
                                         <span class="fw-bolder text-muted fs-5 font-monospace">{{
                                             currencyFormat(sales.deal_price)
-                                        }}</span>
+                                            }}</span>
                                         <span class="fw-bolder text-dark fs-5 font-monospace">{{
                                             currencyFormat(
                                                 paymentHistories.reduce(
@@ -417,7 +481,7 @@ const getCancellationReasonLabel = (reason) => {
                                                     <div class="badge bg-light text-dark border small">
                                                         <i class="bi bi-person-fill me-1"></i>
                                                         <span class="text-capitalize">{{ act.user?.name || "Sistem" }} -
-                                                            {{ getRoleName(act.user?.roles[0]?.name).label }}</span>
+                                                            {{ getRoleName(act.user?.role_name).label }}</span>
                                                     </div>
                                                 </div>
                                                 <span class="text-muted small fw-medium ms-1" style="font-size: 11px">

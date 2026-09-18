@@ -38,7 +38,7 @@ class PaymentHistory extends Model
     {
         return $this->belongsTo(LeadModel::class, 'id_lead', 'id_lead');
     }
-    public function sale()
+    public function sales()
     {
         return $this->belongsTo(SalesModel::class, 'id_sales', 'id_sales');
     }

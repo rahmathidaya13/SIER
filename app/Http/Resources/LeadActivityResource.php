@@ -27,7 +27,18 @@ class LeadActivityResource extends JsonResource
             'user' => UserResource::make($this->whenLoaded('user')),
 
             'user_update' => UserResource::make($this->whenLoaded('userUpdate')),
+            'activities' => $this->whenLoaded('lead', function () {
+                return LeadActivityResource::collection(
+                    $this->lead->activity
+                );
+            }),
 
+            'branch' => $this->whenLoaded('branch', function () {
+                return [
+                    'id_branch' => $this->branch->id_branch,
+                    'name'      => $this->branch->name,
+                ];
+            }),
         ];
     }
 }

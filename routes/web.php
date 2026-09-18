@@ -86,6 +86,8 @@ Route::middleware(['auth', 'verified', 'check.status.active'])->group(function (
     Route::controller(SaleController::class)->group(function () {
         Route::get('/sales/list', 'index')->name('sales.index');
         Route::get('/sales/show/{id}', 'show')->name('sales.show');
+        Route::get('/sales/activities/{id}', 'activities')->name('sales.activities');
+        Route::get('/sales/payment-history/{id}', 'paymentHistory')->name('sales.payment.history');
         Route::post('/sales/pay/{id}', 'payRemaining')->name('sales.pay');
         Route::post('/sales/cancel/{id}', 'payCancel')->name('sales.cancel');
     });
