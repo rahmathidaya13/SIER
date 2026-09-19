@@ -41,6 +41,7 @@ const resetForm = () => {
     form.reset();
     form.clearErrors();
     activities.value = [];
+    activityEdit.id = null;
 }
 
 
@@ -106,7 +107,7 @@ const updateActivity = () => {
                 id: activityEdit.id,
                 message: errors.description,
                 type: 'danger',
-                duration: 5000
+                duration: 6000
             });
         }
     });
@@ -144,6 +145,7 @@ const close = () => {
     emit("update:show", false);
     resetForm();
     usePage().props.flash.modal_message = null
+
 };
 
 const submitTextButton = computed(() => {
@@ -182,6 +184,16 @@ const getRoleName = (data, mode = 'create') => {
     };
     return roles[role] || 'bg-light text-dark border';
 };
+const getShortDate = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+}
+const getTimeOnly = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
 </script>
 <template>
     <div class="row" v-if="props.show">
@@ -192,7 +204,8 @@ const getRoleName = (data, mode = 'create') => {
                     'bi bi-pencil-square text-primary': isEdit,
                     'bi bi-plus-circle-fill text-primary': !isEdit
                 }
-            ]" :show="props.show" title="Aktivitas Follow Up" :mobileFullscreen="false" @closed="close">
+            ]" :show="props.show" title="Aktivitas Follow Up" :mobileFullscreen="false" @closed="close"
+                :footer="false">
 
                 <template #body>
 
@@ -216,12 +229,13 @@ const getRoleName = (data, mode = 'create') => {
                         </div>
                         <p class="text-muted mt-3 small fw-medium">Sedang mengambil data...</p>
                     </div>
+
                     <div v-else>
                         <form-wrapper @submit.prevent="submit">
                             <div class="row g-3 animate-fade-in">
 
-                                <div class="col-12">
-                                    <div class=" p-3 rounded-4 border position-relative">
+                                <div class="col-12 p-3 rounded-4 border">
+                                    <div class="position-relative">
                                         <label for="activity_input"
                                             class="form-label small fw-bold text-primary mb-2 d-flex align-items-center">
                                             <i class="bi bi-chat-right-dots-fill me-2 fs-6"></i> BUAT CATATAN FOLLOW-UP
@@ -233,128 +247,134 @@ const getRoleName = (data, mode = 'create') => {
                                             placeholder="Tuliskan apa yang baru saja dibicarakan dengan pelanggan di sini..." />
                                         <input-error :message="form.errors.description" />
                                     </div>
+
+                                    <div
+                                        class="d-flex justify-content-end align-items-center gap-2 bg-transparent mt-3">
+                                        <button type="button" class="btn btn-sm btn-c-slate px-4 rounded-1"
+                                            @click.prevent="close">Batal</button>
+                                        <button @click.prevent="submit" type="button"
+                                            :disabled="form.processing || isLoading"
+                                            class="btn btn-sm fw-semibold rounded-1"
+                                            :class="form.status === 'CLOSED_WON' ? 'btn-c-success' : 'btn-c-primary'">
+                                            <span>
+                                                <span v-if="form.processing"
+                                                    class="spinner-border spinner-border-sm me-2"></span>
+                                                <i v-else
+                                                    :class="isEdit ? 'bi bi-check-circle me-1' : 'bi bi-save me-1'"></i>
+                                                {{ submitTextButton }}
+                                            </span>
+                                        </button>
+                                    </div>
+
                                 </div>
 
-                                <div v-if="activities && activities.length > 0" class="col-12 mt-4 pt-2">
+                                <div class="col-12">
+                                    <div v-if="activities.length > 0" class="tracking-container pb-3">
 
-                                    <h6 class="fw-bold text-muted mb-4 pb-2 border-bottom d-flex align-items-center"
-                                        style="font-size: 13px; letter-spacing: 0.5px;">
-                                        <i class="bi bi-clock-history me-2 fs-5"></i> JEJAK REKAM KONSUMEN (TIMELINE)
-                                    </h6>
+                                        <h6 class="fw-bold text-muted mb-3 pb-2 d-flex align-items-center"
+                                            style="font-size: 13px; letter-spacing: 0.5px;">
+                                            <i class="bi bi-clock-history me-2 fs-5"></i> JEJAK REKAM AKTIVITAS FOLLOW-UP
+                                        </h6>
 
-                                    <div class="timeline-scroll-container pe-2"
-                                        style="max-height: 480px; overflow-y: auto;">
+                                        <div v-for="(act, index) in activities" :key="act.id_lead_activity"
+                                            class="d-flex align-items-stretch gap-3">
 
-                                        <div class="position-relative pt-2 pb-4 ms-3">
+                                            <div class="flex-shrink-0 text-end pe-3"
+                                                style="width: 60px; padding-top: 2px;">
+                                                <div class="fw-medium tracking-date text-muted">
+                                                    {{ getShortDate(act.created_at) }}
+                                                </div>
+                                                <div class="tracking-time text-muted opacity-75">
+                                                    {{ getTimeOnly(act.created_at) }}
+                                                </div>
+                                            </div>
 
-                                            <div class="position-absolute border-start border-2 border-secondary-subtle"
-                                                style="left: 0; top: 24px; bottom: 0; z-index: 1;"></div>
 
-                                            <div class="position-relative mb-4 ps-4" v-for="act in activities"
-                                                :key="act.id_lead_activity">
+                                            <div class="position-relative d-flex flex-column align-items-center"
+                                                style="width: 5px;">
 
-                                                <div class="position-absolute bg-primary rounded-circle border border-3 border-white shadow-sm"
-                                                    style="width: 18px; height: 18px; left: -9px; top: 15px; z-index: 2;">
+                                                <div class="rounded-circle z-2"
+                                                    :class="index === 0 ? 'bg-success' : 'bg-secondary opacity-50'"
+                                                    :style="index === 0 ? 'width: 10px; height: 10px; margin-top: 4px; box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.2);' : 'width: 8px; height: 8px; margin-top: 5px;'">
                                                 </div>
 
-                                                <!-- CARD KONTEN -->
-                                                <div class="card border shadow-sm rounded-4 overflow-hidden">
-                                                    <div
-                                                        class="card-header bg-primary-subtle border-bottom-0 py-2 px-3 d-flex justify-content-between align-items-center">
-                                                        <div class="d-flex align-items-center gap-3">
-                                                            <div class="badge bg-primary text-white rounded-circle d-flex justify-content-center align-items-center shadow-sm"
-                                                                style="width: 36px; height: 36px;">
-                                                                <i class="bi bi-person-fill fs-5"></i>
-                                                            </div>
-                                                            <div class="d-flex flex-column align-items-start">
-                                                                <span class="fw-bold text-dark text-capitalize"
-                                                                    style="font-size: 13.5px;">
-                                                                    {{ act.user?.name || 'Sistem' }}
-                                                                    <span
-                                                                        class="badge bg-secondary-subtle text-secondary ms-1 fw-medium border border-secondary-subtle"
-                                                                        style="font-size: 10px;">
-                                                                        {{ getRoleName(act, 'create').label }}
-                                                                    </span>
-                                                                </span>
-                                                                <span class="text-muted mt-1 d-flex align-items-center"
-                                                                    style="font-size: 11px;">
-                                                                    <i class="bi bi-calendar-event me-1"></i> {{
-                                                                        formatDate(act.created_at) }}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-
-                                                        <div v-if="act.created_at !== act.updated_at && act.id_user !== act.updated_by"
-                                                            class="text-end">
-                                                            <span
-                                                                class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill fw-medium px-2 py-1"
-                                                                style="font-size: 10px;">
-                                                                <i class="bi bi-pencil-square me-1"></i> Diubah: {{
-                                                                    act.user_update?.name }}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="card-body p-3">
-
-                                                        <div v-if="__alert.visible && __alert.id === act.id_lead_activity"
-                                                            class="alert py-2 px-3 mb-3 d-flex align-items-center rounded-3"
-                                                            :class="`alert-${__alert.type}`" style="font-size: 13px;">
-                                                            <i :class="{ 'bi bi-check-circle-fill text-success': __alert.type === 'success', 'bi bi-exclamation-triangle-fill text-danger': __alert.type === 'danger' }"
-                                                                class="me-2 fs-5"></i>
-                                                            <span class="fw-medium">{{ __alert.message }}</span>
-                                                        </div>
-
-                                                        <p v-if="!activityEdit.id || activityEdit.id !== act.id_lead_activity"
-                                                            class="mb-0 text-dark"
-                                                            style="font-size: 14px; white-space: pre-line; line-height: 1.6;">
-                                                            {{ act.description }}
-                                                        </p>
-
-                                                        <div v-if="activityEdit.id === act.id_lead_activity"
-                                                            class="mb-2">
-                                                            <text-area
-                                                                :error="__alert.visible && __alert.id === act.id_lead_activity"
-                                                                :maxChar="2500" name="activity"
-                                                                inputClass="border-secondary-subtle rounded-3"
-                                                                v-model="activityEdit.new_value" :rows="5" />
-                                                        </div>
-
-                                                        <div
-                                                            class="d-flex gap-2 justify-content-end mt-3 border-top pt-2">
-                                                            <button v-if="!activityEdit.id"
-                                                                @click.prevent="editActivity(act)"
-                                                                class="btn btn-sm btn-light text-primary fw-medium rounded-pill px-3 shadow-none transition-all hover-bg-primary-subtle"
-                                                                style="font-size: 12px;">
-                                                                <i class="bi bi-pencil me-1"></i> Edit
-                                                            </button>
-
-                                                            <template
-                                                                v-else-if="activityEdit.id === act.id_lead_activity">
-                                                                <button @click.prevent="cancelEditActivity"
-                                                                    class="btn btn-sm btn-light text-danger fw-medium rounded-pill px-3 shadow-none"
-                                                                    style="font-size: 12px;">
-                                                                    Batal
-                                                                </button>
-                                                                <button @click.prevent="updateActivity"
-                                                                    class="btn btn-sm btn-primary fw-medium rounded-pill px-3 shadow-sm"
-                                                                    style="font-size: 12px;">
-                                                                    <i class="bi bi-save me-1"></i> Simpan
-                                                                </button>
-                                                            </template>
-                                                        </div>
-                                                    </div>
+                                                <div v-if="index !== activities.length - 1"
+                                                    class="bg-secondary opacity-25 position-absolute"
+                                                    style="width: 2px; top: 16px; bottom: -6px; left: 50%; transform: translateX(-50%); z-index: 1;">
                                                 </div>
+                                            </div>
+
+                                            <div class="flex-grow-1 ps-3 pb-3">
+
+                                                <div v-if="__alert.visible && __alert.id === act.id_lead_activity"
+                                                    class="alert py-1 px-2 mb-2 d-flex align-items-center rounded-2"
+                                                    :class="`alert-${__alert.type}`" style="font-size: 11px;">
+                                                    <i :class="__alert.type === 'success' ? 'bi bi-check-circle-fill text-success' : 'bi bi-exclamation-triangle-fill text-danger'"
+                                                        class="me-2"></i>
+                                                    <span class="fw-medium">{{ __alert.message }}</span>
+                                                </div>
+
+                                                <div v-if="!activityEdit.id || activityEdit.id !== act.id_lead_activity"
+                                                    class="tracking-desc mb-1"
+                                                    :class="index === 0 ? 'text-success' : 'text-muted'"
+                                                    style="white-space: pre-line;">
+                                                    {{ act.description }}
+                                                </div>
+
+                                                <div v-if="activityEdit.id !== act.id_lead_activity"
+                                                    class="tracking-user text-muted opacity-75 d-flex align-items-center gap-1 mt-1">
+                                                    <i class="bi bi-person"></i>
+                                                    <span class="text-capitalize">{{ act.user?.name || 'Sistem' }} - {{
+                                                        act.user.role_name }}</span>
+                                                    <span v-if="act.created_at !== act.updated_at"
+                                                        class="fst-italic ms-1">
+                                                        (Diubah: {{ act.user?.name }} - {{ getTimeOnly(act.updated_at)
+                                                        }})
+                                                    </span>
+                                                </div>
+
+                                                <div v-if="activityEdit.id === act.id_lead_activity" class="mt-2 mb-2">
+                                                    <text-area
+                                                        :error="__alert.visible && __alert.id === act.id_lead_activity"
+                                                        :maxChar="2500" name="activity"
+                                                        inputClass="border-secondary-subtle rounded-3"
+                                                        v-model="activityEdit.new_value" :rows="5"
+                                                        placeholder="Buat aktifitas pelanggan..." />
+                                                </div>
+
+                                                <div class="d-flex gap-3">
+                                                    <button v-if="!activityEdit.id" @click.prevent="editActivity(act)"
+                                                        class="btn btn-sm p-0 text-primary text-decoration-none shadow-none tracking-action">
+                                                        Ubah
+                                                    </button>
+
+                                                    <template v-else-if="activityEdit.id === act.id_lead_activity">
+                                                        <button @click.prevent="cancelEditActivity"
+                                                            class="btn btn-sm p-0 text-danger text-decoration-none shadow-none tracking-action">
+                                                            Batal
+                                                        </button>
+                                                        <button @click.prevent="updateActivity"
+                                                            class="btn btn-sm p-0 text-success text-decoration-none shadow-none tracking-action">
+                                                            Simpan
+                                                        </button>
+                                                    </template>
+                                                </div>
+
 
                                             </div>
+
+
                                         </div>
                                     </div>
-                                </div>
-
-                                <div v-if="!activities || activities.length === 0"
-                                    class="col-12 text-center text-muted py-5">
-                                    <i class="bi bi-chat-square-dots fs-1 opacity-25 d-block mb-2"></i>
-                                    <small class="fw-medium">Belum ada riwayat percakapan pada prospek ini.</small>
+                                    <div v-else class="empty-state">
+                                        <div class="empty-icon bg-light text-muted mb-3"><i
+                                                class="bi bi-clock-history"></i>
+                                        </div>
+                                        <h6 class="text-muted fw-bold">Belum Ada Riwayat</h6>
+                                        <p class="text-muted small">Belum ada jejak aktivitas pelanggan
+                                            ini.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </form-wrapper>
@@ -424,5 +444,92 @@ const getRoleName = (data, mode = 'create') => {
 /* Efek hover tombol */
 .hover-bg-primary-subtle:hover {
     background-color: var(--bs-primary-bg-subtle) !important;
+}
+
+/* Kustomisasi Empty State */
+.empty-state {
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.empty-state>i {
+    font-size: 48px;
+    color: #cbd5e1;
+    opacity: 0.7;
+}
+
+.empty-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+}
+
+/* Tracking Activity UI Styles */
+.tracking-container {
+    max-height: 520px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 10px;
+}
+
+.tracking-container::-webkit-scrollbar {
+    width: 5px;
+}
+
+.tracking-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tracking-container::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+
+.tracking-container::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+}
+
+/* Tipografi Presisi */
+.tracking-date {
+    font-size: 12px;
+    line-height: 1.2;
+    letter-spacing: 0.2px;
+}
+
+.tracking-time {
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.tracking-desc {
+    font-size: 14px;
+    line-height: 1.55;
+    letter-spacing: 0.1px;
+    word-break: break-word;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
+.tracking-user {
+    font-size: 12px;
+}
+
+.tracking-action {
+    font-size: 11.5px;
+    font-weight: 500;
+}
+
+.tracking-action:hover {
+    text-decoration: underline !important;
 }
 </style>

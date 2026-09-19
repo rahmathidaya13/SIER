@@ -13,10 +13,8 @@ const props = defineProps({
 });
 const emit = defineEmits(["update:show"]);
 
-const isLoading = ref(false);
+const isInitialLoading = ref(false);
 const activities = ref([]);
-const customerName = ref("");
-const phoneNumber = ref("");
 const products = ref(null);
 const paymentHistories = ref([]);
 const sales = ref({});
@@ -27,8 +25,6 @@ const cancellation = ref(null);
 const close = () => {
     emit("update:show", false);
     activities.value = [];
-    customerName.value = "";
-    phoneNumber.value = "";
     products.value = null;
     sales.value = {};
     paymentHistories.value = [];
@@ -37,107 +33,101 @@ const close = () => {
     cancellation.value = null;
 };
 
-const request = async (callback, errorMessage) => {
-    isLoading.value = true;
+const requests = async (callback, errorMessage, showLoading = true) => {
+    if (showLoading) isInitialLoading.value = true;
     try {
         return await callback();
     } catch (error) {
         console.error(errorMessage, error);
+        throw error;
     } finally {
-        isLoading.value = false;
+        if (showLoading)
+            isInitialLoading.value = false;
     }
 }
 
-const loadSales = async () => {
-    await request(async () => {
-        const { data } = await axios.get(route('sales.show', props.idSales));
+const loadSales = async (showLoading = true) => {
+    return requests(async () => {
+        const { data } = await axios.get(
+            route('sales.show', props.idSales)
+        );
         const salesData = data.data;
-        sales.value = salesData;
-
+        sales.value = salesData || {};
+        products.value = salesData?.products || null;
         cancellation.value = salesData?.cancelled_at
             ? {
                 cancelled_at: salesData.cancelled_at,
                 cancelled_by: salesData.cancelled_by,
                 cancelled_reason: salesData.cancelled_reason,
                 cancelled_notes: salesData.cancelled_notes,
+                user_name: salesData.cancelledBy?.name,
+                role_name: salesData.cancelledBy?.role_name
             }
             : null;
-    }, "Gagal mengambil data");
-}
-// const loadTimeline = async () => {
-//     if (!props.idSales) return;
-//     isLoading.value = true;
-//     try {
-//         // Kita manfaatkan endpoint show yang sudah membawa relasi lead.activity
-//         const { data } = await axios.get(`/sales/show/${props.idSales}`);
-//         // customerName.value = data.lead?.name || "Konsumen";
-//         // phoneNumber.value = data.lead?.phone || "Tidak Tersedia";
-//         // products.value = data.sales_product || null;
-//         sales.value = data.data || {};
+        console.log(salesData);
+    },
+        "Gagal mengambil data penjualan",
+        showLoading
+    );
+};
 
-//         cancellation.value = data.cancelled_at
-//             ? {
-//                 cancelled_at: data.cancelled_at,
-//                 cancelled_by: data.cancelled_by,
-//                 cancelled_reason: data.cancelled_reason,
-//                 cancelled_notes: data.cancelled_notes,
-//                 user_name: data.user?.name,
-//                 role_name: data.user?.roles[0].name,
-//             }
-//             : null;
-//         console.log(sales.value);
-//     } catch (error) {
-//         console.error("Gagal mengambil riwayat:", error);
-//     } finally {
-//         isLoading.value = false;
-//     }
-// };
-
-const loadActivity = async (page = 1) => {
+const loadActivity = async (page = 1, showLoading = true) => {
     if (!props.idSales) return;
-    isLoading.value = true;
+    return requests(
+        async () => {
+            const { data } = await axios.get(
+                route('sales.activities', props.idSales),
+                {
+                    params: { page },
+                }
+            );
+            activities.value = data.data || [];
+            console.log(activities.value);
+
+        },
+        'Gagal mengambil riwayat aktivitas:',
+        showLoading
+    );
+}
+
+const loadPaymentHistory = async (page = 1, showLoading = true) => {
+    if (!props.idSales) return;
+    return requests(
+        async () => {
+            const { data } = await axios.get(
+                route('sales.payment.history', props.idSales),
+                {
+                    params: { page },
+                }
+            );
+            paymentHistories.value = data.data || [];
+
+        },
+        'Gagal mengambil riwayat pembayaran:',
+        showLoading
+    );
+}
+const loadInitialData = async () => {
+    if (!props.idSales) return;
+    isInitialLoading.value = true;
     try {
-        const { data } = await axios.get(route("sales.activities", props.idSales), {
-            params: {
-                page,
-            },
-        });
-        const cleanData = data.data;
-        activities.value = cleanData || [];
+        await Promise.all([
+            loadActivity(1, false),
+            loadPaymentHistory(1, false),
+            loadSales(false)
+        ])
     } catch (error) {
-        console.error("Gagal mengambil riwayat aktivitas:", error);
+        console.error('Gagal memuat detail penjualan:', error);
     } finally {
-        isLoading.value = false;
+        isInitialLoading.value = false
     }
 }
-
-const loadPaymentHistory = async (page = 1) => {
-    if (!props.idSales) return;
-    isLoading.value = true;
-    try {
-        const { data } = await axios.get(route("sales.payment.history", props.idSales), {
-            params: {
-                page,
-            },
-        });
-        const cleanData = data.data;
-        paymentHistories.value = cleanData || [];
-        console.log(cleanData);
-    } catch (error) {
-        console.error("Gagal mengambil riwayat pembayaran:", error);
-    } finally {
-        isLoading.value = false;
-    }
-}
-
 watch(
     () => props.show,
     async (isOpen) => {
         if (isOpen) {
             activeTab.value = "transactions";
-            loadSales();
-            loadActivity();
-            loadPaymentHistory();
+            await loadInitialData();
         }
     },
     { immediate: true }
@@ -250,6 +240,16 @@ const getCancellationReasonLabel = (reason) => {
 
     return reasons[reason] || reason;
 };
+const getShortDate = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+}
+const getTimeOnly = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
 </script>
 
 <template>
@@ -258,33 +258,32 @@ const getCancellationReasonLabel = (reason) => {
             title="Riwayat Transaksi & Aktivitas" @closed="close" :mobileFullscreen="false">
             <template #body>
 
+                <div v-if="isInitialLoading" class="d-flex flex-column align-items-center justify-content-center p-5">
+                    <div class="spinner-border text-primary mb-3"></div>
 
-
-                <div v-if="isLoading" class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
+                    <div class="fw-semibold">
+                        Memuat detail transaksi & aktivitas...
                     </div>
-                    <p class="text-muted mt-3 small fw-medium">Menarik data dari arsip...</p>
+
+                    <small class="text-muted">
+                        Mohon tunggu sebentar
+                    </small>
                 </div>
 
                 <div v-else class="pb-3">
 
-                    <div class="card mb-3 overflow-hidden shadow-sm border bg-c-slate border-secondary">
+                    <div class="card mb-3 overflow-hidden shadow-sm border" style="background-color: #81afe4;">
                         <div class="row g-0">
-                            <div class="col-md-2 d-flex align-items-center justify-content-center">
-                                <span style="font-size: 5rem;"><i
-                                        class="bi bi-person-bounding-box text-muted"></i></span>
-                            </div>
                             <div class="col-md-10">
                                 <div class="card-body">
-                                    <h6 class="card-title text-muted small text-uppercase">
-                                        Timeline Konsumen
+                                    <h6 class="card-title text-white small text-uppercase ">
+                                        {{ sales.invoice }}
                                     </h6>
-                                    <h5 class="mb-2 fw-bold text-truncate" style="max-width: 100%;">
-                                        {{ customerName }}
+                                    <h5 class="mb-2 fw-bold text-truncate text-white" style="max-width: 100%;">
+                                        {{ sales.lead?.name || "Konsumen" }}
                                     </h5>
-                                    <div class="small fw-medium text-white-75 mb-3">
-                                        <i class="bi bi-telephone-fill me-1"></i> {{ phoneNumber }}
+                                    <div class="small fw-medium text-muted mb-3">
+                                        <i class="bi bi-telephone-fill me-1"></i> {{ sales.lead?.phone }}
                                     </div>
 
                                     <div v-if="products && products.length > 0" class="d-flex flex-wrap gap-2">
@@ -301,7 +300,6 @@ const getCancellationReasonLabel = (reason) => {
                                             </span>
                                         </template>
 
-                                        <!-- Badge sisa produk (Muncul jika lebih dari 3) -->
                                         <span v-if="products.length > 5"
                                             class="badge bg-white text-dark fw-bold d-flex align-items-center py-1 px-3 rounded-pill shadow-sm transition-all"
                                             style="font-size: 12px;"
@@ -321,8 +319,6 @@ const getCancellationReasonLabel = (reason) => {
                             </div>
                         </div>
                     </div>
-
-
 
 
                     <div class="history-tabs mb-4">
@@ -350,6 +346,8 @@ const getCancellationReasonLabel = (reason) => {
                         </div>
                     </div>
                     <div class="tab-content">
+
+                        <!-- Transactions Tabs -->
                         <div v-if="activeTab === 'transactions'" class="animation-fade-in">
                             <div v-if="paymentHistories.length > 0"
                                 class="financial-receipt-wrapper bg-white border rounded-4 shadow-sm">
@@ -436,7 +434,7 @@ const getCancellationReasonLabel = (reason) => {
                                     <div class="d-flex flex-column text-end">
                                         <span class="fw-bolder text-muted fs-5 font-monospace">{{
                                             currencyFormat(sales.deal_price)
-                                            }}</span>
+                                        }}</span>
                                         <span class="fw-bolder text-dark fs-5 font-monospace">{{
                                             currencyFormat(
                                                 paymentHistories.reduce(
@@ -447,6 +445,8 @@ const getCancellationReasonLabel = (reason) => {
                                         }}</span>
                                     </div>
                                 </div>
+
+
                             </div>
                             <div v-else class="empty-state">
                                 <div class="empty-icon bg-light text-muted mb-3">
@@ -457,42 +457,64 @@ const getCancellationReasonLabel = (reason) => {
                                     Konsumen ini belum memiliki riwayat pembayaran.
                                 </p>
                             </div>
+
+                            <div v-if="sales.notes !== null" class="bg-light border rounded-3 p-3 mt-3">
+                                <div class="text-muted text-uppercase fw-bold mb-2"
+                                    style="font-size: 10px; letter-spacing: 0.6px">
+                                    Catatan Transaksi
+                                </div>
+
+                                <div class="text-dark small" style="white-space: pre-line; line-height: 1.6">
+                                    {{ sales.notes }}
+                                </div>
+                            </div>
                         </div>
 
-
+                        <!-- Aktivity Tabs -->
                         <div v-if="activeTab === 'activities'" class="animation-fade-in">
-                            <div v-if="activities.length > 0" class="timeline-container pb-3">
+                            <div v-if="activities.length > 0" class="tracking-container pb-3">
+
                                 <div v-for="(act, index) in activities" :key="act.id_lead_activity"
-                                    class="timeline-item position-relative mb-4">
-                                    <div v-if="index !== activities.length" class="timeline-line"></div>
-                                    <div class="d-flex gap-3">
-                                        <div class="timeline-icon flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center shadow-sm z-2"
-                                            :class="getTimelineStyle(act.description).bg"
-                                            style="width: 40px; height: 40px; border: 3px solid #fff">
-                                            <i class="fs-5" :class="[
-                                                getTimelineStyle(act.description).icon,
-                                                getTimelineStyle(act.description).text,
-                                            ]"></i>
+                                    class="d-flex align-items-stretch gap-3">
+
+                                    <div class="flex-shrink-0 text-end pe-3" style="width: 70px; padding-top: 2px;">
+                                        <div class="fw-medium tracking-date text-muted">
+                                            {{ getShortDate(act.created_at) }}
                                         </div>
-                                        <div class="flex-grow-1 bg-white border rounded-3 p-3 shadow-sm">
-                                            <div
-                                                class="d-xl-flex d-block justify-content-between align-items-start mb-2 border-bottom pb-3">
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <div class="badge bg-light text-dark border small">
-                                                        <i class="bi bi-person-fill me-1"></i>
-                                                        <span class="text-capitalize">{{ act.user?.name || "Sistem" }} -
-                                                            {{ getRoleName(act.user?.role_name).label }}</span>
-                                                    </div>
-                                                </div>
-                                                <span class="text-muted small fw-medium ms-1" style="font-size: 11px">
-                                                    <i class="bi bi-calendar2-event me-1"></i>
-                                                    {{ formatDate(act.created_at) }}
-                                                </span>
-                                            </div>
-                                            <p class="mb-0 text-dark"
-                                                style="font-size: 14px; white-space: pre-line; line-height: 1.5">
-                                                {{ act.description }}
-                                            </p>
+                                        <div class="tracking-time text-muted opacity-75">
+                                            {{ getTimeOnly(act.created_at) }}
+                                        </div>
+                                    </div>
+
+                                    <div class="position-relative d-flex flex-column align-items-center"
+                                        style="width: 5px;">
+
+                                        <div class="rounded-circle z-2"
+                                            :class="index === 0 ? 'bg-success' : 'bg-secondary opacity-50'"
+                                            :style="index === 0 ? 'width: 10px; height: 10px; margin-top: 4px; box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.2);' : 'width: 8px; height: 8px; margin-top: 5px;'">
+                                        </div>
+
+                                        <div v-if="index !== activities.length - 1"
+                                            class="bg-secondary opacity-25 position-absolute"
+                                            style="width: 2px; top: 16px; bottom: -6px; left: 50%; transform: translateX(-50%); z-index: 1;">
+                                        </div>
+                                    </div>
+
+                                    <div class="flex-grow-1 ps-3 pb-3">
+
+                                        <div class="tracking-desc mb-1"
+                                            :class="index === 0 ? 'text-success fw-medium' : 'text-muted'"
+                                            style="white-space: pre-line;">
+                                            {{ act.description }}
+                                        </div>
+
+                                        <div
+                                            class="tracking-user text-muted opacity-75 d-flex align-items-center gap-1 mt-1">
+                                            <i class="bi bi-person"></i>
+                                            <span class="text-capitalize">{{ act.user?.name || 'Sistem' }}</span>
+                                            <span v-if="act.created_at !== act.updated_at" class="fst-italic ms-1">
+                                                (Diubah: {{ act.user?.name }})
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -772,5 +794,57 @@ const getCancellationReasonLabel = (reason) => {
     align-items: center;
     justify-content: center;
     font-size: 26px;
+}
+
+
+/* Tracking Activity UI Styles */
+.tracking-container {
+    max-height: 520px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 8px;
+}
+
+.tracking-container::-webkit-scrollbar {
+    width: 5px;
+}
+
+.tracking-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tracking-container::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+
+.tracking-container::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+}
+
+/* Tipografi Presisi */
+.tracking-date {
+    font-size: 12px;
+    line-height: 1.2;
+    letter-spacing: 0.2px;
+}
+
+.tracking-time {
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.tracking-desc {
+    font-size: 14px;
+    line-height: 1.55;
+    letter-spacing: 0.1px;
+    word-break: break-word;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
+.tracking-user {
+    font-size: 12px;
 }
 </style>

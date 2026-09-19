@@ -42,19 +42,11 @@ class SalesResource extends JsonResource
                     'phone' => $this->lead->phone,
                 ];
             }),
-            'branch' => $this->whenLoaded('branch', function () {
-                return [
-                    'id_branch' => $this->branch->id_branch,
-                    'name' => $this->branch->name,
-                ];
-            }),
-            'activities' => $this->whenLoaded('lead', function () {
-                return LeadActivityResource::collection(
-                    $this->lead->activity
-                );
+            'products' => $this->whenLoaded('salesProduct', function () {
+                return SalesProductResource::collection($this->salesProduct);
             }),
             'user' => UserResource::make($this->whenLoaded('user')),
-            'user_cancelled' => UserResource::make($this->whenLoaded('cancelledBy')),
+            'cancelledBy' => UserResource::make($this->whenLoaded('cancelledBy')),
         ];
     }
 }

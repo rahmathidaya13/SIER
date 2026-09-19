@@ -21,10 +21,10 @@ class SalesProductResource extends JsonResource
             'updated_at' => $this->updated_at,
             'product' => $this->whenLoaded('product', function () {
                 return [
-                    'id_product' => $this->product->id_product,
-                    'name' => $this->product->name,
+                    'id_product' => $this->product?->id_product,
+                    'name' => $this->product?->name,
                 ];
-            }),,
+            }),
         ];
     }
 }

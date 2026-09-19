@@ -105,37 +105,18 @@ class SaleController extends Controller
             ])
             ->with([
                 'lead:id_lead,name,phone',
+                'user:id,name',
+                'user.roles:id,name',
+                'salesProduct:id_sales,id_product',
+                'salesProduct.product:id_product,name',
                 'cancelledBy:id,name',
                 'cancelledBy.roles:id,name',
             ])
             ->findOrFail($id);
 
-        return SalesResource::collection($sales);
+        return SalesResource::make($sales);
     }
 
-    public function salesProduct(string $id)
-    {
-        $sales = SalesModel::query()
-            ->select([
-                'id_sales',
-                'id_lead',
-            ])
-            ->findOrFail($id);
-
-        $salesProduct = SalesProductModel::query()
-            ->where('id_sales', $sales->id_sales)
-            ->select([
-                'id_sales',
-                'id_product',
-                'created_at',
-                'updated_at'
-            ])
-            ->with([
-                'product:id_product,name',
-            ]);
-
-        return SalesProductResource::collection($salesProduct);
-    }
     public function activities(string $id)
     {
         $sales = SalesModel::query()

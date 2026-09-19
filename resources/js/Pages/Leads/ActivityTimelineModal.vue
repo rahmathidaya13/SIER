@@ -137,12 +137,22 @@ const customerType = (type) => {
     };
     return types[type] || 'bg-light text-dark border';
 };
+const getShortDate = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+}
+const getTimeOnly = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
 </script>
 
 <template>
     <div v-if="props.show">
-        <modal width="650px" size="modal-md" :icon="['text-primary', 'bi bi-clock-history']" :show="props.show"
-            title="Riwayat Jejak Rekam Aktivitas" @closed="close" :mobileFullscreen="true">
+        <modal width="750px" size="modal-md" :icon="['text-primary', 'bi bi-clock-history']" :show="props.show"
+            title="Riwayat Jejak Rekam Aktivitas" @closed="close" :mobileFullscreen="false">
 
             <template #body>
 
@@ -197,55 +207,61 @@ const customerType = (type) => {
 
                     </div>
 
-                    <template v-if="activities.length > 0">
-                        <div v-for="(act, index) in activities" :key="act.id_lead_activity"
-                            class="timeline-item position-relative mb-4 animate-fade-in">
+                    <div class="animate-fade-in">
+                        <div v-if="activities.length > 0" class="tracking-container pb-3">
 
-                            <div v-if="index !== activities.length - 1" class="timeline-line"></div>
+                            <div v-for="(act, index) in activities" :key="act.id_lead_activity"
+                                class="d-flex align-items-stretch gap-3">
 
-                            <div class="d-flex gap-3">
-                                <div class="timeline-icon flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center shadow-sm z-2"
-                                    :class="getTimelineStyle(act.description).bg"
-                                    style="width: 40px; height: 40px; border: 3px solid #fff;">
-                                    <i class="fs-5"
-                                        :class="[getTimelineStyle(act.description).icon, getTimelineStyle(act.description).text]"></i>
+                                <div class="flex-shrink-0 text-end pe-3" style="width: 70px; padding-top: 2px;">
+                                    <div class="fw-medium tracking-date text-muted">
+                                        {{ getShortDate(act.created_at) }}
+                                    </div>
+                                    <div class="tracking-time text-muted opacity-75">
+                                        {{ getTimeOnly(act.created_at) }}
+                                    </div>
                                 </div>
 
-                                <div class="flex-grow-1 bg-white border rounded-3 p-3 shadow-sm">
-                                    <div
-                                        class="d-flex justify-content-between align-items-start mb-2 border-bottom pb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="badge bg-light text-dark border small">
-                                                <i class="bi bi-person-fill me-1"></i>
-                                                <span class="text-capitalize">
-                                                    {{ act.user?.name || 'Sistem' }} {{
-                                                        `(${getRoleName(act.user?.role_name).label})` }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <span class="text-muted small fw-medium" style="font-size: 11px;">
-                                            <i class="bi bi-calendar2-event me-1"></i> {{ formatDate(act.created_at) }}
-                                        </span>
+                                <div class="position-relative d-flex flex-column align-items-center"
+                                    style="width: 5px;">
+
+                                    <div class="rounded-circle z-2"
+                                        :class="index === 0 ? 'bg-success' : 'bg-secondary opacity-50'"
+                                        :style="index === 0 ? 'width: 10px; height: 10px; margin-top: 4px; box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.2);' : 'width: 8px; height: 8px; margin-top: 5px;'">
                                     </div>
 
-                                    <p class="mb-0 text-dark"
-                                        style="font-size: 14px; white-space: pre-line; line-height: 1.5;">
+                                    <div v-if="index !== activities.length - 1"
+                                        class="bg-secondary opacity-25 position-absolute"
+                                        style="width: 2px; top: 16px; bottom: -6px; left: 50%; transform: translateX(-50%); z-index: 1;">
+                                    </div>
+                                </div>
+
+                                <div class="flex-grow-1 ps-3 pb-3">
+
+                                    <div class="tracking-desc mb-1"
+                                        :class="index === 0 ? 'text-success fw-medium' : 'text-muted'"
+                                        style="white-space: pre-line;">
                                         {{ act.description }}
-                                    </p>
+                                    </div>
+
+                                    <div
+                                        class="tracking-user text-muted opacity-75 d-flex align-items-center gap-1 mt-1">
+                                        <i class="bi bi-person"></i>
+                                        <span class="text-capitalize">{{ act.user?.name || 'Sistem' }}</span>
+                                        <span v-if="act.created_at !== act.updated_at" class="fst-italic ms-1">
+                                            (Diubah: {{ act.user?.name }} - {{ getTimeOnly(act.updated_at) }})
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-
                         </div>
-                    </template>
-                    <template v-else>
-                        <div class="text-center py-5">
-                            <i class="bi bi-inbox fs-1 text-muted opacity-25 d-block mb-3"></i>
+                        <div v-else class="empty-state">
+                            <div class="empty-icon bg-light text-muted mb-3"><i class="bi bi-clock-history"></i></div>
                             <h6 class="text-muted fw-bold">Belum Ada Riwayat</h6>
-                            <p class="text-muted small">Konsumen ini belum memiliki jejak rekam atau aktivitas
-                                pembayaran.
-                            </p>
+                            <p class="text-muted small">Belum ada jejak rekam atau aktivitas untuk konsumen ini.</p>
                         </div>
-                    </template>
+                    </div>
+
                 </div>
             </template>
 
@@ -317,5 +333,83 @@ const customerType = (type) => {
 
 .tracking-wide {
     letter-spacing: 1px;
+}
+
+/* Kustomisasi Empty State */
+.empty-state {
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.empty-state>i {
+    font-size: 48px;
+    color: #cbd5e1;
+    opacity: 0.7;
+}
+
+.empty-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+}
+
+/* Tracking Activity UI Styles */
+.tracking-container {
+    max-height: 520px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 8px;
+}
+
+.tracking-container::-webkit-scrollbar {
+    width: 5px;
+}
+
+.tracking-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tracking-container::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+
+.tracking-container::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+}
+
+/* Tipografi Presisi */
+.tracking-date {
+    font-size: 12px;
+    line-height: 1.2;
+    letter-spacing: 0.2px;
+}
+
+.tracking-time {
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.tracking-desc {
+    font-size: 14px;
+    line-height: 1.55;
+    letter-spacing: 0.1px;
+    word-break: break-word;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
+.tracking-user {
+    font-size: 12px;
 }
 </style>
