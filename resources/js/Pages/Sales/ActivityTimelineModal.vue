@@ -3,7 +3,8 @@ import { ref, watch, computed } from "vue";
 import { formatDate } from "@/Helpers/formatDate";
 import { currencyFormat } from "@/Helpers/currencyFormat";
 import axios from "axios";
-
+import { useRequest } from "@/Composables/useRequest";
+const { isLoading, requests } = useRequest();
 const props = defineProps({
     show: Boolean,
     idSales: {
@@ -13,7 +14,6 @@ const props = defineProps({
 });
 const emit = defineEmits(["update:show"]);
 
-const isInitialLoading = ref(false);
 const activities = ref([]);
 const products = ref(null);
 const paymentHistories = ref([]);
@@ -33,18 +33,6 @@ const close = () => {
     cancellation.value = null;
 };
 
-const requests = async (callback, errorMessage, showLoading = true) => {
-    if (showLoading) isInitialLoading.value = true;
-    try {
-        return await callback();
-    } catch (error) {
-        console.error(errorMessage, error);
-        throw error;
-    } finally {
-        if (showLoading)
-            isInitialLoading.value = false;
-    }
-}
 
 const loadSales = async (showLoading = true) => {
     return requests(async () => {
@@ -64,9 +52,9 @@ const loadSales = async (showLoading = true) => {
                 role_name: salesData.cancelledBy?.role_name
             }
             : null;
-        console.log(salesData);
+        console.log(data.data);
     },
-        "Gagal mengambil data penjualan",
+        "Gagal mengambil data transaksi",
         showLoading
     );
 };
@@ -82,7 +70,6 @@ const loadActivity = async (page = 1, showLoading = true) => {
                 }
             );
             activities.value = data.data || [];
-            console.log(activities.value);
 
         },
         'Gagal mengambil riwayat aktivitas:',
@@ -101,7 +88,7 @@ const loadPaymentHistory = async (page = 1, showLoading = true) => {
                 }
             );
             paymentHistories.value = data.data || [];
-
+            console.log(data.data);
         },
         'Gagal mengambil riwayat pembayaran:',
         showLoading
@@ -109,7 +96,7 @@ const loadPaymentHistory = async (page = 1, showLoading = true) => {
 }
 const loadInitialData = async () => {
     if (!props.idSales) return;
-    isInitialLoading.value = true;
+    isLoading.value = true;
     try {
         await Promise.all([
             loadActivity(1, false),
@@ -119,7 +106,7 @@ const loadInitialData = async () => {
     } catch (error) {
         console.error('Gagal memuat detail penjualan:', error);
     } finally {
-        isInitialLoading.value = false
+        isLoading.value = false
     }
 }
 watch(
@@ -255,14 +242,14 @@ const getTimeOnly = (date) => {
 <template>
     <div v-if="props.show">
         <modal width="750px" size="modal-md" :icon="['text-primary', 'bi bi-clock-history']" :show="props.show"
-            title="Riwayat Transaksi & Aktivitas" @closed="close" :mobileFullscreen="false">
+            title="Riwayat Transaksi & Aktivitas" @closed="close" :mobileFullscreen="false" :footer="false">
             <template #body>
 
-                <div v-if="isInitialLoading" class="d-flex flex-column align-items-center justify-content-center p-5">
+                <div v-if="isLoading" class="d-flex flex-column align-items-center justify-content-center p-5">
                     <div class="spinner-border text-primary mb-3"></div>
 
                     <div class="fw-semibold">
-                        Memuat detail transaksi & aktivitas...
+                        Sedang mengambil data...
                     </div>
 
                     <small class="text-muted">
@@ -272,51 +259,103 @@ const getTimeOnly = (date) => {
 
                 <div v-else class="pb-3">
 
-                    <div class="card mb-3 overflow-hidden shadow-sm border" style="background-color: #81afe4;">
-                        <div class="row g-0">
-                            <div class="col-md-10">
-                                <div class="card-body">
-                                    <h6 class="card-title text-white small text-uppercase ">
-                                        {{ sales.invoice }}
-                                    </h6>
-                                    <h5 class="mb-2 fw-bold text-truncate text-white" style="max-width: 100%;">
-                                        {{ sales.lead?.name || "Konsumen" }}
-                                    </h5>
-                                    <div class="small fw-medium text-muted mb-3">
-                                        <i class="bi bi-telephone-fill me-1"></i> {{ sales.lead?.phone }}
-                                    </div>
+                    <div class="card bg-info bg-opacity-10 border rounded-4 mb-3 overflow-auto">
+                        <div class="card-body">
 
-                                    <div v-if="products && products.length > 0" class="d-flex flex-wrap gap-2">
-                                        <template v-for="(prod, index) in products.slice(0, 5)"
-                                            :key="prod.id_product || index">
-                                            <span
-                                                class="badge bg-white text-dark fw-normal d-flex align-items-center py-2 px-2 rounded-pill"
-                                                style="font-size: 12px;">
-                                                <i class="bi bi-box-seam me-2"></i>
-                                                <span class="text-truncate" style="max-width: 200px;"
-                                                    :title="prod.product.name">
-                                                    {{ prod.product.name }}
-                                                </span>
-                                            </span>
-                                        </template>
+                            <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-3">
+                                <div class="flex-shrink-0 bg-primary-subtle text-primary rounded-circle d-flex justify-content-center align-items-center shadow-sm"
+                                    style="width: 58px; height: 58px;">
+                                    <i class="bi bi-person-fill fs-3"></i>
+                                </div>
 
-                                        <span v-if="products.length > 5"
-                                            class="badge bg-white text-dark fw-bold d-flex align-items-center py-1 px-3 rounded-pill shadow-sm transition-all"
-                                            style="font-size: 12px;"
-                                            :title="products.slice(5).map(p => p.product.name).join('\n')">
-                                            +{{ products.length - 5 }} Lainnya
+                                <div class="flex-grow-1">
+                                    <h5 class="fw-bold text-dark mb-1 text-capitalize">{{ sales.lead?.name }}</h5>
+                                    <h6 class="fw-semibold text-muted mb-1 text-capitalize">{{ sales.invoice }}</h6>
+                                    <div class="d-flex flex-wrap gap-3 text-muted" style="font-size: 13px;">
+                                        <span class="d-flex align-items-center">
+                                            <i class="bi bi-telephone-fill me-1 text-secondary opacity-75"></i> {{
+                                                sales.lead?.phone }}
                                         </span>
-                                    </div>
-
-                                    <div v-else>
-                                        <span
-                                            class="badge bg-white bg-opacity-10 text-white-50 border border-white border-opacity-10 fw-normal py-1 px-3 rounded-pill fst-italic"
-                                            style="font-size: 11px;">
-                                            Belum ada produk
+                                        <span class="d-flex align-items-center">
+                                            <i class="bi bi-envelope-fill me-1 text-secondary opacity-75"></i> {{
+                                                sales.lead?.email || 'Tidak ada email' }}
                                         </span>
                                     </div>
                                 </div>
+
+                                <div
+                                    class="text-sm-end mt-2 mt-sm-0 border-sm-start border-secondary border-opacity-25 ps-sm-4">
+                                    <div class="text-muted small fw-semibold text-uppercase tracking-wide mb-1"
+                                        style="font-size: 11px;">
+                                        Total Produk
+                                    </div>
+                                    <span class="badge bg-primary bg-gradient fs-5 px-4 py-2 rounded-pill shadow-sm">
+                                        {{ sales.product_count || 0 }}
+                                    </span>
+                                </div>
+
                             </div>
+
+                            <div v-if="sales.notes"
+                                class="mt-4 p-3 bg-light border-start border-4 border-warning rounded-end-3 overflow-hidden">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-journal-text text-warning mt-1 fs-5 flex-shrink-0"></i>
+                                    <div class="flex-grow-1" style="min-width: 0;">
+                                        <div class="text-muted fw-bold text-uppercase tracking-wide mb-1"
+                                            style="font-size: 10.5px;">
+                                            Catatan
+                                        </div>
+                                        <p class="mb-0 text-dark"
+                                            style="font-size: 13.5px; white-space: pre-line; line-height: 1.5; word-break: break-word; overflow-wrap: break-word;">
+                                            {{ sales.notes }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="border-secondary opacity-10 my-3">
+
+                            <div>
+                                <h6 class="fw-bold text-dark mb-3 d-flex align-items-center text-uppercase"
+                                    style="font-size: 13px; letter-spacing: 0.5px;">
+                                    <i class="bi bi-bag-check-fill text-success me-2 fs-5"></i> Daftar Produk Dipesan
+                                </h6>
+
+                                <div v-if="sales.products && sales.products.length > 0"
+                                    class="d-flex align-items-center flex-wrap gap-2">
+                                    <template v-for="(prod, index) in sales.products.slice(0, 4)"
+                                        :key="prod.product?.id_product || index">
+                                        <span
+                                            class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 fw-medium py-1 px-3 rounded-pill d-flex align-items-center shadow-sm hover-shadow transition-all"
+                                            style="font-size: 12.5px;">
+                                            <i class="bi bi-box-seam me-2 opacity-75"></i>
+                                            <span class="text-truncate" style="max-width: 180px;"
+                                                :title="prod.product?.name">
+                                                {{ prod.product?.name }}
+                                            </span>
+                                        </span>
+                                    </template>
+
+                                    <template v-if="sales.products.length > 4">
+                                        <span
+                                            class="badge bg-white text-dark border border-secondary border-opacity-25 fw-bold py-1 px-3 rounded-pill shadow-sm hover-shadow transition-all cursor-pointer"
+                                            style="font-size: 12px;"
+                                            :title="sales.products.slice(4).map(p => p.product?.name).join('\n')">
+                                            +{{ sales.products.length - 4 }} Lainnya
+                                        </span>
+                                    </template>
+                                </div>
+
+                                <div v-else>
+                                    <span
+                                        class="badge bg-light text-muted border border-secondary border-opacity-10 fw-normal py-1 px-3 rounded-pill fst-italic"
+                                        style="font-size: 12px;">
+                                        <i class="bi bi-inbox me-1"></i> Belum ada produk
+                                    </span>
+                                </div>
+                            </div>
+
+
                         </div>
                     </div>
 
@@ -345,6 +384,7 @@ const getTimeOnly = (date) => {
                             </button>
                         </div>
                     </div>
+
                     <div class="tab-content">
 
                         <!-- Transactions Tabs -->
@@ -430,6 +470,8 @@ const getTimeOnly = (date) => {
                                         <span class="text-muted fw-bold text-uppercase"
                                             style="font-size: 12px; letter-spacing: 0.5px">Total
                                             Telah Dibayar</span>
+                                        <span class="text-muted fw-bold text-uppercase mt-4"
+                                            style="font-size: 12px; letter-spacing: 0.5px">Status Pembayaran</span>
                                     </div>
                                     <div class="d-flex flex-column text-end">
                                         <span class="fw-bolder text-muted fs-5 font-monospace">{{
@@ -443,6 +485,14 @@ const getTimeOnly = (date) => {
                                                 )
                                             )
                                         }}</span>
+                                        <div style="font-size: 14px; letter-spacing: 0.5px"
+                                            class="badge rounded-2 px-3 py-2 mt-2 text-uppercase font-monospace" :class="{
+                                                'badge-soft-warning': sales.payment_status === 'DP',
+                                                'badge-soft-success': sales.payment_status === 'LUNAS'
+                                            }">
+                                            {{ sales.payment_status === 'DP' ? 'Dana Awal (DP)' :
+                                                'Lunas' }}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -623,14 +673,6 @@ const getTimeOnly = (date) => {
                 </div>
 
 
-            </template>
-
-            <template #footer>
-                <div class="d-flex justify-content-end">
-                    <button type="button" class="btn btn-secondary fw-bold px-4 shadow-sm" @click="close">
-                        <i class="bi bi-x-circle me-1"></i> TUTUP
-                    </button>
-                </div>
             </template>
         </modal>
     </div>

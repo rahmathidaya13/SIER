@@ -19,10 +19,14 @@ class HomeController extends Controller
     }
     public function index(Request $request)
     {
-
-        $month = $request->input('month', now()->month);
-        $year  = $request->input('year', now()->year);
-        $branchName = $request->input('branch', '');
+        $validated = $request->validate([
+            'month' => 'nullable|integer|min:1|max:12',
+            'year' => 'nullable|integer|min:2000|max:9999',
+            'branch' => 'nullable|string:in:all,' . implode(',', BranchModel::pluck('name')->toArray()),
+        ]);
+        $month = $validated['month'] ?? now()->month;
+        $year  = $validated['year'] ?? now()->year;
+        $branchName = $validated['branch'] ?? 'all';
 
 
         $branchId = null;

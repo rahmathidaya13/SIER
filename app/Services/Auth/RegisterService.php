@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Validation\ValidationException;
+use App\Services\Otp\OtpService;
 
 class RegisterService
 {
@@ -26,13 +27,14 @@ class RegisterService
                 'id_branch' => $validated['id_branch'],
                 'is_active' => true,
             ]);
+
+
             ProfileModel::create([
                 'id_user' => $user->id,
             ]);
 
             $user->assignRole($validated['role']);
             $this->assignUserPermission($user, $validated['role']);
-            event(new Registered($user));
             DB::commit();
             return $user;
         } catch (\Exception $error) {

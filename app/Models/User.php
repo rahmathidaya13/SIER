@@ -109,4 +109,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(PaymentHistory::class, 'id_user', 'id');
     }
+
+    public function otpCodes()
+    {
+        return $this->hasMany(OtpCode::class, 'id_user', 'id');
+    }
 }

@@ -68,18 +68,16 @@ class LeadController extends Controller
 
         ]);
 
-        $filters = app(ScopeResolverService::class)->filters($filters);
+        $filters = app(ScopeResolverService::class)->filters($filters); // Gunakan ScopeResolverService untuk memproses filter berdasarkan scope yang diperlukan
 
         $leads = $this->repository->getCached($filters['scope'], $filters);
         $channels = ChannelModel::select('id_channel', 'name', 'icon')->get();
-        $products = ProductModel::select('id_product', 'name', 'image_link', 'image_path')->get();
         return inertia(
             'Leads/Index',
             [
                 'leads' => $leads,
                 'filters' => $filters,
                 'channels' => $channels,
-                'products' => $products,
             ]
         );
     }
@@ -120,10 +118,10 @@ class LeadController extends Controller
                     ChannelRepository::class
                 ],
                 [
+                    'user_' . $leads->id_user,
+                    'branch_' . $leads->id_branch,
                     'global',
                     'global_super_admin',
-                    'branch_' . $user->id_branch,
-                    'user_' . $user->id
                 ]
             );
 
@@ -159,6 +157,9 @@ class LeadController extends Controller
             ]);
         }
 
+        $oldUserId = $leads->id_user;
+        $oldBranchId = $leads->id_branch;
+
         try {
             $leads = $this->leadServices->update($leads, $validated, $user);
             $recipients = $this->getLeadNotificationRecipients(
@@ -172,6 +173,14 @@ class LeadController extends Controller
                     $user
                 )
             );
+            $scopeIds = [
+                'user_' . $oldUserId,
+                'branch_' . $oldBranchId,
+                'user_' . $leads->id_user,
+                'branch_' . $leads->id_branch,
+                'global',
+                'global_super_admin',
+            ];
             $this->invalidateCaches(
                 [
                     UserRepository::class,
@@ -179,12 +188,7 @@ class LeadController extends Controller
                     SaleRepository::class,
                     ChannelRepository::class
                 ],
-                [
-                    'global',
-                    'global_super_admin',
-                    'branch_' . $user->id_branch,
-                    'user_' . $user->id
-                ]
+                array_values(array_unique($scopeIds))
             );
             return redirect()->back()->with('message', 'Lead ' . $leads->name . ' berhasil diperbarui!');
         } catch (\Exception $error) {
@@ -213,16 +217,18 @@ class LeadController extends Controller
                 'notes',
                 'follow_up_date',
                 'closed_at'
-            ])->with([
+            ])
+            ->with([
                 'user:id,name',
+                'user.roles:id,name',
                 'channel:id_channel,name,icon',
-
                 'leadProduct:id_lead,id_product',
                 'leadProduct.product:id_product,name,image_link,image_path',
+            ])
+            ->withCount('leadProduct')
+            ->findOrFail($id);
 
-            ])->findOrFail($id);
-
-        return new LeadResource($leads); // Gunakan LeadResource untuk mengubah data menjadi format JSON yang sesuai
+        return LeadResource::make($leads); // Gunakan LeadResource untuk mengubah data menjadi format JSON yang sesuai
     }
 
     public function activities(string $id)
@@ -262,6 +268,12 @@ class LeadController extends Controller
             ]);
         }
 
+        if ($leads->sales()->exists()) {
+            throw ValidationException::withMessages([
+                'error' => 'Tidak dapat menghapus lead yang memiliki transaksi.'
+            ]);
+        }
+
         $response = Gate::inspect('delete', $leads);
         if ($response->denied()) {
             throw ValidationException::withMessages([
@@ -272,9 +284,11 @@ class LeadController extends Controller
         try {
             $leadId = $leads->id_lead;
             $leadName = $leads->name;
+
             $recipients = $this->getLeadNotificationRecipients($leads, $user);
             $this->leadServices->delete($leads, $user);
             Notification::send($recipients, new LeadDeleteNotification($leadId, $leadName, $user));
+
             $this->invalidateCaches(
                 [
                     UserRepository::class,
@@ -283,10 +297,10 @@ class LeadController extends Controller
                     ChannelRepository::class
                 ],
                 [
+                    'user_' . $leads->id_user,
+                    'branch_' . $leads->id_branch,
                     'global',
                     'global_super_admin',
-                    'branch_' . $user->id_branch,
-                    'user_' . $user->id,
                 ]
             );
             return redirect()->back()->with('message', 'Lead ' . ucwords($leads->name) . ' berhasil dihapus');

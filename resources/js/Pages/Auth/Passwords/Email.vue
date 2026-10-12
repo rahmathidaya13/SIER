@@ -1,5 +1,5 @@
 <script setup>
-import { useForm, Head, Link, usePage } from '@inertiajs/vue3';
+import { useForm, Head, Link, usePage, router } from '@inertiajs/vue3';
 import { computed, onMounted, ref } from 'vue';
 
 const form = useForm({
@@ -17,6 +17,7 @@ const emailInput = ref(null);
 onMounted(() => {
     emailInput.value.focus();
 });
+
 </script>
 
 <template>

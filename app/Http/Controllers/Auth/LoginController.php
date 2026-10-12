@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use Inertia\Inertia;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Http\Requests\LoginRequest;
@@ -37,10 +38,22 @@ class LoginController extends Controller
 
         $this->authenticate($request);
         $request->session()->regenerate();
+        $user = Auth::user();
+        $request->session()->put(
+            'last_user_activity_at',
+            now()->timestamp
+        );
 
         if (!$request->user()->hasVerifiedEmail()) {
+            Auth::logout();
+
+            $request->session()->put(
+                'otp_user_id',
+                $user->id
+            );
+
             return redirect()
-                ->route('verification.notice');
+                ->route('verification.otp');
         }
 
         return redirect(RouteServiceProvider::HOME)->with('message', 'Login berhasil. Selamat datang kembali.');
@@ -54,9 +67,9 @@ class LoginController extends Controller
             'password'
         ]);
 
-        // $remember = $request->boolean('remember');
+        $remember = $request->boolean('remember');
 
-        if (!Auth::attempt($credentials, true)) {
+        if (!Auth::attempt($credentials, $remember)) {
             RateLimiter::hit($this->throttleKey($request));
             throw ValidationException::withMessages([
                 'error' => 'Email atau password salah.',
@@ -93,6 +106,8 @@ class LoginController extends Controller
         // Hapus sesi & regenerasi token CSRF
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        Inertia::clearHistory();
         return redirect()->route('login')->with(' message', 'Anda berhasil logout');
     }
 }

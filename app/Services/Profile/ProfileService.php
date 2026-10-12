@@ -3,11 +3,11 @@
 namespace App\Services\Profile;
 
 use App\Models\User;
-use App\Models\ProfileModel;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Traits\BranchMutationHelper;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Laravel\Facades\Image;
 
 class ProfileService
 {
@@ -16,15 +16,24 @@ class ProfileService
         DB::beginTransaction();
         try {
 
-            $imageProfile = null;
+            $profile = $user->profile;
+
+            $imageProfile = $profile->photo;
+
             if (request()->hasFile('photo')) {
-                if ($user->profile->photo && Storage::disk('public')->exists($user->profile->photo)) {
-                    Storage::disk('public')->delete($user->profile->photo);
+                $file = request()->file('photo');
+                $fileName = Str::ulid() . '.webp';
+                $path = 'profile/' . $fileName;
+                $image = Image::read($file)
+                    ->coverDown(256, 256)
+                    ->toWebp(75);
+
+                Storage::disk('public')->put($path, $image);
+
+                if ($profile->photo && Storage::disk('public')->exists($profile->photo)) {
+                    Storage::disk('public')->delete($profile->photo);
                 }
-                $imageProfile = request()->file('photo')
-                    ->store('profile', 'public');
-            } else {
-                $imageProfile = $user->profile->photo;
+                $imageProfile = $path;
             }
 
             $user->profile()->update([
@@ -41,7 +50,7 @@ class ProfileService
             ]);
 
             DB::commit();
-            return $user;
+            return $user->fresh('profile');
         } catch (\Exception $error) {
             DB::rollBack();
             Log::error("Gagal memperbarui Lead: " . $error->getMessage());

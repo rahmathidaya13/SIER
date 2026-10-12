@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Models\User;
 use App\Models\BranchModel;
+use App\Services\Otp\OtpService;
 use Illuminate\Http\Request;
 use App\Traits\RegisterValidation;
 use Spatie\Permission\Models\Role;
@@ -54,11 +55,18 @@ class RegisterController extends Controller
             $this->services->uniqueRolePerBranch(new User(), $validated['role'], $validated['id_branch']);
             $user = $this->services->store($validated);
 
+
+            request()->session()->put(
+                'otp_user_id',
+                $user->id
+            );
+
+            $otpService = new OtpService();
+            $otpService->send($user);
+
             // bersihkan cache
-            $user->sendEmailVerificationNotification(); // kirim email verifikasi
-            Auth::login($user); // login user baru
             $this->invalidateCaches([UserRepository::class, BranchRepository::class], ['global', 'global_super_admin', 'branch_' . $validated['id_branch'], 'user_' . $user->id]);
-            return redirect()->route('verification.notice')->with('message',  'Akun berhasil dibuat. Silakan verifikasi email Anda.');
+            return redirect()->route('verification.otp');
         } catch (\Exception $error) {
             return redirect()->back()
                 ->withInput()

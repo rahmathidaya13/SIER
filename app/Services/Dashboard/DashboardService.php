@@ -15,7 +15,7 @@ class DashboardService
     {
         $this->scope = $dataScopeService;
     }
-    public function getStats(?int $selectedMonth = null, ?int $selectedYear = null, ?int $branchId)
+    public function getStats(?int $selectedMonth = null, ?int $selectedYear = null, ?string $branchId)
     {
         $date = $this->resolveDate($selectedMonth, $selectedYear);
         $currentStart = $date->copy()->startOfMonth();

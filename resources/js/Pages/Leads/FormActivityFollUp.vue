@@ -8,7 +8,8 @@ import { formatDate } from "@/Helpers/formatDate";
 import { debounce } from "lodash";
 import axios from "axios";
 const { show, __alert, hide } = useRowAlert();
-
+import { useRequest } from "@/Composables/useRequest";
+const { isLoading, requests } = useRequest();
 const props = defineProps({
     idLead: {
         type: String,
@@ -18,7 +19,6 @@ const props = defineProps({
 });
 
 const isEdit = computed(() => !!props.idLead);
-const isLoading = ref(false);
 const activities = ref([]);
 
 const form = useForm({
@@ -57,7 +57,6 @@ const loadActivity = async () => {
         const { data } = await axios.get(route('leads.activities', props.idLead));
         const cleanData = data.data;
         fillForm(cleanData);
-        console.log(cleanData);
     } catch (error) {
         console.error("Gagal mengambil data:", error);
         alert("Terjadi kesalahan saat memuat data.");
@@ -234,7 +233,7 @@ const getTimeOnly = (date) => {
                         <form-wrapper @submit.prevent="submit">
                             <div class="row g-3 animate-fade-in">
 
-                                <div class="col-12 p-3 rounded-4 border">
+                                <div class="col-12 p-3 rounded-4 border shadow-sm">
                                     <div class="position-relative">
                                         <label for="activity_input"
                                             class="form-label small fw-bold text-primary mb-2 d-flex align-items-center">
@@ -242,8 +241,7 @@ const getTimeOnly = (date) => {
 
                                         </label>
                                         <text-area :maxChar="2500" :error="form.errors.description" name="description"
-                                            v-model="form.description" :rows="5"
-                                            inputClass="border-0 shadow-sm rounded-3"
+                                            v-model="form.description" :rows="5" inputClass="border-0 rounded-3"
                                             placeholder="Tuliskan apa yang baru saja dibicarakan dengan pelanggan di sini..." />
                                         <input-error :message="form.errors.description" />
                                     </div>
@@ -269,12 +267,13 @@ const getTimeOnly = (date) => {
                                 </div>
 
                                 <div class="col-12">
-                                    <div v-if="activities.length > 0" class="tracking-container pb-3">
 
-                                        <h6 class="fw-bold text-muted mb-3 pb-2 d-flex align-items-center"
-                                            style="font-size: 13px; letter-spacing: 0.5px;">
-                                            <i class="bi bi-clock-history me-2 fs-5"></i> JEJAK REKAM AKTIVITAS FOLLOW-UP
-                                        </h6>
+                                    <h6 class="fw-bold text-muted mb-3 pb-2 d-flex align-items-center"
+                                        style="font-size: 13px; letter-spacing: 0.5px;">
+                                        <i class="bi bi-clock-history me-2 fs-5"></i> JEJAK REKAM AKTIVITAS FOLLOW-UP
+                                    </h6>
+
+                                    <div v-if="activities.length > 0" class="tracking-container pb-3">
 
                                         <div v-for="(act, index) in activities" :key="act.id_lead_activity"
                                             class="d-flex align-items-stretch gap-3">
@@ -326,10 +325,12 @@ const getTimeOnly = (date) => {
                                                     <i class="bi bi-person"></i>
                                                     <span class="text-capitalize">{{ act.user?.name || 'Sistem' }} - {{
                                                         act.user.role_name }}</span>
-                                                    <span v-if="act.created_at !== act.updated_at"
-                                                        class="fst-italic ms-1">
-                                                        (Diubah: {{ act.user?.name }} - {{ getTimeOnly(act.updated_at)
-                                                        }})
+                                                    <span v-if="act.user_update !== null" class="fst-italic ms-1">
+                                                        ( Diubah: {{ act.user_update?.name }} - {{
+                                                        act.user_update?.role_name }} ,
+                                                        {{ getShortDate(act.updated_at) }} - {{
+                                                        getTimeOnly(act.updated_at) }}
+                                                        )
                                                     </span>
                                                 </div>
 
@@ -512,7 +513,7 @@ const getTimeOnly = (date) => {
 
 .tracking-desc {
     font-size: 14px;
-    line-height: 1.55;
+    line-height: 1.2;
     letter-spacing: 0.1px;
     word-break: break-word;
     white-space: pre-wrap;

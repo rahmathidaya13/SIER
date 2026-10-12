@@ -37,7 +37,12 @@ class HandleInertiaRequests extends Middleware
     {
         return array_merge(parent::share($request), [
             'auth' => [
-                'user' => auth()->user()?->load(['roles', 'permissions', 'branch', 'profile']) ?? null,
+                'user' => auth()->user()?->load([
+                    'roles:id,name',
+                    'permissions:id,name',
+                    'branch:id_branch,name,status',
+                    'profile',
+                ]) ?? null,
                 'user_id' => $request->user() ? $request->user()->id : null,
                 'unread_notifications_count' => $request->user() ? $request->user()->unreadNotifications()->count() : 0
             ],
@@ -69,6 +74,12 @@ class HandleInertiaRequests extends Middleware
                 'version' => '1.0.0',
             ],
             'locale' => fn() => app()->getLocale(),
+            'idleTimeout' => [
+                'seconds' => 3600, // 1 hour in seconds
+                'lastActivityAt' => fn() => $request->user()
+                    ? $request->session()->get('last_user_activity_at')
+                    : null,
+            ],
         ]);
     }
 }

@@ -3,7 +3,11 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useForm, router, usePage } from "@inertiajs/vue3";
 import { hasRole } from "@/Composables/useAuth";
 import { currencyFormat } from "@/Helpers/currencyFormat";
+import { useConfirm } from "@/Composables/useConfirm"
+const confirm = useConfirm();
 import axios from "axios";
+
+
 const props = defineProps({
     idSales: {
         type: String,
@@ -46,8 +50,9 @@ const loadSales = async () => {
     isLoading.value = true;
     try {
         const { data } = await axios.get(`/sales/show/${props.idSales}`);
-        fillForm(data);
-        console.log(data);
+        const cleanData = data.data
+        fillForm(cleanData);
+        console.log(cleanData);
     } catch (error) {
         console.error("Gagal mengambil data:", error);
         alert("Terjadi kesalahan saat memuat data.");
@@ -55,16 +60,26 @@ const loadSales = async () => {
         isLoading.value = false
     }
 };
-const submit = () => {
-    form.post(`/sales/cancel/${props.idSales}`, {
-        preserveScroll: true,
-        preserveState: true,
-        replace: true,
-        onSuccess: () => {
-            emit("saved");
-            close();
-        },
+const submit = async () => {
+
+    const setConfirm = await confirm.ask({
+        title: 'Pembatalan Transaksi',
+        message: `Berhati-hati, kamu akan membatalkan transaksi ini. Apakah kamu yakin?`,
+        confirmText: 'Ya, Batalkan',
+        variant: 'danger'
     });
+
+    if (setConfirm) {
+        form.post(`/sales/cancel/${props.idSales}`, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+            onSuccess: () => {
+                emit("saved");
+                close();
+            },
+        });
+    }
 };
 watch(
     () => props.show,
@@ -134,68 +149,161 @@ const reasonOptions = computed(() => {
                         <p class="text-muted mt-3 small fw-medium">Sedang mempersiapkan form...</p>
                     </div>
                     <div v-else>
-                        <form-wrapper @submit.prevent="submit">
-                            <div class="card bg-c-slate text-white border-0 mb-4 overflow-hidden position-relative">
-                                <div class="card-body p-4">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <p class="mb-1 text-white-50 small text-uppercase fw-bold ls-1">
-                                                {{ dataSales?.invoice }}
-                                            </p>
 
-                                            <h5 class="mb-0 fw-bold text-capitalize">
-                                                {{ dataSales?.lead?.name }}
-                                            </h5>
+                        <div class="card border shadow-sm rounded-4 overflow-hidden mb-3">
+                            <div
+                                class="card-header bg-danger bg-opacity-10 border-bottom border-danger border-opacity-10 p-3">
+                                <div
+                                    class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+
+                                    <div class="d-flex align-items-center gap-2 min-w-0">
+
+                                        <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                            style="width: 48px; height: 48px;">
+                                            <i class="bi bi-x-circle-fill fs-3"></i>
                                         </div>
 
-                                        <div class="text-end">
-                                            <span class="badge bg-light text-dark">
-                                                {{ dataSales?.payment_status }}
+                                        <div class="min-w-0">
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <span
+                                                    class="badge bg-white text-danger border border-danger-subtle fw-semibold p-2"
+                                                    style="font-size: 14px;">
+                                                    {{ dataSales?.invoice || 'NO-INVOICE' }}
+                                                </span>
+                                            </div>
+                                            <h6 class="mb-0 fw-bold text-dark mt-1 text-capitalize text-truncate"
+                                                style="font-size: 18px;" :title="dataSales?.lead?.name">
+                                                {{ dataSales?.lead?.name || 'Nama Pelanggan' }}
+                                            </h6>
+                                            <div class="d-inline-flex align-items-center gap-2">
+                                                <span class="small text-muted fw-semibold" style="font-size: 12px;">
+                                                    <i class="bi bi-telephone-fill me-1"></i>
+                                                    {{ dataSales?.lead?.phone }}
+                                                </span>
+                                                <span class="small text-muted fw-semibold" style="font-size: 12px;">
+                                                    <i class="bi bi-envelope-fill me-1"></i>{{ dataSales?.lead?.email ||
+                                                        'Tidak ada email' }}</span>
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+
+                                    <div class="align-self-start align-self-sm-center flex-shrink-0">
+                                        <span class="badge bg-opacity-15 px-3 py-2 rounded-pill fw-medium" :class="{
+                                            'bg-success': dataSales?.payment_status === 'LUNAS',
+                                            'bg-warning': dataSales?.payment_status === 'DP',
+                                        }" style="font-size: 12px;">
+                                            <i class="bi me-1" :class="{
+                                                ' bi-clock-history': dataSales?.payment_status === 'DP',
+                                                ' bi-check-circle': dataSales?.payment_status === 'LUNAS',
+                                            }"></i>
+                                            {{ dataSales?.payment_status === 'LUNAS' ? 'Lunas' : 'Dana Awal (DP)' }}
+                                        </span>
+                                    </div>
+
+                                </div>
+
+
+                            </div>
+
+                            <div class="card-body p-3 bg-white">
+
+                                <div class="d-flex flex-column mb-3">
+                                    <h6 class="fw-bold text-dark mb-3 d-flex align-items-center text-uppercase"
+                                        style="font-size: 13px; letter-spacing: 0.5px;">
+                                        <i class="bi bi-bag-check-fill text-success me-2 fs-5"></i> Daftar
+                                        Produk Dipesan
+                                    </h6>
+
+                                    <div v-if="dataSales.products && dataSales.products.length > 0"
+                                        class="d-flex align-items-center flex-wrap gap-2">
+                                        <template v-for="(prod, index) in dataSales.products.slice(0, 4)"
+                                            :key="prod.product?.id_product || index">
+                                            <span
+                                                class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 fw-medium py-1 px-3 rounded-pill d-flex align-items-center shadow-sm hover-shadow transition-all"
+                                                style="font-size: 12.5px;">
+                                                <i class="bi bi-box-seam me-2 opacity-75"></i>
+                                                <span class="text-truncate" style="max-width: 180px;"
+                                                    :title="prod.product?.name">
+                                                    {{ prod.product?.name }}
+                                                </span>
                                             </span>
-                                        </div>
+                                        </template>
+
+                                        <template v-if="dataSales.products.length > 4">
+                                            <span
+                                                class="badge bg-white text-dark border border-secondary border-opacity-25 fw-bold py-1 px-3 rounded-pill shadow-sm hover-shadow transition-all cursor-pointer"
+                                                style="font-size: 12px;"
+                                                :title="dataSales.products.slice(4).map(p => p.product?.name).join('\n')">
+                                                +{{ dataSales.products.length - 4 }} Lainnya
+                                            </span>
+                                        </template>
                                     </div>
 
-                                    <div class="row mt-4 pt-3 border-top border-light border-opacity-50">
-                                        <div class="col-4">
-                                            <p class="mb-0 text-white-50 small">Total Deal</p>
-
-                                            <h6 class="mb-0 fw-bold">
-                                                {{ currencyFormat(dataSales?.deal_price) }}
-                                            </h6>
-                                        </div>
-
-                                        <div class="col-4 text-center">
-                                            <p class="mb-0 text-white-50 small">Dibayar</p>
-
-                                            <h6 class="mb-0 fw-bold">
-                                                {{ currencyFormat(dataSales?.paid_amount) }}
-                                            </h6>
-                                        </div>
-
-                                        <div class="col-4 text-end">
-                                            <p class="mb-0 text-white-50 small">Sisa Tagihan</p>
-
-                                            <h6 class="mb-0 fw-bold text-info">
-                                                {{ currencyFormat(dataSales?.remaining_bill) }}
-                                            </h6>
-                                        </div>
+                                    <div v-else>
+                                        <span
+                                            class="badge bg-light text-muted border border-secondary border-opacity-10 fw-normal py-1 px-3 rounded-pill fst-italic"
+                                            style="font-size: 12px;">
+                                            <i class="bi bi-inbox me-1"></i> Belum ada produk
+                                        </span>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="alert border alert-warning d-flex align-items-start gap-2 mb-4">
-                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                <hr class="border-secondary opacity-10 my-3">
 
-                                <div class="small">
-                                    <strong>Perhatian!</strong>
-                                    <div class="mt-1">
-                                        Pembatalan transaksi akan mengubah status transaksi menjadi
-                                        <strong>CANCELLED</strong>
-                                        dan tercatat sebagai riwayat pembatalan.
+
+                                <div class="d-flex flex-column flex-md-row gap-2">
+
+
+                                    <div class="flex-fill p-2 bg-light rounded-3 border">
+                                        <p class="mb-1 text-muted fw-semibold text-uppercase tracking-wide"
+                                            style="font-size: 12px;">
+                                            Total Deal
+                                        </p>
+                                        <div class="fw-bold text-dark" style="font-size: 16px;">
+                                            {{ currencyFormat(dataSales?.deal_price) }}
+                                        </div>
                                     </div>
+
+                                    <div class="flex-fill p-2 bg-light rounded-3 border">
+                                        <p class="mb-1 text-muted fw-semibold text-uppercase tracking-wide"
+                                            style="font-size: 12px;">
+                                            Telah Dibayar
+                                        </p>
+                                        <div class="fw-bold text-success" style="font-size: 16px;">
+                                            {{ currencyFormat(dataSales?.paid_amount) }}
+                                        </div>
+                                    </div>
+
+                                    <div class="flex-fill p-2 bg-light rounded-3 border">
+                                        <p class="mb-1 text-muted fw-semibold text-uppercase tracking-wide"
+                                            style="font-size: 12px;">
+                                            Sisa Tagihan
+                                        </p>
+                                        <div class="fw-bold text-danger" style="font-size: 16px;">
+                                            {{ currencyFormat(dataSales?.remaining_bill) }}
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
+                        </div>
 
+                        <div class="alert border alert-warning d-flex align-items-start gap-2 mb-4">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+
+                            <div class="small">
+                                <strong>Perhatian!</strong>
+                                <div class="mt-1">
+                                    Pembatalan transaksi akan mengubah status transaksi menjadi
+                                    <strong>CANCELLED</strong>
+                                    dan tercatat sebagai riwayat pembatalan.
+                                </div>
+                            </div>
+                        </div>
+
+                        <form-wrapper @submit.prevent="submit">
                             <div class="row">
                                 <div class="col-12 mb-3">
                                     <input-label labelClass="small text-muted mb-2">

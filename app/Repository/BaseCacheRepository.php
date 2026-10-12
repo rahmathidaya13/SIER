@@ -9,44 +9,139 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 
 abstract class BaseCacheRepository
 {
+    /** Prefix global untuk semua key. Override di child bila perlu. */
     protected string $cachePrefix = 'repository_cache';
-    protected int $cacheMinutes = 60; // Bisa dibuat lebih lama (misal 60 menit) karena invalidasi instan
+    /** TTL default cache data (menit). Bisa di-override via property di child. */
+    protected int $cacheMinutes = 60;
 
+    /** TTL version key (hari). 0 = forever. */
+    protected int $versionTtlDays = 30;
     // Lock config (anti race condition / cache stampede)
     protected int $lockSeconds = 5;
+
+    /** Durasi lock (detik). */
     protected int $lockWaitSeconds = 3;
 
-    // Abstract method yang wajib diisi oleh Repository turunannya
-    abstract protected function getData(string|int|null $scopeId, array $filters = []): LengthAwarePaginator;
+    /** Lama menunggu lock sebelum fallback ke DB (detik). */
+    protected int $realtimeWindowSeconds = 300;
+
+
+    // ---------------------------------------------------------------------
+    // ABSTRACT — wajib diimplementasikan child
+    // ---------------------------------------------------------------------
+    /**
+     * Query sumber data (DB/Eloquent) yang akan di-cache.
+     *
+     * @param  array<string,mixed>  $filters
+     * @return LengthAwarePaginator<int, mixed>
+     */
+
+    abstract protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator;
 
     /**
      * KEY VERSION (inti dari unicorn scaling)
      * Sekarang berdasarkan Cabang/Toko, bukan User.
      */
-    protected function getVersionKey(string|int|null $scopeId): string
+    protected function getVersionKey(string|int|null $scopeKey): string
     {
-        return "{$this->cachePrefix}_version_scope_{$scopeId}";
+        return "{$this->cachePrefix}_version_scope_{$scopeKey}";
     }
 
+    // ---------------------------------------------------------------------
+    // PUBLIC API
+    // ---------------------------------------------------------------------
+
     /**
-     * Ambil versi cache (default 1)
+     * Ambil data dari cache, atau query DB jika miss.
+     *
+     * @param  array<string,mixed>  $filters
+     * @param  int|null             $page     Halaman saat ini (null = ambil dari request).
+     * @return LengthAwarePaginator<int, mixed>
      */
-    protected function getVersion(string|int|null $scopeId): int
+
+    public function getCached(string|int|null $scopeKey, array $filters = [], ?int $page = null): LengthAwarePaginator
     {
-        $key = $this->getVersionKey($scopeId);
+        // Scope null = data global (super admin). Bisa juga di-bypass total.
+        $scopeKey =   $scopeKey === null || $scopeKey === '' ? 'global' : $scopeKey;
+        $page     = $page ?? (int) (request()->get('page', 1));
+        $cacheKey = $this->buildCacheKey($scopeKey, $filters);
+
+        $start = microtime(true);
+
+        // ✅ 1. HIT CACHE
+        $cached = Cache::get($cacheKey);
+
+        if ($cached !== null) {
+            $this->trackMetric('hit', $start);
+
+            return $this->rebuildPaginator(
+                $this->decodePayload($cached)
+            );
+        }
+
+        // MISS PATH: lock per cache key ----
+        $lockKey = 'lock_' . $cacheKey;
+        $lock    = Cache::lock($lockKey, $this->lockSeconds);
+        $locked  = false;
+
+        // 🔒 2. LOCK (Anti Race Condition)
+        // $lockKey = "lock_{$this->cachePrefix}_scope_{$scopeKey}";
+        // $lock = Cache::lock($lockKey, $this->lockSeconds);
+
+        try {
+            $lock->block($this->lockWaitSeconds); // Tunggu sampai lock tersedia
+            $locked = true;
+
+            // Double-check: siapa tahu request sebelumnya sudah mengisi cache.
+            $cached = Cache::get($cacheKey);
+            if ($cached !== null) {
+                $this->trackMetric('hit', $start);
+
+                return $this->rebuildPaginator(
+                    $this->decodePayload($cached)
+                );
+            }
+
+            // 🚀 3. QUERY DB (Panggil fungsi dari class turunannya)
+            $result = $this->getData($scopeKey, $filters);
+            $payload = $this->paginatorToPayload($result);
+
+            // 💾 4. SIMPAN CACHE (dengan kompresi)
+            Cache::put(
+                $cacheKey,
+                $this->encodePayload($payload),
+                now()->addMinutes($this->cacheMinutes)
+            );
+
+            $this->trackMetric('miss', $start);
+            $this->trackMetricRealtime('miss', $start);
+            // $this->maybeCleanupOldCache($scopeKey);
+
+            return $result;
+        } catch (LockTimeoutException $e) {
+            // Jika antrean lock terlalu lama, langsung tembak ke DB agar user tidak stuck loading
+            return $this->getData($scopeKey, $filters);
+        } finally {
+            optional($lock)->release();
+        }
+    }
+
+    protected function getVersion(string|int|null $scopeKey): int
+    {
+        $key = $this->getVersionKey($scopeKey);
 
         if (!Cache::has($key)) {
             Cache::forever($key, 1);
         }
 
-        return (int) Cache::get($key);
+        return Cache::get($key);
     }
 
     /**
      * Build cache key unik berdasarkan parameter pencarian
      */
 
-    protected function buildCacheKey(string|int|null $scopeId, array $filters = []): string
+    protected function buildCacheKey(string|int|null $scopeKey, array $filters = []): string
     {
         // Pastikan pagination ikut menjadi bagian dari key
         $filters = array_merge($filters, [
@@ -59,76 +154,12 @@ abstract class BaseCacheRepository
 
         ksort($filters);
 
-        $version = $this->getVersion($scopeId);
-        return "{$this->cachePrefix}_scope_{$scopeId}_v{$version}_" . md5(json_encode($filters));
+        $version = $this->getVersion($scopeKey);
+        return "{$this->cachePrefix}_scope_{$scopeKey}_v{$version}_" . md5(json_encode($filters));
     }
 
-    /**
-     * Ambil data dari cache atau DB
-     */
-    public function getCached(string|int|null $scopeId, array $filters = []): LengthAwarePaginator
-    {
-        // Jika tidak ada scopeId (misal super_admin yang melihat data global), bypass cache atau set ke 'global'
-        $scopeId ??= 'global';
 
-        $start = microtime(true);
-        $cacheKey = $this->buildCacheKey($scopeId, $filters);
 
-        // ✅ 1. HIT CACHE
-        if (Cache::has($cacheKey)) {
-            $this->trackMetric('hit', $start);
-            $this->trackMetricRealtime('hit', $start);
-
-            return $this->rebuildPaginator(
-                $this->decodePayload(Cache::get($cacheKey))
-            );
-        }
-
-        // 🔒 2. LOCK (Anti Race Condition)
-        $lockKey = "lock_{$this->cachePrefix}_scope_{$scopeId}";
-        $lock = Cache::lock($lockKey, $this->lockSeconds);
-
-        try {
-            $lock->block($this->lockWaitSeconds); // Tunggu sampai lock tersedia
-
-            // Double check setelah mendapat lock (siapa tahu antrean sebelumnya sudah membuat cache-nya)
-            if (Cache::has($cacheKey)) {
-                $this->trackMetric('hit', $start);
-                $this->trackMetricRealtime('hit', $start);
-
-                return $this->rebuildPaginator(
-                    $this->decodePayload(Cache::get($cacheKey))
-                );
-            }
-
-            // 🚀 3. QUERY DB (Panggil fungsi dari class turunannya)
-            $result = $this->getData($scopeId, $filters);
-            $payload = [
-                'data'         => collect($result->items())->toArray(),
-                'total'        => $result->total(),
-                'per_page'     => $result->perPage(),
-                'current_page' => $result->currentPage(),
-            ];
-
-            // 💾 4. SIMPAN CACHE (dengan kompresi)
-            Cache::put(
-                $cacheKey,
-                $this->encodePayload($payload),
-                now()->addMinutes($this->cacheMinutes)
-            );
-
-            $this->trackMetric('miss', $start);
-            $this->trackMetricRealtime('miss', $start);
-            // $this->maybeCleanupOldCache($scopeId);
-
-            return $result;
-        } catch (LockTimeoutException $e) {
-            // Jika antrean lock terlalu lama, langsung tembak ke DB agar user tidak stuck loading
-            return $this->getData($scopeId, $filters);
-        } finally {
-            optional($lock)->release();
-        }
-    }
     protected function trackMetric($type, $startTime): void
     {
         $duration = round((microtime(true) - $startTime) * 1000, 2);
@@ -255,45 +286,69 @@ abstract class BaseCacheRepository
     /**
      * Clear semua cache user (super cepat via registry)
      */
-    public function clearCache(string|int|null $scopeId): void
+    public function clearCache(string|int|null $scopeKey): void
     {
-        if (!$scopeId) return;
+        if ($scopeKey === null || $scopeKey === '') {
+            return;
+        }
 
-        $key = $this->getVersionKey($scopeId);
+        $key = $this->getVersionKey($scopeKey);
 
-        $current = (int) Cache::get($key, 1);
-        Cache::forever($key, $current + 1);
+        if (!Cache::has($key)) {
+            Cache::forever($key, 1);
+        }
+
+        Cache::increment($key);
     }
 
-    public function clearRelatedCaches(string|int|null $scopeId): void
+    public function clearRelatedCaches(string|int|null $scopeKey): void
     {
         // selalu refresh global
         $this->clearCache('global');
 
         // refresh cabang terkait
-        if ($scopeId) {
-            $this->clearCache($scopeId);
+        if ($scopeKey) {
+            $this->clearCache($scopeKey);
         }
     }
 
-    public function clearMultipleCaches(array $scopeIds): void
+    public function clearMultipleCaches(array $scopeKeys): void
     {
-        foreach (array_unique(array_filter($scopeIds)) as $scopeId) {
-            $this->clearCache($scopeId);
+        foreach (array_unique(array_filter($scopeKeys)) as $scopeKey) {
+            $this->clearCache($scopeKey);
         }
     }
-    protected function maybeCleanupOldCache($scopeId): void
+    protected function maybeCleanupOldCache($scopeKey): void
     {
         // 10% kemungkinan untuk membersihkan sampah cache versi lama
         if (rand(1, 100) <= 10) {
-            $version = $this->getVersion($scopeId);
+            $version = $this->getVersion($scopeKey);
 
             // hapus versi lama (version - 2)
             $oldVersion = $version - 2;
 
             if ($oldVersion > 0) {
-                Cache::forget("{$this->cachePrefix}_scope_{$scopeId}_v{$oldVersion}_");
+                Cache::forget("{$this->cachePrefix}_scope_{$scopeKey}_v{$oldVersion}_");
             }
         }
+    }
+
+
+     // ---------------------------------------------------------------------
+    // INTERNAL — payload (de)serialization
+    // ---------------------------------------------------------------------
+
+    /**
+     * @param  LengthAwarePaginator<int, mixed>  $p
+     * @return array{data:array,total:int,per_page:int,current_page:int}
+     */
+    protected function paginatorToPayload(LengthAwarePaginator $p): array
+    {
+        return [
+            'data'         => collect($p->items())->toArray(),
+            'total'        => $p->total(),
+            'per_page'     => $p->perPage(),
+            'current_page' => $p->currentPage(),
+        ];
     }
 }

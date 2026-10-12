@@ -6,98 +6,166 @@ use Carbon\Carbon;
 use Illuminate\Support\Str;
 use App\Models\ProductModel;
 use App\Models\ProductPriceModel;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Laravel\Facades\Image;
 
 class ProductService
 {
-    public function store($validated)
+    public function store(array $validated)
     {
-        return DB::transaction(function () use ($validated) {
+        $newImagePath = null;
+        try {
+            return DB::transaction(function () use ($validated, &$newImagePath) {
 
-            $imagePath = null;
-            if (request()->hasFile('image')) {
-                $imagePath = request()->file('image')->store('product_image', 'public');
+                if (request()->hasFile('image')) {
+                    $newImagePath = $this->storeOptimizedImage(request()->file('image'));
+                }
+
+                $product = ProductModel::create([
+                    'created_by' => auth()->id(),
+                    'source' => 'manual',
+                    'name' => $validated['name'],
+                    'slug' => Str::slug($validated['name']) . '-' . Str::random(5),
+                    'category' => $validated['category'],
+                    'type_item' => $validated['type_item'],
+                    'item_condition' => $validated['item_condition'],
+                    'image_path' => $newImagePath,
+                    'link' => $validated['link'],
+                ]);
+
+                ProductPriceModel::create([
+                    'id_product'          => $product->id_product,
+                    'created_by'          => auth()->id(),
+                    'status'              => $validated['status'],
+                    'valid_from'          => $validated['valid_from'] ?? Carbon::now()->toDateString(),
+                    'valid_until'         => $validated['valid_until'] ?? null,
+                    'base_price'          => $validated['base_price'],
+                    'discount_percentage' => $validated['discount_percentage'] ?? 0,
+                    'discount_price'      => $validated['discount_price'] ?? 0,
+                    'price_type'          => ($validated['discount_price'] > 0) ? 'discount' : 'normal',
+                ]);
+                return $product;
+            });
+        } catch (\Throwable $error) {
+            // Bersihkan file baru jika transaksi database gagal.
+            if ($newImagePath) {
+                Storage::disk('public')->delete($newImagePath);
             }
 
-            $product = ProductModel::create([
-                'created_by' => auth()->id(),
-                'source' => 'manual',
-                'name' => $validated['name'],
-                'slug' => Str::slug($validated['name']) . '-' . Str::random(5),
-                'category' => $validated['category'],
-                'type_item' => $validated['type_item'],
-                'item_condition' => $validated['item_condition'],
-                'image_path' => $imagePath,
-                'link' => $validated['link'],
+            Log::error('Gagal membuat produk.', [
+                'message' => $error->getMessage(),
             ]);
 
-            ProductPriceModel::create([
-                'id_product'          => $product->id_product,
-                'created_by'          => auth()->id(),
-                'status'              => $validated['status'],
-                'valid_from'          => $validated['valid_from'] ?? Carbon::now()->toDateString(),
-                'valid_until'         => $validated['valid_until'] ?? null,
-                'base_price'          => $validated['base_price'],
-                'discount_percentage' => $validated['discount_percentage'] ?? 0,
-                'discount_price'      => $validated['discount_price'] ?? 0,
-                'price_type'          => ($validated['discount_price'] > 0) ? 'discount' : 'normal',
-            ]);
-            return $product;
-        });
+            throw $error;
+        }
     }
 
     public function update(ProductModel $product, $validated)
     {
-        return DB::transaction(function () use ($product, $validated) {
-            $imageCover = null;
-            if (request()->hasFile('image')) {
-                if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
-                    Storage::disk('public')->delete($product->image_path);
+        $newImagePath = null;
+        $oldImagePath = $product->image_path;
+        try {
+
+            $updatedProduct  = DB::transaction(function () use ($product, $validated, &$newImagePath) {
+                $hasNewImage = request()->hasFile('image');
+
+                if ($hasNewImage) {
+                    $newImagePath = $this->storeOptimizedImage(request()->file('image'));
                 }
-                $imageCover = request()->file('image')
-                    ->store('product_image', 'public');
-            } else {
-                $imageCover = $product->image_path;
+
+                $product->update([
+                    'name'           => $validated['name'],
+                    'created_by'     => auth()->id(),
+                    'source'         => $hasNewImage ? 'manual' : $product->source,
+                    'slug'           => Str::slug($validated['name']) . '-' . Str::random(5),
+                    'category'       => $validated['category'],
+                    'type_item'      => $validated['type_item'],
+                    'item_condition' => $validated['item_condition'],
+                    'link'           => $validated['link'] ?? $product->link,
+                    'image_path'     => $hasNewImage ? $newImagePath : $product->image_path,
+                ]);
+
+                $product->prices()->updateOrCreate(['id_product' => $product->id_product], [
+                    'id_product'          => $product->id_product,
+                    'created_by'          => auth()->id(),
+                    'status'              => $validated['status'],
+                    'valid_from'          => $validated['valid_from'] ?? Carbon::now()->toDateString(),
+                    'valid_until'         => $validated['valid_until'] ?? null,
+                    'base_price'          => $validated['base_price'],
+                    'discount_percentage' => $validated['discount_percentage'] ?? 0,
+                    'discount_price'      => $validated['discount_price'] ?? 0,
+                    'price_type'          => ($validated['discount_price'] > 0) ? 'discount' : 'normal',
+                ]);
+
+                return $product->fresh();
+            });
+            // Hapus gambar lama setelah transaksi berhasil.
+            if (
+                $newImagePath &&
+                $oldImagePath &&
+                $oldImagePath !== $newImagePath
+            ) {
+                Storage::disk('public')->delete($oldImagePath);
             }
 
-            $product->update([
-                'name'           => $validated['name'],
-                'created_by'     => auth()->id(),
-                'source'         => request()->hasFile('image') ? 'manual' : 'scrape',
-                'slug'           => Str::slug($validated['name']) . '-' . Str::random(5),
-                'category'       => $validated['category'],
-                'type_item'      => $validated['type_item'],
-                'item_condition' => $validated['item_condition'],
-                'link'           => $validated['link'] ?? $product->link,
-                'image_path'     => $imageCover ?? $product->image_path,
+            return $updatedProduct;
+        } catch (\Throwable $error) {
+            // Hapus file baru jika transaksi gagal.
+            if ($newImagePath) {
+                Storage::disk('public')->delete($newImagePath);
+            }
+
+            Log::error('Gagal memperbarui produk.', [
+                'product_id' => $product->id_product,
+                'message' => $error->getMessage(),
             ]);
 
-            $product->prices()->updateOrCreate(['id_product' => $product->id_product], [
-                'id_product'          => $product->id_product,
-                'created_by'          => auth()->id(),
-                'status'              => $validated['status'],
-                'valid_from'          => $validated['valid_from'] ?? Carbon::now()->toDateString(),
-                'valid_until'         => $validated['valid_until'] ?? null,
-                'base_price'          => $validated['base_price'],
-                'discount_percentage' => $validated['discount_percentage'] ?? 0,
-                'discount_price'      => $validated['discount_price'] ?? 0,
-                'price_type'          => ($validated['discount_price'] > 0) ? 'discount' : 'normal',
-            ]);
-
-            return $product;
-        });
+            throw $error;
+        }
     }
 
     public function delete(ProductModel $product)
     {
-        return DB::transaction(function () use ($product) {
-            if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
-                Storage::disk('public')->delete($product->image_path);
-            }
+        $imagePath = $product->image_path;
+
+        $deletedProduct = DB::transaction(function () use ($product) {
             $product->prices()->delete();
             $product->delete();
+
             return $product;
         });
+
+        // File dihapus setelah transaksi database berhasil.
+        if ($imagePath) {
+            Storage::disk('public')->delete($imagePath);
+        }
+
+        return $deletedProduct;
+    }
+
+    private function storeOptimizedImage(UploadedFile $file)
+    {
+        $filename = Str::ulid() . '.webp';
+        $path = 'product_image/' . $filename;
+
+        $encodedImage = Image::read($file)
+            ->scaleDown(600,  600)
+            ->toWebp(78);
+
+        $stored = Storage::disk('public')->put(
+            $path,
+            (string) $encodedImage
+        );
+
+        if (!$stored) {
+            throw new \RuntimeException(
+                'Gagal menyimpan gambar produk.'
+            );
+        }
+
+        return $path;
     }
 }

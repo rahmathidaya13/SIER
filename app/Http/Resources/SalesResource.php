@@ -45,6 +45,7 @@ class SalesResource extends JsonResource
             'products' => $this->whenLoaded('salesProduct', function () {
                 return SalesProductResource::collection($this->salesProduct);
             }),
+            'product_count' => $this->sales_product_count,
             'user' => UserResource::make($this->whenLoaded('user')),
             'cancelledBy' => UserResource::make($this->whenLoaded('cancelledBy')),
         ];

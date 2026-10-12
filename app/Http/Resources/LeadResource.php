@@ -28,27 +28,34 @@ class LeadResource extends JsonResource
             'follow_up_date' => $this->follow_up_date,
             'closed_at'      => $this->closed_at,
 
+            'user' => UserResource::make($this->whenLoaded('user')),
             // 2. Manipulasi Alias Langsung (Tidak perlu "as creator_name" di query DB)
             // whenLoaded() memastikan data ini HANYA dirender jika relasinya dipanggil (menghindari error N+1)
             'creator_name' => $this->whenLoaded('user', function () {
-                return $this->user->name;
+                return $this->user?->name;
             }),
 
             'channel' => $this->whenLoaded('channel', function () {
                 return [
-                    'id_channel' => $this->channel->id_channel,
-                    'name' => $this->channel->name,
-                    'icon' => $this->channel->icon
+                    'id_channel' => $this->channel?->id_channel,
+                    'name' => $this->channel?->name,
+                    'icon' => $this->channel?->icon
                 ];
             }),
-
+            'branch' => $this->whenLoaded('branch', function () {
+                return [
+                    'id_branch' => $this->branch?->id_branch,
+                    'name' => $this->branch?->name,
+                ];
+            }),
+            'product_count' => $this->lead_product_count,
             'products' => $this->whenLoaded('leadProduct', function () {
                 return $this->leadProduct->map(function ($lp) {
                     return [
-                        'id_product'   => $lp->product->id_product ?? null,
-                        'product_name' => $lp->product->name ?? null,
-                        'image_link'   => $lp->product->image_link ?? null,
-                        'image_path'   => $this->product->image_path ?? null,
+                        'id_product'   => $lp->product?->id_product,
+                        'product_name' => $lp->product?->name,
+                        'image_link'   => $lp->product?->image_link,
+                        'image_path'   => $lp->product?->image_path,
                     ];
                 });
             }),

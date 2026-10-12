@@ -7,6 +7,7 @@ use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Leads\LeadController;
 use App\Http\Controllers\Sales\SaleController;
+use App\Http\Controllers\UserActivityController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Branch\BranchController;
 use App\Http\Controllers\Channel\ChannelController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Leads\LeadActivityController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\VerifyByOtpController;
 use App\Http\Controllers\Leads\LeadConversionController;
 use App\Http\Controllers\Notification\NotificationController;
 
@@ -33,12 +35,11 @@ use App\Http\Controllers\Notification\NotificationController;
 Route::get('/', function () {
     return redirect()->route('login');
 });
-// Route::get('/leads', function () {
-//     return Inertia::render('Test/page');
-// })->name('leads');
 
-Route::middleware(['auth', 'verified', 'check.status.active'])->group(function () {
-    Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
+
+Route::middleware(['auth', 'check.status.active', 'idle.timeout', 'verified.email'])->group(function () {
+    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+    Route::post('/activity/ping', [UserActivityController::class, 'ping'])->name('activity.ping');
 
     Route::controller(HomeController::class)->group(function () {
         Route::get('/home',  'index')->name('home');
@@ -117,6 +118,13 @@ Route::controller(VerificationController::class)->group(function () {
     Route::get('/email/verify', 'notice')->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', 'verify')->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
     Route::post('/email/verification-notification', 'resend')->middleware(['throttle:6,1'])->name('verification.send');
+});
+Route::controller(VerifyByOtpController::class)->group(function () {
+    Route::get('/verify-otp/show', 'showVerifyOtp')->name('verification.otp');
+    Route::post('/verify-otp/verify', 'verifyOtp')
+        ->name('verification.otp.verify');
+    Route::post('/resend-otp', 'resendOtp')
+        ->name('verification.otp.resend');
 });
 
 // akun yang belum login dan akan register

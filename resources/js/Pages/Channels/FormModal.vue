@@ -35,7 +35,6 @@ const loadChannel = async () => {
 
 }
 const fillForm = (data) => {
-    console.log(data);
     form.defaults({
         name: data.name || '',
         code: data.code || '',

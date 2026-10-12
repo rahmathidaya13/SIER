@@ -18,7 +18,6 @@ const props = defineProps({
     stats: Object,
     branch: Array
 });
-console.log(props.sales.data);
 const {
     filters,
     isLoading,
@@ -79,13 +78,20 @@ const header = [
         },
     },
     {
-        label: "PELANGGAN & PRODUK",
-        key: "customer_product",
+        label: "NAMA PELANGGAN",
+        key: "customer",
+        attrs: {
+            class: 'text-start',
+        },
+    },
+    {
+        label: "PRODUK DIBELI",
+        key: "product",
         attrs: {
             style: {
                 width: '25%'
             },
-            class: 'text-start',
+            class: 'text-center',
         },
     },
     {
@@ -187,6 +193,14 @@ onMounted(() => {
 const rowClasses = (item) => ({
     'tr-highlight-danger': item.status === 'CANCELLED',
 })
+const getWaLink = (phone) => {
+    let p = phone.replace(/\D/g, ''); // Hapus spasi, strip, tanda plus
+    if (p.startsWith('0')) p = '62' + p.slice(1);
+    return `https://wa.me/${p}`;
+};
+const getEmail = (email) => {
+    return `mailto:${email}`;
+}
 </script>
 <template>
 
@@ -329,61 +343,61 @@ const rowClasses = (item) => ({
                                             v-html="highlight(item.invoice, filters.keyword)"></span>
                                         <span class="text-muted small">{{ formatDate(item.deal_at) }}</span>
                                     </td>
+                                    <td>
+                                        <div class="d-flex">
+                                            <i class="bi bi-person-fill me-2 text-primary"></i>
+                                            <div @click.prevent="openActivityModal(item)"
+                                                class="fw-bold text-primary mb-1 text-decoration-none cursor-pointer"
+                                                v-html="highlight(item.lead_customer_name, filters.keyword)"></div>
+                                        </div>
+                                        <div v-if="item.lead_customer_email" class="text-muted small mb-1">
+                                            <a :href="getEmail(item.lead_customer_email)" class="text-decoration-none">
+                                                <i class="bi bi-envelope-fill me-1"></i>
+                                                {{ item.lead_customer_email
+                                                }}</a>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <a :href="getWaLink(item.lead_customer_phone)" target="_blank"
+                                                class="badge bg-success text-white text-decoration-none px-2 py-1 d-inline-flex align-items-center gap-1"
+                                                title="Chat langsung via WhatsApp">
+                                                <i class="bi bi-whatsapp"></i>
+                                                <span v-html="highlight(item.lead_customer_phone ||
+                                                    'Unknown', filters.keyword)">
+                                                </span>
+                                            </a>
+                                        </div>
+                                    </td>
 
                                     <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="badge bg-primary-subtle text-primary p-2 rounded-circle fs-4">
-                                                <i class="bi bi-person-fill"></i>
-                                            </div>
+                                        <div v-if="item.sales_product && item.sales_product.length > 0"
+                                            class="d-flex flex-wrap gap-2 mt-1 ms-1">
 
-                                            <div class="text-capitalize">
-                                                <span @click.prevent="openActivityModal(item)"
-                                                    class="fw-bold text-decoration-underline text-primary mb-0 cursor-pointer"
-                                                    v-html="highlight(item.lead_customer_name ||
-                                                        'Unknown', filters.keyword)"></span>
+                                            <template v-for="(slp, index) in item.sales_product.slice(0, 2)"
+                                                :key="slp.product?.id_product || index">
+                                                <span v-if="slp.product"
+                                                    class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 d-flex align-items-center py-1 px-3 rounded-pill shadow-none"
+                                                    style="font-size: 11.5px; max-width: 300px"
+                                                    :title="slp.product.name">
+                                                    <i class="bi bi-box-seam me-2 opacity-75"></i>
+                                                    <span class="text-truncate fw-medium">{{ slp.product.name
+                                                    }}</span>
+                                                </span>
+                                            </template>
 
-                                                <div
-                                                    class="d-block mb-1 small fw-medium badge bg-success rounded-2 rounded-pill">
-                                                    <i class="bi bi-whatsapp me-1"></i>
-                                                    <span v-html="highlight(item.lead_customer_phone ||
-                                                        'Unknown', filters.keyword)">
-                                                    </span>
-                                                </div>
+                                            <span v-if="item.sales_product.length > 2"
+                                                class="badge bg-light text-secondary border d-flex align-items-center py-1 px-2 rounded-pill shadow-none cursor-pointer"
+                                                style="font-size: 11px;"
+                                                :title="item.sales_product.slice(2).map(p => p.product?.name).join('\n')">
+                                                <span class="fw-bold me-1">+{{ item.sales_product.length - 2
+                                                }}</span> Lainnya
+                                            </span>
+                                        </div>
 
-
-                                                <div v-if="item.sales_product && item.sales_product.length > 0"
-                                                    class="d-flex flex-wrap gap-1">
-
-                                                    <template v-for="(lp, index) in item.sales_product.slice(0, 2)"
-                                                        :key="lp.product?.id_product || index">
-                                                        <span v-if="lp.product"
-                                                            class="badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center py-1 px-2 rounded-pill shadow-sm"
-                                                            style="font-size: 12px; max-width: 200px;"
-                                                            :title="lp.product.name">
-
-                                                            <i class="bi bi-box-seam me-1 opacity-75"></i>
-
-                                                            <span class="text-truncate">{{ lp.product.name }}</span>
-                                                        </span>
-                                                    </template>
-
-                                                    <span v-if="item.sales_product.length > 2"
-                                                        class="badge bg-light text-secondary border py-1 px-2 rounded-pill shadow-sm"
-                                                        style="font-size: 11px; cursor: help;"
-                                                        :title="'Ada ' + (item.sales_product.length - 2) + ' produk lainnya di dalam form'">
-                                                        +{{ item.sales_product.length - 2 }}
-                                                    </span>
-
-                                                </div>
-                                                <div v-else>
-                                                    <span
-                                                        class="badge bg-light text-muted border border-dashed py-1 px-2 fw-normal"
-                                                        style="font-size: 10.5px;">
-                                                        <i class="bi bi-slash-circle me-1"></i> Belum ada produk
-                                                    </span>
-                                                </div>
-                                            </div>
-
+                                        <div v-else class="ms-1">
+                                            <span class="text-muted fst-italic d-flex align-items-center"
+                                                style="font-size: 11.5px;">
+                                                <i class="bi bi-dash-circle me-1 opacity-50"></i> Belum ada produk
+                                            </span>
                                         </div>
                                     </td>
 
@@ -428,7 +442,7 @@ const rowClasses = (item) => ({
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.sales_name || 'Sistem'
-                                                    }} - {{ `${getRoleName(item.role_name).label ?? 'Unknown'}` }}
+                                                }} - {{ `${getRoleName(item.role_name).label ?? 'Unknown'}` }}
                                                 </span>
                                                 <span class="small mb-1 fw-semibold">
                                                     <i class="bi bi-geo-alt-fill text-danger"></i>
@@ -451,8 +465,9 @@ const rowClasses = (item) => ({
                                     <td class="text-center">
                                         <div v-if="item.status !== 'CANCELLED'"
                                             class="d-flex justify-content-center align-items-center gap-1">
-                                            <button v-if="item.payment_status !== 'LUNAS'" @click="openPaymentModal(item)"
-                                                class="btn btn-c-success" title="Sahkan Closing">
+                                            <button v-if="item.payment_status !== 'LUNAS'"
+                                                @click="openPaymentModal(item)" class="btn btn-c-success"
+                                                title="Sahkan Closing">
                                                 <i class="bi bi-check-circle-fill"></i>
                                             </button>
                                             <button @click="cancelClosing(item)" class="btn btn-c-danger"

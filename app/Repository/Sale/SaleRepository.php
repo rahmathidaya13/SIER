@@ -5,20 +5,28 @@ namespace App\Repository\Sale;
 use App\Models\SalesModel;
 use App\Repository\BaseCacheRepository;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 
 class SaleRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'sales_cache_';
 
-    protected function buildBaseQuery(string|int|null $branchId, array $filters = [])
+    protected function buildBaseQuery(): Builder
     {
-        $user = auth()->user();
         $query = SalesModel::query()
-            ->with(['salesProduct.product:id_product,name,image_link,image_path'])
             ->allowedForUser()
             ->joinUserRole()
             ->leftJoin('leads', 'leads.id_lead', '=', 'sales.id_lead')
-            ->leftJoin('branches', 'branches.id_branch', '=', 'sales.id_branch')
+            ->leftJoin('branches', 'branches.id_branch', '=', 'sales.id_branch');
+        return $query;
+    }
+    protected function buildListQuery(): Builder
+    {
+        return $this->buildBaseQuery()
+            ->with([
+                'salesProduct:id_sales,id_product',
+                'salesProduct.product:id_product,name',
+            ])
             ->select([
                 'sales.id_sales',
                 'sales.id_lead',
@@ -38,38 +46,21 @@ class SaleRepository extends BaseCacheRepository
                 'sales.cancelled_notes',
                 'sales.created_at',
                 'sales.updated_at',
+
                 'leads.name as lead_customer_name',
                 'leads.phone as lead_customer_phone',
                 'leads.email as lead_customer_email',
+
                 'users.name as sales_name',
                 'roles.name as role_name',
+
                 'branches.name as branch_name',
             ]);
-
-        if ($user->hasRole(['super_admin'])) {
-            $branchFilter = $filters['branch'] ?? 'all';
-            $query->when($branchFilter !== 'all', function ($q) use ($branchFilter) {
-                $q->where('branches.name', $branchFilter);
-            });
-        }
-
-        $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
-            $search = $filters['keyword'];
-            $cleanSearch = addcslashes($search, '%_');
-            $q->where(function ($subQuery) use ($cleanSearch) {
-                $subQuery->where('leads.name', 'like', "%{$cleanSearch}%")
-                    ->orWhere('leads.phone', 'like', "%{$cleanSearch}%")
-                    ->orWhere('sales.invoice', 'like', "%{$cleanSearch}%");
-            });
-        });
-
-        return $query;
     }
-    protected function getData(string|int|null $branchId, array $filters = []): LengthAwarePaginator
+    protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator
     {
-
-        $query = $this->buildBaseQuery($branchId, $filters);
-        $this->resolveStatus($filters, $query);
+        $query = $this->buildListQuery();
+        $this->applyFilters($query, $filters);
         [$column, $direction] = $this->resolveSorting($filters);
         $limit = min((int) ($filters['limit'] ?? 10), 100);
         return $query
@@ -77,16 +68,21 @@ class SaleRepository extends BaseCacheRepository
             ->paginate($limit)
             ->withQueryString();
     }
-    protected function resolveSorting(array $filters): ?array
+    protected function applyFilters(Builder $query, array $filters): Builder
+    {
+        $query = $this->resolveStatus($query, $filters);
+        $query = $this->filterKeyword($query, $filters);
+        $query = $this->filterBranch($query, $filters);
+        return $query;
+    }
+    protected function resolveSorting(array $filters): array
     {
         return match ($filters['order_by'] ?? 'latest') {
-
             'oldest' => ['sales.created_at', 'asc'],
-
             default => ['sales.created_at', 'desc'],
         };
     }
-    protected function resolveStatus(array $filters, $query)
+    protected function resolveStatus(Builder $query, array $filters): Builder
     {
         return match ($filters['status'] ?? 'closing') {
             'closing' => $query->where('sales.status', 'ACTIVE'),
@@ -95,15 +91,42 @@ class SaleRepository extends BaseCacheRepository
         };
     }
 
-    public function getSalesStats(string|int|null $branchId, array $filters = []): array
+    public function getSalesStats(array $filters = []): array
     {
         // Panggil query yang sama, jadi filternya tetap akurat
-        $query = $this->buildBaseQuery($branchId, $filters);
+        $query = $this->buildBaseQuery();
+        $query = $this->applyFilters($query, $filters);
 
         return [
-            'omset_lunas' => (clone $query)->where('sales.status', '!=', 'CANCELLED')->sum('sales.paid_amount'),
-            'piutang'     => (clone $query)->sum('sales.remaining_bill'),
-            'avg_deal'    => (clone $query)->where('sales.status', '!=', 'CANCELLED')->avg('sales.deal_price') ?? 0,
+            'omset_lunas' => (clone $query)
+                ->where('sales.status', '!=', 'CANCELLED')
+                ->sum('sales.paid_amount'),
+            'piutang'     => (clone $query)
+                ->sum('sales.remaining_bill'),
+            'avg_deal'    => (clone $query)
+                ->where('sales.status', '!=', 'CANCELLED')
+                ->avg('sales.deal_price') ?? 0,
         ];
+    }
+    protected function filterKeyword(Builder $query, array $filters): Builder
+    {
+        return $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
+            $search = $filters['keyword'];
+            $cleanSearch = addcslashes($search, '%_');
+            $q->where(function ($subQuery) use ($cleanSearch) {
+                $subQuery->where('leads.name', 'like', "%{$cleanSearch}%")
+                    ->orWhere('leads.phone', 'like', "%{$cleanSearch}%")
+                    ->orWhere('sales.invoice', 'like', "%{$cleanSearch}%");
+            });
+        });
+    }
+    protected function filterBranch(Builder $query, array $filters): Builder // Filter berdasarkan branch 
+    {
+        $user = auth()->user();
+        if (!$user->hasRole(['super_admin'])) return $query;
+        $branchFilter = $filters['branch'] ?? 'all';
+        return $query->when($branchFilter !== 'all', function (Builder $query) use ($branchFilter) {
+            $query->where('branches.name', $branchFilter);
+        });
     }
 }

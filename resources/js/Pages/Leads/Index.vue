@@ -15,10 +15,8 @@ const props = defineProps({
     leads: Object,
     filters: Object,
     channels: Array,
-    products: Array,
     role_name: String
 });
-console.log(props.leads.data);
 const getCurrentMonth = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -46,7 +44,7 @@ const {
         'status',
         'order_by',
     ],
-    only: ['leads', 'filters', 'channels', 'products'],
+    only: ['leads', 'filters', 'channels'],
     debounceTime: 500,
 });
 const header = [
@@ -62,7 +60,7 @@ const header = [
         key: "prospect",
     },
     {
-        label: "SUMBER & PAKET",
+        label: "SUMBER & PRODUK",
         key: "source",
     },
     {
@@ -340,16 +338,19 @@ const canAccess = (permission, role = []) => {
                                     </td>
 
                                     <td>
-                                        <div @click.prevent="openHistoryModal(item)"
-                                            class="fw-bold text-primary mb-1 text-decoration-underline cursor-pointer"
-                                            v-html="highlight(item.name, filters.keyword)"></div>
+                                        <div class="d-flex">
+                                            <i class="bi bi-person-fill me-2 text-primary"></i>
+                                            <div @click.prevent="openHistoryModal(item)"
+                                                class="fw-bold text-primary mb-1 text-decoration-none cursor-pointer"
+                                                v-html="highlight(item.name, filters.keyword)"></div>
+                                        </div>
                                         <div v-if="item.email" class="text-muted small mb-2">
                                             <a :href="getEmail(item.email)" class="text-decoration-none">{{ item.email
-                                                }}</a>
+                                            }}</a>
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
                                             <a :href="getWaLink(item.phone)" target="_blank"
-                                                class="badge bg-success text-white text-decoration-none px-2 py-1 d-inline-flex align-items-center gap-1"
+                                                class="badge badge-soft-success text-success rounded-pill d-flex align-items-center gap-1 py-1 px-2 text-decoration-none"
                                                 title="Chat langsung via WhatsApp">
                                                 <i class="bi bi-whatsapp"></i> {{ item.phone }}
                                             </a>
@@ -357,43 +358,53 @@ const canAccess = (permission, role = []) => {
                                     </td>
 
                                     <td class="align-middle">
-                                        <div class="d-flex flex-column gap-2 my-1">
+                                        <div class="d-flex flex-column gap-2 py-1">
 
-                                            <div class="d-flex align-items-center gap-1 fw-semibold"
-                                                style="font-size: 14px;">
-                                                <i :class="item.icon || 'bi-broadcast'" class="text-muted"></i>
-                                                <span>{{ item.channel_name || 'Tidak diketahui' }}</span>
+                                            <div class="d-inline-flex align-items-center">
+                                                <span
+                                                    class="badge bg-white border shadow-sm text-dark d-flex align-items-center py-1 px-3 rounded-pill"
+                                                    style="font-size: 12.5px;">
+                                                    <!-- Ikon Channel -->
+                                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-2"
+                                                        style="width: 22px; height: 22px;">
+                                                        <i :class="item.icon || 'bi-broadcast'"
+                                                            style="font-size: 11px;"></i>
+                                                    </div>
+                                                    <span class="fw-semibold text-uppercase"
+                                                        style="letter-spacing: 0.3px;">
+                                                        {{ item.channel_name || 'Sumber Tidak Diketahui' }}
+                                                    </span>
+                                                </span>
                                             </div>
 
                                             <div v-if="item.lead_product && item.lead_product.length > 0"
-                                                class="d-flex flex-wrap gap-1">
+                                                class="d-flex flex-wrap gap-2 mt-1 ms-1">
 
                                                 <template v-for="(lp, index) in item.lead_product.slice(0, 2)"
                                                     :key="lp.product?.id_product || index">
                                                     <span v-if="lp.product"
-                                                        class="badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center py-1 px-2 rounded-pill shadow-sm"
-                                                        style="font-size: 12px; max-width: 140px;"
+                                                        class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 d-flex align-items-center py-1 px-3 rounded-pill shadow-none"
+                                                        style="font-size: 11.5px; max-width: 300px"
                                                         :title="lp.product.name">
-
-                                                        <i class="bi bi-box-seam me-1 opacity-75"></i>
-
-                                                        <span class="text-truncate">{{ lp.product.name }}</span>
+                                                        <i class="bi bi-box-seam me-2 opacity-75"></i>
+                                                        <span class="text-truncate fw-medium">{{ lp.product.name
+                                                        }}</span>
                                                     </span>
                                                 </template>
 
                                                 <span v-if="item.lead_product.length > 2"
-                                                    class="badge bg-light text-secondary border py-1 px-3 rounded-pill shadow-sm"
+                                                    class="badge bg-light text-secondary border d-flex align-items-center py-1 px-2 rounded-pill shadow-none cursor-pointer"
                                                     style="font-size: 11px;"
-                                                    :title="'Ada ' + (item.lead_product.length - 2) + ' Produk lainnya'">
-                                                    +{{ item.lead_product.length - 2 }} Produk lainnya
+                                                    :title="item.lead_product.slice(2).map(p => p.product?.name).join('\n')">
+                                                    <span class="fw-bold me-1">+{{ item.lead_product.length - 2
+                                                    }}</span> Lainnya
                                                 </span>
-
                                             </div>
-                                            <div v-else>
-                                                <span
-                                                    class="badge bg-light text-muted border border-dashed py-1 px-2 fw-normal"
-                                                    style="font-size: 10.5px;">
-                                                    <i class="bi bi-slash-circle me-1"></i> Belum ada produk
+
+                                            <div v-else class="ms-1">
+                                                <span class="text-muted fst-italic d-flex align-items-center"
+                                                    style="font-size: 11.5px;">
+                                                    <i class="bi bi-dash-circle me-1 opacity-50"></i> Belum ada produk
                                                 </span>
                                             </div>
 
@@ -424,7 +435,7 @@ const canAccess = (permission, role = []) => {
                                                 style="font-size: 11.5px;">
                                                 <i class="bi bi-play-circle-fill text-primary me-1"></i>
                                                 Mulai: <span class="ms-1 fw-medium">{{ formatDate(item.follow_up_date)
-                                                }}</span>
+                                                    }}</span>
                                             </div>
 
                                             <div class="d-flex align-items-center text-muted" style="font-size: 11.5px;"
@@ -474,7 +485,7 @@ const canAccess = (permission, role = []) => {
                                             <div class="d-flex flex-column small" style="line-height: 1.3;">
                                                 <span class="fw-bold text-dark mb-1 text-capitalize">{{
                                                     item.creator_name || 'Sistem'
-                                                }} - {{ `${getRoleName(item.role_name).label}`
+                                                    }} - {{ `${getRoleName(item.role_name).label}`
                                                     }}
                                                 </span>
                                                 <span class="small mb-1 fw-semibold">
@@ -552,7 +563,7 @@ const canAccess = (permission, role = []) => {
                                                 periode: filters.periode,
                                                 limit: filters.limit,
                                                 order_by: filters.order_by,
-                                            }" :only="['leads', 'filters', 'channels', 'products']" />
+                                            }" :only="['leads', 'filters', 'channels']" />
                                     </div>
                                 </template>
 
@@ -561,7 +572,7 @@ const canAccess = (permission, role = []) => {
                         </div>
                     </div>
                 </div>
-                <FormModal @saved="handleLeadSaved" :channels="props.channels" :products="props.products"
+                <FormModal @saved="handleLeadSaved" :channels="props.channels"
                     :idLead="selectedId" :show="showModal" @update:show="showModal = $event" />
                 <ConvertLeadModal :idLead="selectedId" :show="showConvertModal"
                     @update:show="showConvertModal = $event" />

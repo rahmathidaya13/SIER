@@ -43,7 +43,6 @@ class SaleController extends Controller
 
     public function index(Request $request)
     {
-
         $request->validate([
             'keyword'  => 'nullable|string|max:255',
             'limit'    => 'nullable|integer|min:1|max:100',
@@ -66,7 +65,7 @@ class SaleController extends Controller
         $filters = app(ScopeResolverService::class)->filters($filters);
         $sales   = $this->saleRepository->getCached($filters['scope'], $filters);
 
-        $salesStats = $this->saleRepository->getSalesStats($this->scopeId(auth()->user()), $filters);
+        $salesStats = $this->saleRepository->getSalesStats($filters);
         $branch     = BranchModel::select('id_branch', 'name')->get();
         return inertia(
             'Sales/Index',
@@ -96,10 +95,12 @@ class SaleController extends Controller
                 'status',
                 'deal_at',
                 'notes',
+
                 'cancelled_at',
                 'cancelled_by',
                 'cancelled_reason',
                 'cancelled_notes',
+
                 'created_at',
                 'updated_at',
             ])
@@ -112,6 +113,7 @@ class SaleController extends Controller
                 'cancelledBy:id,name',
                 'cancelledBy.roles:id,name',
             ])
+            ->withCount('salesProduct')
             ->findOrFail($id);
 
         return SalesResource::make($sales);
@@ -216,6 +218,6 @@ class SaleController extends Controller
                 'user_' . $user->id,
             ]
         );
-        return redirect()->back()->with('message', 'Closing berhasil dibatalkan');
+        return redirect()->back()->with('message', 'Pembatalan Transaksi berhasil dilakukan');
     }
 }

@@ -4,6 +4,7 @@ namespace App\Repository\Lead;
 
 use App\Models\LeadModel;
 use App\Repository\BaseCacheRepository;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 
@@ -11,24 +12,29 @@ class LeadsRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'leads_cache';
 
-    protected function buildBaseQuery(array $filters = [])
+    protected function buildBaseQuery()
     {
         $query = LeadModel::query()
+            ->allowedForUser()
+            ->joinUserRole()
+            ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')
+            ->leftJoin('sales', 'sales.id_lead', '=', 'leads.id_lead')
+            ->leftJoin('branches', 'branches.id_branch', '=', 'users.id_branch');
+        return $query;
+    }
+    protected function buildListQuery(): Builder
+    {
+        return $this->buildBaseQuery()
             ->with([
                 // 'activity:id_lead,created_at',
-                'leadProduct.product:id_product,name,image_link,image_path',
+                'leadProduct:id_lead_product,id_lead,id_product',
+                'leadProduct.product:id_product,name',
                 'activity' => function ($query) {
                     $query->select('id_lead', 'created_at')
                         ->latest()
                         ->limit(10);
                 },
-            ])
-            ->allowedForUser()
-            ->joinUserRole()
-            ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')
-            ->leftJoin('sales', 'sales.id_lead', '=', 'leads.id_lead')
-            ->leftJoin('branches', 'branches.id_branch', '=', 'users.id_branch')
-            ->select([
+            ])->select([
                 'leads.id_lead',
                 'leads.name',
                 'leads.email',
@@ -46,64 +52,34 @@ class LeadsRepository extends BaseCacheRepository
                 'channels.icon',
                 'sales.invoice',
             ]);
-
-
-        $status = $this->resolveStatus($filters);
-        $query->when(
-            !empty($status),
-            function ($q) use ($status) {
-                if (is_array($status)) {
-                    $q->whereIn('leads.status', $status);
-                } else {
-                    $q->where('leads.status', $status);
-                }
-            }
-        );
-
-        $query->when(!empty($filters['periode']), function ($q) use ($filters) {
-            $datePart = explode('-', $filters['periode']);
-
-            if (count($datePart) === 2) {
-                $year = $datePart[0];
-                $month = $datePart[1];
-
-                $q->whereMonth('leads.created_at', $month)
-                    ->whereYear('leads.created_at', $year);
-            }
-        });
-
-        $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
-            $search = $filters['keyword'];
-
-            $q->where(function ($subQuery) use ($search) {
-                $subQuery->where('leads.name', 'like', "%{$search}%")
-                    ->orWhere('leads.phone', 'like', "%{$search}%");
-            });
-        });
-
-
-        return $query;
     }
-
     protected function getData(string|int|null $branchId, array $filters = []): LengthAwarePaginator
     {
-        $query = $this->buildBaseQuery($filters);
+        $query = $this->buildListQuery();
+        $this->applyFilters($query, $filters);
         [$column, $direction] = $this->resolveSorting($filters);
         return $query
             ->orderBy($column, $direction)
             ->paginate($filters['limit'] ?? 10)
             ->withQueryString();
     }
-    protected function resolveStatus(array $filters): ?array
+    protected function applyFilters(Builder $query, array $filters): Builder
+    {
+        $query = $this->resolveStatus($query, $filters);
+        $query = $this->filterKeyword($query, $filters);
+        $query = $this->filterPeriode($query, $filters);
+        return $query;
+    }
+    protected function resolveStatus(Builder $query, array $filters): Builder
     {
         return match ($filters['status'] ?? 'active') {
-            'new'         => ['NEW'],
-            'follow_up'   => ['FOLLOW_UP'],
-            'closed_won'  => ['CLOSED_WON'],
-            'closed_lost' => ['CLOSED_LOST'],
-            'active'      => ['NEW', 'FOLLOW_UP'],
-            'all'         => null,
-            default       => null,
+            'new'         => $query->where('leads.status', 'NEW'),
+            'follow_up'   => $query->where('leads.status', 'FOLLOW_UP'),
+            'closed_won'  => $query->where('leads.status', 'CLOSED_WON'),
+            'closed_lost' => $query->where('leads.status', 'CLOSED_LOST'),
+            'active'      => $query->whereIn('leads.status', ['NEW', 'FOLLOW_UP']),
+            'all'         => $query,
+            default       => $query,
         };
     }
     protected function resolveSorting(array $filters): ?array
@@ -112,5 +88,28 @@ class LeadsRepository extends BaseCacheRepository
             'oldest' => ['leads.created_at', 'asc'],
             default => ['leads.created_at', 'desc'],
         };
+    }
+    protected function filterKeyword(Builder $query, array $filters)
+    {
+        return $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
+            $search = $filters['keyword'];
+            $cleanSearch = addcslashes($search, '%_');
+            $q->where(function ($subQuery) use ($cleanSearch) {
+                $subQuery->where('leads.name', 'like', "%{$cleanSearch}%")
+                    ->orWhere('leads.phone', 'like', "%{$cleanSearch}%");
+            });
+        });
+    }
+    protected function filterPeriode(Builder $query, array $filters)
+    {
+        return $query->when(!empty($filters['periode']), function ($q) use ($filters) {
+            $datePart = explode('-', $filters['periode']);
+            if (count($datePart) === 2) {
+                $year = $datePart[0];
+                $month = $datePart[1];
+                $q->whereMonth('leads.created_at', $month)
+                    ->whereYear('leads.created_at', $year);
+            }
+        });
     }
 }

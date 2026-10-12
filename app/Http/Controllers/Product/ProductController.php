@@ -74,17 +74,20 @@ class ProductController extends Controller
     public function update(Request $request, string $id)
     {
         $product = ProductModel::find($id);
+
         if (!$product) {
             throw ValidationException::withMessages([
                 'error' => 'Data produk tidak ditemukan atau sudah dihapus.'
             ]);
         }
+
         $response = Gate::inspect('update', $product);
         if ($response->denied()) {
             throw ValidationException::withMessages([
                 'unauthorized_action' => $response->message()
             ]);
         }
+
         $user = auth()->user();
         $this->validateProduct($request->all());
         $this->services->update($product, $request->all());
@@ -122,7 +125,10 @@ class ProductController extends Controller
     public function productSearch(Request $request)
     {
         $keyword = $request->input('keyword');
-        $products = ProductModel::with('prices')
+        $products = ProductModel::with('prices:id_product,status')
+            ->whereHas('prices', function ($q) {
+                $q->where('status', 'published');
+            })
             ->select('id_product', 'name', 'image_link', 'image_path', 'category')
             ->when($keyword, function ($q, $search) {
                 $cleanSearch = addcslashes($search, '%_');
@@ -130,7 +136,18 @@ class ProductController extends Controller
                     ->orWhere('id_product', 'like', "%{$cleanSearch}%");
             })
             ->limit(10) // HANYA AMBIL 10 TERATAS!
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                $product->image_link = !empty($product->image_link)
+                    ? $product->image_link
+                    : (
+                        !empty($product->image_path)
+                        ? asset('storage/' . ltrim($product->image_path, '/'))
+                        : null
+                    );
+
+                return $product;
+            });
 
         return response()->json($products);
     }

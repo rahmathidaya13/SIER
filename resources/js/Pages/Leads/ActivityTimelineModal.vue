@@ -1,6 +1,8 @@
 <script setup>
 import { ref, watch, computed } from "vue";
 import { formatDate } from "@/Helpers/formatDate";
+import { useRequest } from "@/Composables/useRequest";
+const { isLoading, requests } = useRequest();
 import axios from "axios";
 
 const props = defineProps({
@@ -10,46 +12,34 @@ const props = defineProps({
         default: null
     }
 });
-
 const emit = defineEmits(["update:show"]);
 
-const isLoading = ref(false);
 const activities = ref([]);
-const customerName = ref("");
-const phoneNumber = ref('');
-const products = ref(null);
+const leads = ref(null);
+
 const close = () => {
     emit("update:show", false);
     activities.value = [];
-    customerName.value = "";
-    phoneNumber.value = '';
-    products.value = null;
+    leads.value = null;
 };
 
-const loadTimeline = async () => {
-    if (!props.idLead) return;
-
-    isLoading.value = true;
-    try {
-        // Kita manfaatkan endpoint show yang sudah membawa relasi lead.activity
-        const { data } = await axios.get(`/leads/show/${props.idLead}`);
+const loadLead = async () => {
+    return requests(async () => {
+        const { data } = await axios.get(
+            route('leads.show', props.idLead)
+        );
         const cleanData = data.data;
-        customerName.value = cleanData?.name || 'Konsumen';
-        phoneNumber.value = cleanData?.phone || '';
-        // activities.value = cleanData?.activity || [];
-        products.value = cleanData?.products || null;
-        // console.log(cleanData);
-    } catch (error) {
-        console.error("Gagal mengambil riwayat:", error);
-    } finally {
-        isLoading.value = false;
-    }
+        leads.value = cleanData || null;
+    },
+        "Gagal mengambil data produk",
+        false
+    );
 };
+
 
 const loadActivities = async (page = 1) => {
     if (!props.idLead) return;
-    isLoading.value = true;
-    try {
+    return requests(async () => {
         const { data } = await axios.get(
             route('leads.activities', props.idLead),
             {
@@ -60,21 +50,31 @@ const loadActivities = async (page = 1) => {
         );
         const cleanData = data.data;
         activities.value = cleanData;
-        console.log(data);
-    } catch (error) {
-        console.error("Gagal mengambil riwayat:", error);
-    } finally {
-        isLoading.value = false;
-    }
+    },
+        "Gagal mengambil data aktivitas lead",
+        false
+    );
 
 };
-
+const loadInitialData = async () => {
+    if (!props.idLead) return;
+    isLoading.value = true;
+    try {
+        await Promise.all([
+            loadActivities(),
+            loadLead()
+        ])
+    } catch (error) {
+        console.error('Gagal memuat data :', error);
+    } finally {
+        isLoading.value = false
+    }
+}
 watch(
     () => props.show,
     async (isOpen) => {
         if (isOpen) {
-            loadTimeline();
-            loadActivities();
+            await loadInitialData();
         }
     }, {
     immediate: true
@@ -118,7 +118,10 @@ const getRoleName = (roleName) => {
             color: 'bg-secondary text-white'
         }
     };
-    return roles[roleName] || 'bg-light text-dark border';
+    return roles[roleName] || {
+        label: 'User',
+        color: 'bg-light text-dark border'
+    };
 };
 const customerType = (type) => {
     const types = {
@@ -127,15 +130,42 @@ const customerType = (type) => {
             color: 'bg-success text-white'
         },
         'REPEAT_ORDER': {
-            label: 'Pelanggan Lama/Beli Ulang',
+            label: 'Pelanggan Lama',
             color: 'bg-primary text-white'
         },
         'WIN_BACK': {
-            label: 'Pelanggan Cancel',
+            label: 'Pelanggan Pernah Refund',
             color: 'bg-danger text-white'
         },
     };
-    return types[type] || 'bg-light text-dark border';
+    return types[type] || {
+        label: 'Pelanggan Baru',
+        color: 'bg-light text-dark border'
+    };
+};
+const statusProspect = (value) => {
+    const types = {
+        'NEW': {
+            label: 'Prospek Baru Masuk',
+            color: 'bg-info text-white'
+        },
+        'FOLLOW_UP': {
+            label: 'Sedang Follow Up',
+            color: 'bg-primary text-white'
+        },
+        'CLOSED_WON': {
+            label: 'Berhasil Closing',
+            color: 'bg-success text-white'
+        },
+        'CLOSED_LOST': {
+            label: 'Tidak Jadi/Refund',
+            color: 'bg-secondary text-white'
+        },
+    };
+    return types[value] || {
+        label: 'Pelanggan Baru',
+        color: 'bg-light text-dark border'
+    };
 };
 const getShortDate = (date) => {
     if (!date) return '';
@@ -147,73 +177,194 @@ const getTimeOnly = (date) => {
     const d = new Date(date);
     return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 }
+
 </script>
 
 <template>
     <div v-if="props.show">
-        <modal width="750px" size="modal-md" :icon="['text-primary', 'bi bi-clock-history']" :show="props.show"
-            title="Riwayat Jejak Rekam Aktivitas" @closed="close" :mobileFullscreen="false">
+        <modal width="850px" size="modal-lg" :icon="['text-primary', 'bi bi-info-circle']" :show="props.show"
+            title="Informasi Detail Leads" @closed="close" :mobileFullscreen="false" :footer="false">
 
             <template #body>
 
-                <div v-if="isLoading" class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
+                <div v-if="isLoading" class="d-flex flex-column align-items-center justify-content-center p-5">
+                    <div class="spinner-border text-primary mb-3"></div>
+
+                    <div class="fw-semibold">
+                        Sedang mengambil data...
                     </div>
-                    <p class="text-muted mt-3 small fw-medium">Menarik data dari arsip...</p>
+
+                    <small class="text-muted">
+                        Mohon tunggu sebentar
+                    </small>
                 </div>
 
-                <div v-else class="timeline-container px-2 pb-3">
+                <div v-else class="timeline-container ">
 
-                    <div class="bg-c-slate text-white p-3 rounded-3 mb-4 shadow-sm d-flex align-items-center gap-3">
+                    <div class="card bg-info bg-opacity-10 border rounded-4 mb-2 overflow-auto animate-fade-in">
+                        <div class="card-body p-4">
 
-                        <div class="bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                            style="width: 45px; height: 45px;">
-                            <i class="bi bi-person-lines-fill fs-4 text-white"></i>
-                        </div>
+                            <!-- Info Profil -->
+                            <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-3">
+                                <!-- Avatar -->
+                                <div class="flex-shrink-0 bg-primary-subtle text-primary rounded-circle d-flex justify-content-center align-items-center shadow-sm"
+                                    style="width: 58px; height: 58px;">
+                                    <i class="bi bi-person-fill fs-3"></i>
+                                </div>
 
-                        <div class="d-flex flex-column justify-content-center">
-                            <p class="mb-0 text-white-50 small fw-medium text-uppercase tracking-wide"
-                                style="font-size: 10.5px;">Timeline Konsumen</p>
-                            <h5 class="mb-1 fw-bold">{{ customerName }}</h5>
-                            <span class="small fw-medium">
-                                <i class="bi bi-telephone-fill me-1"></i>
-                                {{ phoneNumber }}
-                            </span>
-
-                            <div v-if="products && products.length > 0" class="d-flex flex-wrap gap-1 mt-1">
-
-                                <template v-for="(prod, index) in products" :key="prod.id_product || index">
-                                    <span
-                                        class="badge bg-white bg-opacity-25 text-white border border-white border-opacity-25 fw-normal d-flex align-items-center py-1 px-2 rounded-pill shadow-sm"
-                                        style="font-size: 11px;">
-                                        <i class="bi bi-box-seam me-1 opacity-75"></i>
-                                        <span class="text-truncate" style="max-width: 130px;"
-                                            :title="prod.product_name">
-                                            {{ prod.product_name }}
+                                <!-- Detail Kontak -->
+                                <div class="flex-grow-1">
+                                    <h5 class="fw-bold text-dark mb-1 text-capitalize">{{ leads.name }}</h5>
+                                    <div class="d-flex flex-wrap gap-3 text-muted" style="font-size: 13px;">
+                                        <span class="d-flex align-items-center">
+                                            <i class="bi bi-telephone-fill me-1 text-secondary opacity-75"></i> {{
+                                                leads.phone }}
                                         </span>
+                                        <span class="d-flex align-items-center">
+                                            <i class="bi bi-envelope-fill me-1 text-secondary opacity-75"></i> {{
+                                                leads.email || 'Tidak ada email' }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Total Produk -->
+                                <div
+                                    class="text-sm-end mt-2 mt-sm-0 border-sm-start border-secondary border-opacity-25 ps-sm-4">
+                                    <div class="text-muted small fw-semibold text-uppercase tracking-wide mb-1"
+                                        style="font-size: 11px;">
+                                        Total Produk
+                                    </div>
+                                    <span class="badge bg-primary bg-gradient fs-5 px-4 py-2 rounded-pill shadow-sm">
+                                        {{ leads.product_count || 0 }}
                                     </span>
-                                </template>
+                                </div>
                             </div>
 
-                            <div v-else class="mt-1">
-                                <span
-                                    class="badge bg-white bg-opacity-10 text-white-50 border border-white border-opacity-10 fw-normal py-1 px-2 rounded-pill fst-italic"
-                                    style="font-size: 10.5px;">
-                                    Belum ada produk
-                                </span>
+                            <div v-if="leads.notes"
+                                class="mt-4 p-3 bg-light border-start border-4 border-warning rounded-end-3 overflow-hidden">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-journal-text text-warning mt-1 fs-5 flex-shrink-0"></i>
+                                    <div class="flex-grow-1" style="min-width: 0;">
+                                        <div class="text-muted fw-bold text-uppercase tracking-wide mb-1"
+                                            style="font-size: 10.5px;">
+                                            Catatan
+                                        </div>
+                                        <p class="mb-0 text-dark"
+                                            style="font-size: 13.5px; white-space: pre-line; line-height: 1.5; word-break: break-word; overflow-wrap: break-word;">
+                                            {{ leads.notes }}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
+
+                            <hr class="border-secondary opacity-10 my-3">
+
+                            <!-- List Produk -->
+                            <div>
+                                <h6 class="fw-bold text-dark mb-3 d-flex align-items-center text-uppercase"
+                                    style="font-size: 13px; letter-spacing: 0.5px;">
+                                    <i class="bi bi-bag-check-fill text-success me-2 fs-5"></i> Daftar Produk Dipesan
+                                </h6>
+
+                                <div v-if="leads.products && leads.products.length > 0"
+                                    class="d-flex align-items-center flex-wrap gap-2">
+                                    <!-- Limit 4 Produk Pertama -->
+                                    <template v-for="(prod, index) in leads.products.slice(0, 4)"
+                                        :key="prod.id_product || index">
+                                        <span
+                                            class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 fw-medium py-1 px-3 rounded-pill d-flex align-items-center shadow-sm hover-shadow transition-all"
+                                            style="font-size: 12.5px;">
+                                            <i class="bi bi-box-seam me-2 opacity-75"></i>
+                                            <span class="text-truncate" style="max-width: 180px;"
+                                                :title="prod.product_name">
+                                                {{ prod.product_name }}
+                                            </span>
+                                        </span>
+                                    </template>
+
+                                    <!-- Sisa Produk (Jika lebih dari 4) -->
+                                    <template v-if="leads.products.length > 4">
+                                        <span
+                                            class="badge bg-white text-dark border border-secondary border-opacity-25 fw-bold py-1 px-3 rounded-pill shadow-sm hover-shadow transition-all cursor-pointer"
+                                            style="font-size: 12px;"
+                                            :title="leads.products.slice(4).map(p => p.product_name).join('\n')">
+                                            +{{ leads.products.length - 4 }} Lainnya
+                                        </span>
+                                    </template>
+                                </div>
+
+                                <!-- State Jika Tidak Ada Produk -->
+                                <div v-else>
+                                    <span
+                                        class="badge bg-light text-muted border border-secondary border-opacity-10 fw-normal py-1 px-3 rounded-pill fst-italic"
+                                        style="font-size: 12px;">
+                                        <i class="bi bi-inbox me-1"></i> Belum ada produk
+                                    </span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mb-4 animate-fade-in">
+                        <!-- Tipe Pelanggan -->
+                        <div class="d-inline-flex align-items-center bg-white border rounded-pill px-3 py-1"
+                            style="font-size: 12px;">
+                            <div class="bg-primary-subtle text-primary rounded-circle d-flex justify-content-center align-items-center me-2"
+                                style="width: 24px; height: 24px;">
+                                <i class="bi bi-person-badge"></i>
+                            </div>
+                            <span class="text-muted me-1">Tipe:</span>
+                            <span class="fw-bold text-dark text-capitalize">{{ customerType(leads.customer_type).label
+                                }}</span>
                         </div>
 
+                        <!-- Channel Trafik -->
+                        <div class="d-inline-flex align-items-center bg-white border rounded-pill px-3 py-1"
+                            style="font-size: 12px;">
+                            <div class="rounded-circle d-flex justify-content-center align-items-center me-2"
+                                style="width: 24px; height: 24px;">
+                                <i :class="'bi ' + leads.channel?.icon" style="font-size: 15px;"></i>
+                            </div>
+                            <span class="text-muted me-1">Sumber:</span>
+                            <span class="fw-bold text-dark text-capitalize">{{ leads.channel?.name
+                                }}</span>
+                        </div>
+
+                        <!-- Suhu -->
+                        <div class="d-inline-flex align-items-center bg-white border rounded-pill px-3 py-1"
+                            style="font-size: 12px;">
+                            <div class="bg-warning-subtle text-warning rounded-circle d-flex justify-content-center align-items-center me-2"
+                                style="width: 24px; height: 24px;">
+                                <i class="bi bi-thermometer-half"></i>
+                            </div>
+                            <span class="text-muted me-1">Suhu:</span>
+                            <span class="fw-bold text-dark text-capitalize">{{ leads.temperature || '-' }}</span>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="d-inline-flex align-items-center bg-white border rounded-pill px-3 py-1"
+                            style="font-size: 12px;">
+                            <div class="bg-success-subtle text-success rounded-circle d-flex justify-content-center align-items-center me-2"
+                                style="width: 24px; height: 24px;">
+                                <i class="bi bi-activity"></i>
+                            </div>
+                            <span class="text-muted me-1">Status:</span>
+                            <span class="fw-bold text-dark text-capitalize">{{ statusProspect(leads.status).label
+                            }}</span>
+                        </div>
                     </div>
 
                     <div class="animate-fade-in">
+                        <h6 class="fw-bold text-muted mb-3 pb-2 d-flex align-items-center text-uppercase"
+                            style="font-size: 13px; letter-spacing: 0.5px;">
+                            <i class="bi bi-clock-history me-2 fs-5"></i> Timeline Aktivitas Follow-Up
+                        </h6>
                         <div v-if="activities.length > 0" class="tracking-container pb-3">
 
                             <div v-for="(act, index) in activities" :key="act.id_lead_activity"
                                 class="d-flex align-items-stretch gap-3">
-
-                                <div class="flex-shrink-0 text-end pe-3" style="width: 70px; padding-top: 2px;">
+                                <div class="flex-shrink-0 text-end pe-3" style="width: 60px; padding-top: 2px;">
                                     <div class="fw-medium tracking-date text-muted">
                                         {{ getShortDate(act.created_at) }}
                                     </div>
@@ -247,9 +398,12 @@ const getTimeOnly = (date) => {
                                     <div
                                         class="tracking-user text-muted opacity-75 d-flex align-items-center gap-1 mt-1">
                                         <i class="bi bi-person"></i>
-                                        <span class="text-capitalize">{{ act.user?.name || 'Sistem' }}</span>
-                                        <span v-if="act.created_at !== act.updated_at" class="fst-italic ms-1">
-                                            (Diubah: {{ act.user?.name }} - {{ getTimeOnly(act.updated_at) }})
+                                        <span class="text-capitalize">{{ act.user?.name || 'Sistem' }} - {{
+                                            act.user.role_name }}</span>
+                                        <span v-if="act.user_update !== null" class="fst-italic ms-1">
+                                            ( Diubah: {{ act.user_update?.name }} - {{ act.user_update?.role_name }} ,
+                                            {{ getShortDate(act.updated_at) }} - {{ getTimeOnly(act.updated_at) }}
+                                            )
                                         </span>
                                     </div>
                                 </div>
@@ -258,21 +412,12 @@ const getTimeOnly = (date) => {
                         <div v-else class="empty-state">
                             <div class="empty-icon bg-light text-muted mb-3"><i class="bi bi-clock-history"></i></div>
                             <h6 class="text-muted fw-bold">Belum Ada Riwayat</h6>
-                            <p class="text-muted small">Belum ada jejak rekam atau aktivitas untuk konsumen ini.</p>
+                            <p class="text-muted small">Belum ada jejak rekam atau aktivitas untuk pelanggan ini.</p>
                         </div>
                     </div>
 
                 </div>
             </template>
-
-            <template #footer>
-                <div class="d-flex justify-content-end">
-                    <button type="button" class="btn btn-secondary fw-bold px-4 shadow-sm" @click="close">
-                        <i class="bi bi-x-circle me-1"></i> TUTUP
-                    </button>
-                </div>
-            </template>
-
         </modal>
     </div>
 </template>
@@ -299,6 +444,7 @@ const getTimeOnly = (date) => {
     max-height: 500px;
     overflow-y: auto;
     overflow-x: hidden;
+    padding: 0px 8px;
 }
 
 /* Kustomisasi Scrollbar agar elegan */
@@ -318,17 +464,6 @@ const getTimeOnly = (date) => {
 
 .timeline-container::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
-}
-
-/* Garis Vertikal Timeline */
-.timeline-line {
-    position: absolute;
-    left: 19px;
-    top: 40px;
-    bottom: -24px;
-    width: 2px;
-    background-color: #e2e8f0;
-    z-index: 1;
 }
 
 .tracking-wide {
@@ -395,7 +530,7 @@ const getTimeOnly = (date) => {
 }
 
 .tracking-time {
-    font-size: 11px;
+    font-size: 12px;
     margin-top: 2px;
 }
 
@@ -411,5 +546,19 @@ const getTimeOnly = (date) => {
 
 .tracking-user {
     font-size: 12px;
+}
+
+.transition-all {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Efek terangkat (melayang) tipis saat kursor diarahkan */
+.hover-shadow:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08) !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
 }
 </style>
