@@ -1,9 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repository;
 
+use Throwable;
+use RuntimeException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
-
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 
@@ -11,18 +15,20 @@ abstract class BaseCacheRepository
 {
     /** Prefix global untuk semua key. Override di child bila perlu. */
     protected string $cachePrefix = 'repository_cache';
+
     /** TTL default cache data (menit). Bisa di-override via property di child. */
     protected int $cacheMinutes = 60;
 
     /** TTL version key (hari). 0 = forever. */
     protected int $versionTtlDays = 30;
-    // Lock config (anti race condition / cache stampede)
-    protected int $lockSeconds = 5;
 
     /** Durasi lock (detik). */
-    protected int $lockWaitSeconds = 3;
+    protected int $lockSeconds = 5;
 
     /** Lama menunggu lock sebelum fallback ke DB (detik). */
+    protected int $lockWaitSeconds = 3;
+
+    /** Jumlah log realtime metrics yang disimpan (sliding window). */
     protected int $realtimeWindowSeconds = 300;
 
 
@@ -37,15 +43,6 @@ abstract class BaseCacheRepository
      */
 
     abstract protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator;
-
-    /**
-     * KEY VERSION (inti dari unicorn scaling)
-     * Sekarang berdasarkan Cabang/Toko, bukan User.
-     */
-    protected function getVersionKey(string|int|null $scopeKey): string
-    {
-        return "{$this->cachePrefix}_version_scope_{$scopeKey}";
-    }
 
     // ---------------------------------------------------------------------
     // PUBLIC API
@@ -114,146 +111,265 @@ abstract class BaseCacheRepository
             );
 
             $this->trackMetric('miss', $start);
-            $this->trackMetricRealtime('miss', $start);
-            // $this->maybeCleanupOldCache($scopeKey);
-
             return $result;
         } catch (LockTimeoutException $e) {
-            // Jika antrean lock terlalu lama, langsung tembak ke DB agar user tidak stuck loading
+            // Lock timeout → fallback langsung ke DB, jangan biarkan user menunggu.
+            Log::warning('Cache lock timeout, fallback ke DB', [
+                'lock_key' => $lockKey,
+                'scope'    => $scopeKey,
+            ]);
+            $this->trackMetric('miss', $start);
+
             return $this->getData($scopeKey, $filters);
         } finally {
-            optional($lock)->release();
+            // Hanya release kalau memang kita yang acquire.
+            if ($locked) {
+                try {
+                    $lock->release();
+                } catch (Throwable) {
+                    // ignore — TTL akan expire sendiri.
+                }
+            }
         }
     }
 
+    /**
+     * Invalidasi cache untuk 1 scope (increment version = O(1)).
+     */
+    public function clearCache(string|int|null $scopeKey): void
+    {
+        $scopeKey = $scopeKey === null || $scopeKey === '' ? 'global' : $scopeKey;
+        $key      = $this->getVersionKey($scopeKey);
+
+        // Pastikan key ada supaya INCR tidak bikin key tanpa TTL (tergantung driver).
+        $this->ensureVersionKey($key);
+
+        Cache::increment($key);
+    }
+
+    /**
+     * Invalidasi cache untuk scope terkait + global.
+     */
+    public function clearRelatedCaches(string|int|null $scopeKey): void
+    {
+        // selalu refresh global
+        $this->clearCache('global');
+
+        if ($scopeKey !== null && $scopeKey !== '' && $scopeKey !== 'global') {
+            $this->clearCache($scopeKey);
+        }
+    }
+
+    /**
+     * Invalidasi banyak scope sekaligus.
+     *
+     * @param  array<int,string|int|null>  $scopeKeys
+     */
+    public function clearMultipleCaches(array $scopeKeys): void
+    {
+        $unique = array_unique(
+            array_filter(
+                $scopeKeys,
+                static fn($v) => $v !== null && $v !== ''
+            )
+        );
+        foreach ($unique as $scopeKey) {
+            $this->clearCache($scopeKey);
+        }
+    }
+
+    /**
+     * Statistik agregat sejak terakhir di-reset.
+     *
+     * @return array{hit:int,miss:int,hit_rate:float,avg_time:float,total:int}
+     */
+    public function getMetrics(): array
+    {
+        $hit    = (int) Cache::get($this->metricKey('hit'), 0);
+        $miss   = (int) Cache::get($this->metricKey('miss'), 0);
+        $timeMs = (int) Cache::get($this->metricKey('time_ms'), 0);
+        $total  = $hit + $miss;
+
+        return [
+            'hit'      => $hit,
+            'miss'     => $miss,
+            'total'    => $total,
+            'hit_rate' => $total > 0 ? round(($hit / $total) * 100, 2) : 0.0,
+            'avg_time' => $total > 0 ? round($timeMs / $total, 2) : 0.0,
+        ];
+    }
+
+    /**
+     * Statistik realtime (sliding window sederhana).
+     *
+     * @return array{hit:int,miss:int,hit_rate:float,total:int,avg_time:float}
+     */
+    public function getMetricsRealtime(): array
+    {
+        $logKey = $this->metricKey('realtime_log');
+        $logs   = Cache::get($logKey, []);
+
+        $now    = now()->timestamp;
+        $cutoff = $now - $this->realtimeWindowSeconds;
+
+        $hit = $miss = $totalMs = 0;
+
+        foreach ($logs as $log) {
+            if (($log['time'] ?? 0) < $cutoff) {
+                continue;
+            }
+            $totalMs += (int) ($log['duration_ms'] ?? 0);
+
+            if (($log['type'] ?? '') === 'hit') {
+                $hit++;
+            } elseif (($log['type'] ?? '') === 'miss') {
+                $miss++;
+            }
+        }
+
+        $total = $hit + $miss;
+
+        return [
+            'hit'      => $hit,
+            'miss'     => $miss,
+            'total'    => $total,
+            'hit_rate' => $total > 0 ? round(($hit / $total) * 100, 2) : 0.0,
+            'avg_time' => $total > 0 ? round($totalMs / $total, 2) : 0.0,
+        ];
+    }
+
+    // ---------------------------------------------------------------------
+    // INTERNAL — key building
+    // ---------------------------------------------------------------------
+    protected function getVersionKey(string|int|null $scopeKey): string
+    {
+        return "{$this->cachePrefix}_version_scope_{$scopeKey}";
+    }
     protected function getVersion(string|int|null $scopeKey): int
     {
         $key = $this->getVersionKey($scopeKey);
 
-        if (!Cache::has($key)) {
-            Cache::forever($key, 1);
-        }
+        // rememberForever menghindari race `has() + forever()` dan 1 round-trip.
+        return (int) Cache::rememberForever($key, static fn() => 1);
+    }
 
-        return Cache::get($key);
+    /**
+     * Pastikan version key ada (idempotent).
+     */
+    protected function ensureVersionKey(string $key): void
+    {
+        if (!Cache::has($key)) {
+            $ttl = $this->versionTtlDays > 0
+                ? now()->addDays($this->versionTtlDays)
+                : null;
+
+            if ($ttl !== null) {
+                // add() = set-if-not-exists → aman dari race.
+                Cache::add($key, 1, $ttl);
+            } else {
+                Cache::forever($key, 1);
+            }
+        }
     }
 
     /**
      * Build cache key unik berdasarkan parameter pencarian
      */
 
-    protected function buildCacheKey(string|int|null $scopeKey, array $filters = []): string
+    protected function buildCacheKey(string|int|null $scopeKey, array $filters = [], ?int $page = null): string
     {
         // Pastikan pagination ikut menjadi bagian dari key
-        $filters = array_merge($filters, [
-            'page' => request()->get('page', 1),
-        ]);
 
-        $filters = array_filter($filters, function ($value) {
-            return $value !== null && $value !== '';
-        });
+        $page ??= (int) (request()->get('page', 1));
 
-        ksort($filters);
+        // Gabung page ke filters supaya bisa di-hash bersama.
+        $filters['page'] = $page;
+
+        // Normalisasi: buang null dan string kosong, TAPI pertahankan 0/false.
+        $filters = array_filter(
+            $filters,
+            static fn($v) => $v !== null && $v !== ''
+        );
+
+        // Deterministic order (termasuk nested, walau nested harus benar2 dinormalisasi di sini).
+        $this->ksortRecursive($filters);
 
         $version = $this->getVersion($scopeKey);
-        return "{$this->cachePrefix}_scope_{$scopeKey}_v{$version}_" . md5(json_encode($filters));
+        return sprintf(
+            '%s_scope_%s_v%d_%s',
+            $this->cachePrefix,
+            $scopeKey,
+            $version,
+            md5(json_encode($filters, JSON_THROW_ON_ERROR))
+        );
     }
 
-
-
-    protected function trackMetric($type, $startTime): void
+    /**
+     * Ksort rekursif supaya nested array juga deterministik.
+     */
+    protected function ksortRecursive(array &$array): void
     {
-        $duration = round((microtime(true) - $startTime) * 1000, 2);
+        ksort($array);
 
-        $metricKey = "metrics_{$this->cachePrefix}";
-
-        $metrics = Cache::get($metricKey, [
-            'hit' => 0,
-            'miss' => 0,
-            'total_time' => 0,
-            'count' => 0,
-        ]);
-
-        $metrics[$type]++;
-        $metrics['total_time'] += $duration;
-        $metrics['count']++;
-
-        Cache::put($metricKey, $metrics, now()->addMinutes(60));
-    }
-    protected function trackMetricRealtime($type, $startTime): void
-    {
-        $duration = round((microtime(true) - $startTime) * 1000, 2);
-        $key = "metrics_log_{$this->cachePrefix}";
-
-        $logs = Cache::get($key, []);
-
-        $logs[] = [
-            'type' => $type,
-            'time' => now()->timestamp,
-            'duration' => $duration,
-        ];
-
-        // 🔥 batasi biar tidak bengkak
-        if (count($logs) > 100) {
-            array_shift($logs);
+        foreach ($array as &$value) {
+            if (is_array($value)) {
+                $this->ksortRecursive($value);
+            }
         }
-
-        Cache::put($key, $logs, now()->addMinutes(10));
     }
-    public function getMetrics(): array
+
+    // ---------------------------------------------------------------------
+    // INTERNAL — payload (de)serialization
+    // ---------------------------------------------------------------------
+
+    /**
+     * @param  LengthAwarePaginator<int, mixed>  $p
+     * @return array{data:array,total:int,per_page:int,current_page:int}
+     */
+
+    protected function paginatorToPayload(LengthAwarePaginator $p): array
     {
-        $metrics = Cache::get("metrics_{$this->cachePrefix}", []);
-
-        if (empty($metrics)) {
-            return [
-                'hit' => 0,
-                'miss' => 0,
-                'hit_rate' => 0,
-                'avg_time' => 0,
-            ];
-        }
-
         return [
-            'hit' => $metrics['hit'],
-            'miss' => $metrics['miss'],
-            'hit_rate' => $metrics['count'] > 0
-                ? round(($metrics['hit'] / $metrics['count']) * 100, 2)
-                : 0,
-            'avg_time' => $metrics['count'] > 0
-                ? round($metrics['total_time'] / $metrics['count'], 2)
-                : 0,
+            'data'         => collect($p->items())->toArray(),
+            'total'        => $p->total(),
+            'per_page'     => $p->perPage(),
+            'current_page' => $p->currentPage(),
         ];
     }
-    public function getMetricsRealtime(): array
+    /**
+     * Encode payload (compress untuk hemat RAM)
+     */
+    protected function encodePayload(array $payload): string
     {
-        $logs = Cache::get("metrics_log_{$this->cachePrefix}", []);
+        $json = json_encode($payload, JSON_THROW_ON_ERROR);
+        $gz   = gzcompress($json, 6);
 
-        $now = now()->timestamp;
-        $window = 300; // 5 menit
-
-        $recentLogs = array_filter($logs, function ($log) use ($now, $window) {
-            return ($now - $log['time']) <= $window;
-        });
-
-        $hit = 0;
-        $miss = 0;
-        $totalTime = 0;
-
-        foreach ($recentLogs as $log) {
-            if ($log['type'] === 'hit') $hit++;
-            if ($log['type'] === 'miss') $miss++;
-            $totalTime += $log['duration'] ?? 0;
+        if ($gz === false) {
+            throw new RuntimeException('Gagal compress cache payload');
         }
 
-        $total = $hit + $miss;
-
-        return [
-            'hit' => $hit,
-            'miss' => $miss,
-            'hit_rate' => $total > 0 ? round(($hit / $total) * 100, 2) : 0,
-            'total' => $total,
-            'avg_time' =>  $total > 0 ? round($totalTime / $total, 2) : 0,
-        ];
+        return $gz;
     }
+
+    /**
+     * @return array{data:array,total:int,per_page:int,current_page:int}
+     */
+    protected function decodePayload(string $payload): array
+    {
+        $raw = @gzuncompress($payload);
+
+        if ($raw === false) {
+            // Cache korup — log lalu lempar supaya caller fallback ke DB.
+            throw new RuntimeException('Gagal decompress cache payload');
+        }
+
+        return json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @param  array{data:array,total:int,per_page:int,current_page:int}  $data
+     * @return LengthAwarePaginator<int, mixed>
+     */
     protected function rebuildPaginator(array $data): LengthAwarePaginator
     {
         return new LengthAwarePaginator(
@@ -267,88 +383,63 @@ abstract class BaseCacheRepository
             ]
         );
     }
-    /**
-     * Encode payload (compress untuk hemat RAM)
-     */
-    protected function encodePayload(array $payload): string
-    {
-        return gzcompress(json_encode($payload));
-    }
 
-    /**
-     * Decode payload
-     */
-    protected function decodePayload(string $payload): array
-    {
-        return json_decode(gzuncompress($payload), true);
-    }
-
-    /**
-     * Clear semua cache user (super cepat via registry)
-     */
-    public function clearCache(string|int|null $scopeKey): void
-    {
-        if ($scopeKey === null || $scopeKey === '') {
-            return;
-        }
-
-        $key = $this->getVersionKey($scopeKey);
-
-        if (!Cache::has($key)) {
-            Cache::forever($key, 1);
-        }
-
-        Cache::increment($key);
-    }
-
-    public function clearRelatedCaches(string|int|null $scopeKey): void
-    {
-        // selalu refresh global
-        $this->clearCache('global');
-
-        // refresh cabang terkait
-        if ($scopeKey) {
-            $this->clearCache($scopeKey);
-        }
-    }
-
-    public function clearMultipleCaches(array $scopeKeys): void
-    {
-        foreach (array_unique(array_filter($scopeKeys)) as $scopeKey) {
-            $this->clearCache($scopeKey);
-        }
-    }
-    protected function maybeCleanupOldCache($scopeKey): void
-    {
-        // 10% kemungkinan untuk membersihkan sampah cache versi lama
-        if (rand(1, 100) <= 10) {
-            $version = $this->getVersion($scopeKey);
-
-            // hapus versi lama (version - 2)
-            $oldVersion = $version - 2;
-
-            if ($oldVersion > 0) {
-                Cache::forget("{$this->cachePrefix}_scope_{$scopeKey}_v{$oldVersion}_");
-            }
-        }
-    }
-
-
-     // ---------------------------------------------------------------------
-    // INTERNAL — payload (de)serialization
+    // ---------------------------------------------------------------------
+    // INTERNAL — metrics
     // ---------------------------------------------------------------------
 
-    /**
-     * @param  LengthAwarePaginator<int, mixed>  $p
-     * @return array{data:array,total:int,per_page:int,current_page:int}
-     */
-    protected function paginatorToPayload(LengthAwarePaginator $p): array
+    protected function metricKey(string $suffix): string
     {
-        return [
-            'data'         => collect($p->items())->toArray(),
-            'total'        => $p->total(),
-            'per_page'     => $p->perPage(),
-            'current_page' => $p->currentPage(),
+        return "metrics_{$this->cachePrefix}_{$suffix}";
+    }
+
+    /**
+     * Counter atomic — pakai increment, bukan read-modify-write.
+     */
+    protected function trackMetric($type, $startTime): void
+    {
+        $durationMs = (int) round((microtime(true) - $startTime) * 1000);
+        $ttl        = now()->addMinutes(60);
+
+        $this->incrementWithTtl($this->metricKey($type), 1, $ttl);
+        $this->incrementWithTtl($this->metricKey('time_ms'), $durationMs, $ttl);
+
+        $this->trackMetricRealtime($type, $durationMs);
+    }
+
+    /**
+     * Simpan log realtime di cache list (dibatasi ukuran).
+     */
+    protected function trackMetricRealtime($type, $durationMs): void
+    {
+        $key  = $this->metricKey('realtime_log');
+        $logs = Cache::get($key, []);
+
+        $logs[] = [
+            'type'        => $type,
+            'time'        => now()->timestamp,
+            'duration_ms' => $durationMs,
         ];
+
+        // Batasi panjang log (bukan array_shift di setiap loop, tapi slice).
+        if (count($logs) > 200) {
+            $logs = array_slice($logs, -200);
+        }
+
+        Cache::put($key, $logs, now()->addMinutes(10));
+    }
+
+    /**
+     * Increment dengan TTL — hindari key tanpa TTL setelah INCR.
+     */
+
+    protected function incrementWithTtl(string $key, int $amount, \DateTimeInterface $ttl): void
+    {
+        if (! Cache::has($key)) {
+            // add() = SET NX, jadi race-safe.
+            Cache::add($key, 0, $ttl);
+        }
+
+        Cache::increment($key, $amount);
     }
 }
