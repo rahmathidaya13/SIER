@@ -2,21 +2,24 @@
 
 namespace App\Http\Controllers\Product;
 
+use App\Support\ScopeKey;
 use App\Traits\UserScope;
+use Illuminate\Support\Arr;
 use App\Models\ProductModel;
 use Illuminate\Http\Request;
+use App\Traits\InvalidatesCaches;
 use App\Traits\ProductValidation;
 use App\Http\Controllers\Controller;
 use App\Traits\BranchMutationHelper;
+use Illuminate\Support\Facades\Gate;
 use App\Services\Product\ProductService;
 use App\Repository\Product\ProductRepository;
 use Illuminate\Validation\ValidationException;
 use App\Services\Authorization\ScopeResolverService;
-use Illuminate\Support\Facades\Gate;
 
 class ProductController extends Controller
 {
-    use UserScope, BranchMutationHelper, ProductValidation;
+    use UserScope, InvalidatesCaches, ProductValidation;
     protected $repository;
     protected $services;
     public function __construct(ProductRepository $repository)
@@ -41,7 +44,8 @@ class ProductController extends Controller
             'page',
         ]);
         $filters = app(ScopeResolverService::class)->filters($filters);
-        $products = $this->repository->getCached($filters['scope'], $filters);
+        $cleanFilters = Arr::except($filters, ['scope', 'page']);
+        $products = $this->repository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
         $category = ProductModel::select('category')->distinct()->get();
         return inertia('Product/Index', [
             'products' => $products,
@@ -91,7 +95,14 @@ class ProductController extends Controller
         $user = auth()->user();
         $this->validateProduct($request->all());
         $this->services->update($product, $request->all());
-        $this->invalidateCaches([ProductRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
+        $this->invalidateCaches([
+            ProductRepository::class
+        ], [
+            ScopeKey::GLOBAL,
+            ScopeKey::GLOBAL_SUPER_ADMIN,
+            ScopeKey::branch($user->id_branch),
+            ScopeKey::user($user->id)
+        ]);
         return redirect()->back()->with('message', 'Perubahan data dari produk ' . $product->name . ' berhasil diperbarui!');
     }
 

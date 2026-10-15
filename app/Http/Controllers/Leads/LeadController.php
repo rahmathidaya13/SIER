@@ -5,21 +5,21 @@ namespace App\Http\Controllers\Leads;
 use App\Models\User;
 use App\Models\LeadModel;
 use App\Traits\UserScope;
+use Illuminate\Support\Arr;
 use App\Models\ChannelModel;
 use App\Models\ProductModel;
 use Illuminate\Http\Request;
 use App\Traits\LeadsValidation;
+use App\Models\LeadActivityModel;
 use App\Services\Lead\LeadServices;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\LeadActivityResource;
 use App\Http\Resources\LeadResource;
-use App\Models\LeadActivityModel;
-use App\Traits\BranchMutationHelper;
 use Illuminate\Support\Facades\Gate;
 use App\Repository\Sale\SaleRepository;
 use App\Repository\User\UserRepository;
 use App\Repository\Lead\LeadsRepository;
 use App\Traits\ActivityMessageFormatter;
+use App\Http\Resources\LeadActivityResource;
 use Illuminate\Support\Facades\Notification;
 use App\Repository\Channel\ChannelRepository;
 use App\Services\Lead\LeadConversionServices;
@@ -28,13 +28,15 @@ use App\Notifications\Lead\LeadCreateNotification;
 use App\Notifications\Lead\LeadDeleteNotification;
 use App\Notifications\Lead\LeadUpdateNotification;
 use App\Services\Authorization\ScopeResolverService;
+use App\Support\ScopeKey;
+use App\Traits\InvalidatesCaches;
 
 class LeadController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    use UserScope, BranchMutationHelper, LeadsValidation, ActivityMessageFormatter;
+    use UserScope, LeadsValidation, ActivityMessageFormatter, InvalidatesCaches;
     protected $repository;
     protected $leadServices;
     protected $leadConversionServices;
@@ -67,10 +69,9 @@ class LeadController extends Controller
             'page',
 
         ]);
-
         $filters = app(ScopeResolverService::class)->filters($filters); // Gunakan ScopeResolverService untuk memproses filter berdasarkan scope yang diperlukan
-
-        $leads = $this->repository->getCached($filters['scope'], $filters);
+        $cleanFilters = Arr::except($filters, ['scope', 'page']); // Hapus 'scope' dan 'page' dari $filters sebelumnya
+        $leads = $this->repository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
         $channels = ChannelModel::select('id_channel', 'name', 'icon')->get();
         return inertia(
             'Leads/Index',
@@ -118,10 +119,10 @@ class LeadController extends Controller
                     ChannelRepository::class
                 ],
                 [
-                    'user_' . $leads->id_user,
-                    'branch_' . $leads->id_branch,
-                    'global',
-                    'global_super_admin',
+                    ScopeKey::user($leads->id_user),
+                    ScopeKey::branch($leads->id_branch),
+                    ScopeKey::GLOBAL,
+                    ScopeKey::GLOBAL_SUPER_ADMIN,
                 ]
             );
 
@@ -166,6 +167,8 @@ class LeadController extends Controller
                 $leads,
                 $user
             );
+
+            // send notification via echo
             Notification::send(
                 $recipients,
                 new LeadUpdateNotification(
@@ -173,14 +176,6 @@ class LeadController extends Controller
                     $user
                 )
             );
-            $scopeIds = [
-                'user_' . $oldUserId,
-                'branch_' . $oldBranchId,
-                'user_' . $leads->id_user,
-                'branch_' . $leads->id_branch,
-                'global',
-                'global_super_admin',
-            ];
             $this->invalidateCaches(
                 [
                     UserRepository::class,
@@ -188,9 +183,16 @@ class LeadController extends Controller
                     SaleRepository::class,
                     ChannelRepository::class
                 ],
-                array_values(array_unique($scopeIds))
+                [
+                    ScopeKey::user($oldUserId),
+                    ScopeKey::branch($oldBranchId),
+                    ScopeKey::user($leads->id_user),
+                    ScopeKey::branch($leads->id_branch),
+                    ScopeKey::GLOBAL,
+                    ScopeKey::GLOBAL_SUPER_ADMIN
+                ]
             );
-            return redirect()->back()->with('message', 'Lead ' . $leads->name . ' berhasil diperbarui!');
+            return redirect()->back()->with('message', 'Lead ' . strtoupper($leads->name) . ' berhasil diperbarui!');
         } catch (\Exception $error) {
             $errorMessage = config('app.debug')
                 ? $error->getMessage()

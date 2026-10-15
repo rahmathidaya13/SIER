@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Auth;
 
+use Throwable;
 use App\Models\User;
+use App\Support\ScopeKey;
 use App\Models\BranchModel;
-use App\Services\Otp\OtpService;
 use Illuminate\Http\Request;
+use App\Services\Otp\OtpService;
 use App\Traits\RegisterValidation;
 use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Controller;
@@ -56,21 +58,38 @@ class RegisterController extends Controller
             $user = $this->services->store($validated);
 
 
-            request()->session()->put(
+            $request->session()->put(
                 'otp_user_id',
                 $user->id
             );
+            $request->session()->save();
 
             $otpService = new OtpService();
             $otpService->send($user);
 
             // bersihkan cache
-            $this->invalidateCaches([UserRepository::class, BranchRepository::class], ['global', 'global_super_admin', 'branch_' . $validated['id_branch'], 'user_' . $user->id]);
+            $this->invalidateCaches([
+                UserRepository::class,
+                BranchRepository::class
+            ], [
+                ScopeKey::GLOBAL,
+                ScopeKey::GLOBAL_SUPER_ADMIN,
+                ScopeKey::branch($validated['id_branch']),
+                ScopeKey::user($user->id)
+            ]);
             return redirect()->route('verification.otp');
-        } catch (\Exception $error) {
+        } catch (ValidationException $er) {
+            throw $er;
+        } catch (Throwable $error) {
+            report($error);
+
             return redirect()->back()
                 ->withInput()
-                ->withErrors(['error' => 'Gagal membuat akun: ' . $error->getMessage()]);
+                ->withErrors([
+                    'error' => config('app.debug')
+                        ? 'Gagal membuat akun: ' . $error->getMessage()
+                        : 'Gagal membuat akun. Silakan coba lagi.',
+                ]);
         }
     }
 }

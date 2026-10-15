@@ -5,6 +5,7 @@ namespace App\Services\Otp;
 use App\Models\User;
 use App\Mail\OtpVerificationMail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
@@ -33,7 +34,9 @@ class OtpService
         $latestOtp = $user->otpCodes()->latest()->first();
         // Cek cooldown
         if ($latestOtp && $latestOtp->created_at->gt(now()->subSeconds($this->resendCooldown))) {
-            $remaining = $this->resendCooldown - $latestOtp->created_at->diffInSeconds(now());
+            $remaining = (int) ceil(
+                $this->resendCooldown - $latestOtp->created_at->diffInSeconds(now())
+            );
 
             throw ValidationException::withMessages([
                 'otp' => "Silakan tunggu {$remaining} detik sebelum meminta OTP baru.",
@@ -70,38 +73,32 @@ class OtpService
      */
     public function verify(User $user, string $code): bool
     {
-        $otp = $user->otpCodes()
+        $recordOtp = $user->otpCodes()
             ->whereNull('verified_at')
+            ->where('expires_at', '>=', now())
             ->latest()
             ->first();
 
-        if (!$otp) {
+        if (!$recordOtp) {
             throw ValidationException::withMessages([
-                'otp' => 'Kode OTP tidak ditemukan. Silakan minta kode baru.',
-            ]);
-        }
-
-        // Cek apakah sudah expired
-        if (now()->greaterThan($otp->expires_at)) {
-            throw ValidationException::withMessages([
-                'otp' => 'Kode OTP sudah kadaluarsa. Silakan minta kode baru.',
+                'otp' => 'Kode OTP tidak valid atau sudah kedaluwarsa.',
             ]);
         }
 
         // Cek limit percobaan
-        if ($otp->attempts >= $this->maxAttempts) {
+        if ($recordOtp->attempts >= $this->maxAttempts) {
             throw ValidationException::withMessages([
                 'otp' => 'Terlalu banyak percobaan. Silakan minta OTP baru.',
             ]);
         }
 
         // Cek kecocokan kode hash
-        if (!Hash::check($code, $otp->otp_code)) {
+        if (!Hash::check($code, $recordOtp->otp_code)) {
             // Increment nilai attempts di DB secara atomic
-            $otp->increment('attempts');
+            $recordOtp->increment('attempts');
 
             // Ambil nilai terbaru setelah di-increment
-            $currentAttempts = $otp->fresh()->attempts;
+            $currentAttempts = $recordOtp->fresh()->attempts;
             $remaining = max(0, $this->maxAttempts - $currentAttempts);
 
             throw ValidationException::withMessages([
@@ -110,13 +107,27 @@ class OtpService
         }
 
         // Tandai OTP telah sukses diverifikasi
-        $otp->update([
+        $recordOtp->update([
             'verified_at' => now(),
         ]);
 
+        if (!$user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+            event(new Verified($user));
+        }
         return true;
     }
 
+    /**
+     * Cek apakah user masih punya OTP aktif (belum verified & belum expired).
+     */
+    public function hasActiveOtp(User $user): bool
+    {
+        return $user->otpCodes()
+            ->whereNull('verified_at')
+            ->where('expires_at', '>=', now())
+            ->exists();
+    }
     public function getOtpLifetime(): int
     {
         return $this->otpLifetime;

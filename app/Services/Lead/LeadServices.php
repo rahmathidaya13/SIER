@@ -42,36 +42,14 @@ class LeadServices
             ]);
 
             // masukan banyak product kedalam database
-            if (!empty($validated['id_product'])) {
-                $leadProductMany = array_map(fn($idProduct) => array_merge(['id_product' => $idProduct]), $validated['id_product']);
-                $leads->leadProduct()->createMany($leadProductMany);
-            }
+            $this->syncLeadProducts($leads, $validated['id_product'] ?? []);
 
             // Jika prospek langsung Deal/Closing
-            if ($validated['status'] === 'CLOSED_WON' && $validated['temperature'] === 'HOT') {
+            $this->handleClosingTransition($leads, $validated, $user);
 
-                $sales = $this->convertLeadToSales($leads, $validated);
-
-                $sales->paymentHistory()->create([
-                    'id_sales'       => $sales->id_sales,
-                    'id_user'        => $user->id,
-                    'id_lead'        => $leads->id_lead,
-                    'payment_method' => $validated['payment_method'],
-                    'bank_name'      => $validated['bank_name'] ?? null,
-                    'paid_amount'    => $validated['paid_amount'],
-                    'notes_payment'  => 'Transaksi awal pada saat pengesahan closing / deal',
-                    'payment_at'     => now()->toDateTimeString()
-                ]);
-
-                $leads->activity()->create([
-                    'id_user'     => $user->id,
-                    'id_lead'     => $leads->id_lead,
-                    'description' => $this->msgClosingDeal($validated)
-                ]);
-            }
             // Jika SEMUA TAHAP di atas berhasil tanpa error, sahkan datanya (Commit)
             DB::commit();
-            return $leads;
+            return $leads->fresh(['leadProduct', 'activity']);
         } catch (\Exception $error) {
 
             DB::rollBack(); // JIKA ADA ERROR (Server mati, database putus, dll), BATALKAN SEMUA!
@@ -110,15 +88,12 @@ class LeadServices
                 'closed_at' => $validated['status'] === 'CLOSED_WON' ? now()->toDateTimeString() : null
             ]);
 
-            if (isset($validated['id_product']) && is_array($validated['id_product'])) {
-                $leads->leadProduct()->delete();
-                $leadProductMany = array_map(fn($idProduct) => array_merge(['id_product' => $idProduct]), $validated['id_product']);
-                if (!empty($leadProductMany)) {
-                    $leads->leadProduct()->createMany($leadProductMany);
-                }
+           
+            if (array_key_exists('id_product', $validated)) {
+                $this->syncLeadProducts($leads, (array) $validated['id_product']);
             }
             DB::commit();
-            return $leads;
+            return $leads->fresh(['leadProduct', 'activity']);
         } catch (\Exception $error) {
             DB::rollBack();
             Log::error("Gagal memperbarui Lead: " . $error);
@@ -129,6 +104,8 @@ class LeadServices
     {
         DB::beginTransaction();
         try {
+            $leads->leadProduct()->delete();
+            $leads->activity()->delete();
             $leads->delete();
             DB::commit();
         } catch (\Exception $error) {
@@ -137,38 +114,80 @@ class LeadServices
             throw $error;
         }
     }
+
+    private function handleClosingTransition(LeadModel $leads, array $validated, $user)
+    {
+        $isClosing = ($validated['status'] ?? null) === 'CLOSED_WON'
+            && ($validated['temperature'] ?? null) === 'HOT';
+
+        if (!$isClosing) {
+            return;
+        }
+        if ($leads->sales()->exists()) {
+            return;
+        }
+
+        $sales = $this->convertLeadToSales($leads, $validated);
+
+        $sales->paymentHistory()->create([
+            'id_sales'       => $sales->id_sales,
+            'id_user'        => $user->id,
+            'id_lead'        => $leads->id_lead,
+            'payment_method' => $validated['payment_method'],
+            'bank_name'      => $validated['bank_name'] ?? null,
+            'paid_amount'    => $validated['paid_amount'],
+            'notes_payment'  => 'Transaksi awal pada saat pengesahan closing / deal',
+            'payment_at'     => now()->toDateTimeString()
+        ]);
+        $leads->activity()->create([
+            'id_user'     => $user->id,
+            'id_lead'     => $leads->id_lead,
+            'description' => $this->msgClosingDeal($validated)
+        ]);
+    }
+
+    private function syncLeadProducts(LeadModel $leads, array $productIds)
+    {
+        $leads->leadProduct()->delete();
+        $productIds = array_filter($productIds, fn($id) => $id !== null && $id !== '');
+
+        if ($productIds === []) {
+            return;
+        }
+
+        $rows = array_map(fn($id) => ['id_product' => $id], $productIds);
+        $leads->leadProduct()->createMany($rows);
+    }
     private function convertLeadToSales(LeadModel $leads, array $validated)
     {
-        return DB::transaction(function () use ($leads, $validated) {
-            $remaining = max(0,  $validated['deal_price'] - $validated['paid_amount']);
+        $remaining = max(0,  $validated['deal_price'] - $validated['paid_amount']);
 
-            $sales = SalesModel::create([
-                'id_lead'        => $leads->id_lead,
-                'id_user'        => $leads->id_user,
-                'id_branch'      => $leads->id_branch,
-                'deal_price'     => $validated['deal_price'],
-                'paid_amount'    => $validated['paid_amount'],
-                'remaining_bill' => $remaining,
-                'payment_status' => $validated['payment_status'],
-                'quantity'       => $validated['quantity'],
-                'deal_at'        => now()->toDateTimeString(),
-                'notes'          => $validated['notes_sales']
-            ]);
+        $sales = SalesModel::create([
+            'id_lead'        => $leads->id_lead,
+            'id_user'        => $leads->id_user,
+            'id_branch'      => $leads->id_branch,
+            'deal_price'     => $validated['deal_price'],
+            'paid_amount'    => $validated['paid_amount'],
+            'remaining_bill' => $remaining,
+            'payment_status' => $validated['payment_status'],
+            'quantity'       => $validated['quantity'],
+            'deal_at'        => now()->toDateTimeString(),
+            'notes'          => $validated['notes_sales']
+        ]);
 
-            // masukan banyak product kedalam database
-            if (!empty($validated['id_product'])) {
-                $salesProductMany = array_map(fn($idProduct) => array_merge(['id_product' => $idProduct]), $validated['id_product']);
-                $sales->salesProduct()->createMany($salesProductMany);
-            }
+        // masukan banyak product kedalam database
+        if (!empty($validated['id_product'])) {
+            $rows = array_map(fn($idProduct) => ['id_product' => $idProduct], $validated['id_product']);
+            $sales->salesProduct()->createMany($rows);
+        }
 
-            $leads->update([
-                'status' => 'CLOSED_WON',
-                'temperature' => 'HOT',
-                'closed_at' => now()->toDateTimeString(),
-                'updated_by' => auth()->id(),
-            ]);
+        $leads->update([
+            'status' => 'CLOSED_WON',
+            'temperature' => 'HOT',
+            'closed_at' => now()->toDateTimeString(),
+            'updated_by' => auth()->id(),
+        ]);
 
-            return $sales;
-        });
+        return $sales;
     }
 }

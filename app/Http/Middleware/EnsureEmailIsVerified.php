@@ -15,18 +15,23 @@ class EnsureEmailIsVerified
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user() && !$request->user()->hasVerifiedEmail()) {
-            // Jika request berasal dari API / Axios / Fetch yang mengharapkan JSON
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'message' => 'Alamat email Anda belum diverifikasi.'
-                ], 403);
-            }
+        $user = $request->user();
 
-            // Jika request dari Web / Inertia, arahkan ke form OTP
-            return redirect()->route('verification.otp');
+        if (!$user || $user->hasVerifiedEmail()) {
+            return $next($request);
         }
 
-        return $next($request);
+        if ($request->routeIs('verification.otp', 'verification.otp.verify', 'verification.otp.resend')) {
+            return $next($request);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Alamat email Anda belum diverifikasi.',
+            ], 403);
+        }
+
+        // Web → arahkan ke form OTP
+        return redirect()->route('verification.otp');
     }
 }

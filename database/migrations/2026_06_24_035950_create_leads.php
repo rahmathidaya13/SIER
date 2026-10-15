@@ -15,10 +15,9 @@ return new class extends Migration
             $table->uuid('id_lead')->primary();
             $table->foreignUuid('id_user')->constrained('users', 'id')->onDelete('cascade'); // CS/Admin yang memegang lead ini
             $table->foreignUuid('id_channel')->constrained('channels', 'id_channel')->cascadeOnDelete(); // Datang dari mana?
-            // $table->foreignUuid('id_product')->constrained('products', 'id_product')->cascadeOnDelete(); // Tertarik produk apa?
 
-            $table->string('name', 100)->index();
-            $table->string('phone', 25)->index(); // WAJIB DI-INDEX karena bakal sering dicari via form pencarian!
+            $table->string('name', 100);
+            $table->string('phone', 25); // WAJIB DI-INDEX karena bakal sering dicari via form pencarian!
             $table->string('email', 100)->unique()->nullable();
 
             // Suhu Ketertarikan
@@ -32,10 +31,12 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->datetime('closed_at')->nullable();
 
+            $table->timestamp('archived_at')->nullable();
+            $table->foreignUuid('archived_by')->constrained('users', 'id')->nullable()->onDelete('cascade');
+
             $table->softDeletes();
             $table->timestamps();
-            $table->index('closed_at');
-            $table->index('created_at');
+            $table->index(['name', 'phone', 'closed_at', 'archived_at','created_at']);
         });
     }
 

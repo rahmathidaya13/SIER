@@ -34,8 +34,8 @@ class LeadConversionController extends Controller
             ],
         ]);
         try {
-            $services->convertLeadToSales($leads, $validated);
             $user = auth()->user();
+            $services->convertLeadToSales($leads, $validated, $user);
 
             $recipients = $this->getLeadNotificationRecipients(
                 $leads,

@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Repository;
 
 use Throwable;
@@ -62,7 +60,6 @@ abstract class BaseCacheRepository
         $scopeKey =   $scopeKey === null || $scopeKey === '' ? 'global' : $scopeKey;
         $page     = $page ?? (int) (request()->get('page', 1));
         $cacheKey = $this->buildCacheKey($scopeKey, $filters);
-
         $start = microtime(true);
 
         // ✅ 1. HIT CACHE
@@ -111,7 +108,7 @@ abstract class BaseCacheRepository
             );
 
             $this->trackMetric('miss', $start);
-            return $result;
+            return $this->rebuildPaginator($payload);
         } catch (LockTimeoutException $e) {
             // Lock timeout → fallback langsung ke DB, jangan biarkan user menunggu.
             Log::warning('Cache lock timeout, fallback ke DB', [
@@ -279,17 +276,8 @@ abstract class BaseCacheRepository
     protected function buildCacheKey(string|int|null $scopeKey, array $filters = [], ?int $page = null): string
     {
         // Pastikan pagination ikut menjadi bagian dari key
-
-        $page ??= (int) (request()->get('page', 1));
-
-        // Gabung page ke filters supaya bisa di-hash bersama.
-        $filters['page'] = $page;
-
-        // Normalisasi: buang null dan string kosong, TAPI pertahankan 0/false.
-        $filters = array_filter(
-            $filters,
-            static fn($v) => $v !== null && $v !== ''
-        );
+        $page = $page ?? (int) request()->get('page', 1);
+        $filters = array_filter($filters, fn($v) => $v !== null && $v !== '');
 
         // Deterministic order (termasuk nested, walau nested harus benar2 dinormalisasi di sini).
         $this->ksortRecursive($filters);

@@ -31,14 +31,14 @@ trait BranchMutationHelper
             'unauthorized_action' => "Anda tidak memiliki hak akses untuk mengubah {$moduleName}!"
         ]);
     }
-    protected function invalidateCaches(string|array $repositories, array $scopeIds): void
+    protected function invalidateCaches(string|array $repositories, array $scopeKeys): void
     {
-        foreach ((array)$repositories as $repoClass) {
+        foreach ((array) $repositories as $repoClass) {
 
             $repo = app($repoClass);
 
             if (method_exists($repo, 'clearMultipleCaches')) {
-                $repo->clearMultipleCaches($scopeIds);
+                $repo->clearMultipleCaches($scopeKeys);
             }
         }
     }

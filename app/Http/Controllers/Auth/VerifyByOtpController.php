@@ -5,13 +5,19 @@ namespace App\Http\Controllers\Auth;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\Otp\OtpService;
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\ValidationException;
 
 class VerifyByOtpController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('web');
+    }
     public function showVerifyOtp(Request $request)
     {
         $user = $this->resolveOtpUser($request);
@@ -52,23 +58,59 @@ class VerifyByOtpController extends Controller
             return $user;
         }
 
-        // Verifikasi OTP
-        $otpService->verify(
-            $user,
-            $request->otp
-        );
+        // Kalau sudah verified (misal double-submit), langsung login & pulang.
+        if ($user->hasVerifiedEmail()) {
+            return $this->loginAndRedirect($request, $user);
+        }
 
-        // Login user & bersihkan session OTP
-        Auth::login($user);
+        try {
+            // Verifikasi OTP
+            $otpService->verify(
+                $user,
+                $request->otp
+            );
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::warning('OTP verify gagal', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+
+            throw ValidationException::withMessages([
+                'otp' => 'Kode OTP tidak valid atau sudah kedaluwarsa.',
+            ]);
+        }
+
+        $user->refresh();
+
+        if (!$user->hasVerifiedEmail()) {
+            // Fallback: tandai verified, karena OTP sudah divalidasi.
+            $user->forceFill(['email_verified_at' => now()])->save();
+
+            event(new Verified($user));
+
+            Log::warning('OtpService tidak menandai email verified, fallback dipakai', [
+                'user_id' => $user->id,
+            ]);
+        }
+
+        return $this->loginAndRedirect($request, $user);
+    }
+
+    private function loginAndRedirect(Request $request, User $user): RedirectResponse
+    {
+        Auth::login($user,  false);
+
+        // Session fixation protection — regenerate SETELAH login.
         $request->session()->regenerate();
-        $request->session()->forget(
-            'otp_user_id'
-        );
 
+        $request->session()->forget('otp_user_id');
         $request->session()->put('last_user_activity_at', now()->timestamp);
 
         return redirect()
-            ->route('home')->with('message', 'Email berhasil diverifikasi. Selamat datang kembali.');
+            ->route('home')
+            ->with('message', 'Email berhasil diverifikasi');
     }
 
     /**
@@ -99,19 +141,32 @@ class VerifyByOtpController extends Controller
      */
     private function resolveOtpUser(Request $request): User|RedirectResponse
     {
+        // 1) Dari session OTP (alur normal setelah register).
         $userId = $request->session()->get('otp_user_id');
-        if (!$userId) {
-            return redirect()->route('register');
-        }
-        $user = User::find($userId);
 
+        if ($userId) {
+            $user = User::find($userId);
 
-        if (!$user) {
+            if ($user) {
+                return $user;
+            }
+
+            // User ID di session tidak valid → bersihkan.
             $request->session()->forget('otp_user_id');
-            return redirect()->route('register');
         }
 
-        return $user;
+        // 2) Fallback: user sudah login (misal redirect loop dari middleware).
+        $authUser = $request->user();
+
+        if ($authUser) {
+            return $authUser;
+        }
+
+        // Benar-benar tidak ada user → lempar ke login (bukan register,
+        // supaya user yang sudah punya akun tapi logout tidak bingung).
+        return redirect()
+            ->route('login')
+            ->with('message', 'Sesi verifikasi berakhir. Silakan login kembali.');
     }
 
     /**

@@ -6,16 +6,17 @@ use App\Models\LeadModel;
 use App\Repository\BaseCacheRepository;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
-
+use App\Support\ScopeKey;
 
 class LeadsRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'leads_cache';
 
+    protected int $cacheMinutes = 30;
+
     protected function buildBaseQuery()
     {
         $query = LeadModel::query()
-            ->allowedForUser()
             ->joinUserRole()
             ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')
             ->leftJoin('sales', 'sales.id_lead', '=', 'leads.id_lead')
@@ -26,7 +27,6 @@ class LeadsRepository extends BaseCacheRepository
     {
         return $this->buildBaseQuery()
             ->with([
-                // 'activity:id_lead,created_at',
                 'leadProduct:id_lead_product,id_lead,id_product',
                 'leadProduct.product:id_product,name',
                 'activity' => function ($query) {
@@ -36,6 +36,8 @@ class LeadsRepository extends BaseCacheRepository
                 },
             ])->select([
                 'leads.id_lead',
+                'leads.id_user',
+                'leads.id_branch',
                 'leads.name',
                 'leads.email',
                 'leads.phone',
@@ -53,15 +55,53 @@ class LeadsRepository extends BaseCacheRepository
                 'sales.invoice',
             ]);
     }
-    protected function getData(string|int|null $branchId, array $filters = []): LengthAwarePaginator
+    protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator
     {
+
+        // $filters = array_intersect_key($filters, array_flip(self::ALLOWED_FILTERS));
         $query = $this->buildListQuery();
+        $this->applyScope($query, $scopeKey);
         $this->applyFilters($query, $filters);
         [$column, $direction] = $this->resolveSorting($filters);
         return $query
             ->orderBy($column, $direction)
-            ->paginate($filters['limit'] ?? 10)
-            ->withQueryString();
+            ->paginate($filters['limit'] ?? 10);
+    }
+
+    // ------------------------------------------------------------------
+    // SCOPE FILTER — inti keamanan multi-tenant
+    // ------------------------------------------------------------------
+
+    /**
+     * Terapkan scope key ke query.
+     *
+     * Format scope yang didukung (dari ScopeResolverService):
+     *   - 'user_5'              → hanya lead milik user 5
+     *   - 'branch_3'            → lead dari cabang 3
+     *   - 'global'              → semua lead yang izinkan
+     *   - 'global_super_admin'  → semua lead
+     *
+     * PENTING: fungsi ini HARUS konsisten dengan cara ScopeResolverService
+     * menghasilkan scopeKey. Kalau tidak, cache bisa bocor antar tenant.
+     */
+    protected function applyScope(Builder $query, string|int|null $scopeKey): void
+    {
+        if ($scopeKey === null || $scopeKey === '') return;
+        
+        if (in_array($scopeKey, [ScopeKey::GLOBAL, ScopeKey::GLOBAL_SUPER_ADMIN], true)) return;
+
+        if (str_starts_with($scopeKey, 'branch_')) {
+            $query->where('leads.id_branch',  substr($scopeKey, strlen('branch_')));
+            return;
+        }
+
+        if (str_starts_with($scopeKey, 'user_')) {
+            $query->where('leads.id_user', substr($scopeKey, strlen('user_')));
+
+            return;
+        }
+
+        throw new \InvalidArgumentException("Scope key tidak dikenal: {$scopeKey}");
     }
     protected function applyFilters(Builder $query, array $filters): Builder
     {
@@ -92,7 +132,7 @@ class LeadsRepository extends BaseCacheRepository
     protected function filterKeyword(Builder $query, array $filters)
     {
         return $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
-            $search = $filters['keyword'];
+            $search = (string) $filters['keyword'];
             $cleanSearch = addcslashes($search, '%_');
             $q->where(function ($subQuery) use ($cleanSearch) {
                 $subQuery->where('leads.name', 'like', "%{$cleanSearch}%")
