@@ -181,7 +181,7 @@ const handleLogout = () => {
 
       <button
         @click.prevent="emit('openProfileModal')"
-        class="btn nav-link text-primary mb-2"
+        class="btn nav-link text-primary mb-2 mt-2"
       >
         <span class="mb-1 fw-bold text-capitalize">{{ $page.props.auth.user.name }}</span>
       </button>

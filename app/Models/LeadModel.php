@@ -28,6 +28,9 @@ class LeadModel extends Model
         'follow_up_date',
         'notes',
         'closed_at',
+
+        'archived_at',
+        'archived_by',
     ];
     protected $dates    = ["deleted_at"];
     protected $casts = [
@@ -35,6 +38,7 @@ class LeadModel extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'closed_at' => 'datetime',
+        'archived_at' => 'datetime',
     ];
 
     public function scopeAllowedForUser($query)

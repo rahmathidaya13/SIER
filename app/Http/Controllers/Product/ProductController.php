@@ -71,7 +71,15 @@ class ProductController extends Controller
         $this->validateProduct($request->all());
         $user = auth()->user();
         $product = $this->services->store($request->all());
-        $this->invalidateCaches([ProductRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
+        $this->invalidateCaches(
+            [ProductRepository::class],
+            [
+                ScopeKey::GLOBAL,
+                ScopeKey::GLOBAL_SUPER_ADMIN,
+                ScopeKey::branch($user->id_branch),
+                ScopeKey::user($user->id)
+            ]
+        );
         return redirect()->back()->with('message', 'Produk baru ' . $product->name . ' berhasil ditambahkan!');
     }
 

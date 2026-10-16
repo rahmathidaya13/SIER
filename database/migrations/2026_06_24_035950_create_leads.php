@@ -32,7 +32,7 @@ return new class extends Migration
             $table->datetime('closed_at')->nullable();
 
             $table->timestamp('archived_at')->nullable();
-            $table->foreignUuid('archived_by')->constrained('users', 'id')->nullable()->onDelete('cascade');
+            $table->foreignUuid('archived_by')->nullable()->constrained('users', 'id')->onDelete('cascade');
 
             $table->softDeletes();
             $table->timestamps();

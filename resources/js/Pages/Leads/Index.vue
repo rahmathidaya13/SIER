@@ -247,7 +247,7 @@ const canAccess = (permission, role = []) => {
 };
 
 const page = usePage();
-const authUserId = computed(() => String(page.props.auth?.user_id ?? ""))
+const authUserId = computed(() => String(page.props.auth?.user_id ?? ""));
 const isOwner = (item) => String(item?.id_user) === authUserId.value;
 const isSupervisorOrAbove = computed(() =>
   hasRole(["supervisor", "super_admin", "developer"])
@@ -265,7 +265,6 @@ const actionLabel = (item) => {
   // Fallback (misal sales lain) — tampilkan base saja, tombol mungkin disembunyikan
   return base;
 };
-
 </script>
 <template>
   <Head title="Data Rekap Leads" />
@@ -666,6 +665,7 @@ const actionLabel = (item) => {
 
                 <template #pagination>
                   <div
+                    v-if="leads?.data.length > 0"
                     class="border-top py-2 px-2 d-flex flex-column flex-md-row justify-content-between align-items-center"
                   >
                     <small class="text-muted mb-2 mb-md-0">
@@ -673,6 +673,7 @@ const actionLabel = (item) => {
                       <strong>{{ leads.to ?? 0 }}</strong> dari
                       <strong>{{ leads.total ?? 0 }}</strong>
                     </small>
+
                     <pagination
                       size="pagination-sm"
                       :links="leads?.links"

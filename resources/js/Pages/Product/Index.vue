@@ -379,6 +379,7 @@ const canAccess = (permission, role = []) => {
 
                 <template #pagination>
                   <div
+                    v-if="products?.data.length > 0"
                     class="border-top py-2 px-2 d-flex flex-column flex-md-row justify-content-between align-items-center"
                   >
                     <small class="text-muted mb-2 mb-md-0">

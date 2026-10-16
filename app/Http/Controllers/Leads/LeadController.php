@@ -299,10 +299,10 @@ class LeadController extends Controller
                     ChannelRepository::class
                 ],
                 [
-                    'user_' . $leads->id_user,
-                    'branch_' . $leads->id_branch,
-                    'global',
-                    'global_super_admin',
+                    'user_' . ScopeKey::user($leads->id_user),
+                    'branch_' . ScopeKey::branch($leads->id_branch),
+                    ScopeKey::GLOBAL,
+                    ScopeKey::GLOBAL_SUPER_ADMIN,
                 ]
             );
             return redirect()->back()->with('message', 'Lead ' . ucwords($leads->name) . ' berhasil dihapus');
