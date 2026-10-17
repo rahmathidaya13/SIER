@@ -218,7 +218,7 @@ const passwordStrength = computed(() => {
                                                 :inputClass="['input-fixed-height', 'has-icon-right', 'input-height-1']"
                                                 autocomplete="off" v-model="form.password" name="password" />
                                             <i @click="togglePasswordVisibilty"
-                                                :class="['input-icon-right', 'cursor-pointer', showPassword ? 'fas fa-eye-slash' : 'fas fa-eye']"></i>
+                                                :class="['input-icon-right', 'cursor-pointer', showPassword ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill']"></i>
                                         </div>
                                         <input-error :message="form.errors.password" />
                                     </div>

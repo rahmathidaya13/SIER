@@ -17,6 +17,7 @@ class LeadsRepository extends BaseCacheRepository
     protected function buildBaseQuery()
     {
         $query = LeadModel::query()
+            ->whereNull('leads.archived_at')
             ->joinUserRole()
             ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')
             ->leftJoin('sales', 'sales.id_lead', '=', 'leads.id_lead')
@@ -87,7 +88,7 @@ class LeadsRepository extends BaseCacheRepository
     protected function applyScope(Builder $query, string|int|null $scopeKey): void
     {
         if ($scopeKey === null || $scopeKey === '') return;
-        
+
         if (in_array($scopeKey, [ScopeKey::GLOBAL, ScopeKey::GLOBAL_SUPER_ADMIN], true)) return;
 
         if (str_starts_with($scopeKey, 'branch_')) {

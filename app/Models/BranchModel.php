@@ -52,4 +52,8 @@ class BranchModel extends Model
     {
         return $this->hasMany(BranchPhoneModel::class, 'id_branch', 'id_branch');
     }
+    public function customers()
+    {
+        return $this->hasMany(CustomerModel::class, 'created_of_branch', 'id_branch');
+    }
 }

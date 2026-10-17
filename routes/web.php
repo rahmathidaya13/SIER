@@ -18,6 +18,7 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Leads\LeadActivityController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\VerifyByOtpController;
+use App\Http\Controllers\Customers\CustomerController;
 use App\Http\Controllers\Leads\LeadConversionController;
 use App\Http\Controllers\Notification\NotificationController;
 
@@ -92,12 +93,21 @@ Route::middleware(['auth', 'check.status.active', 'idle.timeout', 'verified.emai
         Route::post('/sales/pay/{id}', 'payRemaining')->name('sales.pay');
         Route::post('/sales/cancel/{id}', 'payCancel')->name('sales.cancel');
     });
+
     Route::controller(BranchController::class)->group(function () {
         Route::get('/branch/list', 'index')->name('branch.index');
         Route::get('/branch/show/{id}', 'show')->name('branch.show');
         Route::post('/branch/store', 'store')->name('branch.store');
         Route::put('/branch/update/{id}', 'update')->name('branch.update');
         Route::delete('/branch/delete/{id}', 'destroy')->name('branch.delete');
+    });
+
+    Route::controller(CustomerController::class)->group(function () {
+        Route::get('/customer/list', 'index')->name('customer.index');
+        Route::get('/customer/show/{id}', 'show')->name('customer.show');
+        Route::post('/customer/store', 'store')->name('customer.store');
+        Route::put('/customer/update/{id}', 'update')->name('customer.update');
+        Route::delete('/customer/delete/{id}', 'destroy')->name('customer.delete');
     });
 
     Route::controller(ProfileController::class)->group(function () {

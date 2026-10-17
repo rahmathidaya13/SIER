@@ -36,6 +36,12 @@ const menuItems = [
     permissions: ["product-view"],
   },
   {
+    title: "Pelanggan",
+    icon: "bi bi-person-fill",
+    route: "customer.index",
+    prefixUrl: "customer*",
+  },
+  {
     title: "Data Leads",
     icon: "bi bi-person-vcard",
     route: "leads.index",

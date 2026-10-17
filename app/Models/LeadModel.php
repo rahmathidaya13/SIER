@@ -19,6 +19,7 @@ class LeadModel extends Model
         'id_user',
         'id_channel',
         'id_branch',
+        'id_customer',
         'name',
         'phone',
         'email',
@@ -89,5 +90,9 @@ class LeadModel extends Model
     {
         return $this->hasMany(LeadActivityModel::class, 'id_lead', 'id_lead')
             ->latest('created_at');
+    }
+    public function customer()
+    {
+        return $this->belongsTo(CustomerModel::class, 'id_customer', 'id_customer');
     }
 }

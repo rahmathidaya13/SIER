@@ -114,4 +114,13 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(OtpCode::class, 'id_user', 'id');
     }
+
+    public function customers()
+    {
+        return $this->hasMany(CustomerModel::class, 'created_by', 'id');
+    }
+    public function customer_updaters()
+    {
+        return $this->hasMany(CustomerModel::class, 'updated_by', 'id');
+    }
 }

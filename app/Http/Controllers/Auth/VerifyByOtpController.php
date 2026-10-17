@@ -100,11 +100,9 @@ class VerifyByOtpController extends Controller
 
     private function loginAndRedirect(Request $request, User $user): RedirectResponse
     {
-        Auth::login($user,  false);
-
-        // Session fixation protection — regenerate SETELAH login.
         $request->session()->regenerate();
 
+        Auth::login($user,  false);
         $request->session()->forget('otp_user_id');
         $request->session()->put('last_user_activity_at', now()->timestamp);
 

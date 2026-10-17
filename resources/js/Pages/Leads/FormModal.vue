@@ -506,7 +506,7 @@ const dpAmount = computed(() => {
                     <div class="row g-2">
                       <div class="col-md-6 mb-2">
                         <label class="form-label small fw-bold text-muted"
-                          >NAMA PROSPEK
+                          >NAMA
                           <span class="text-danger">*</span>
                         </label>
                         <input-text
@@ -535,8 +535,8 @@ const dpAmount = computed(() => {
 
                       <div class="col-md-6 mb-2">
                         <label class="form-label small fw-bold text-muted"
-                          >EMAIL PELANGGAN (Opsional)</label
-                        >
+                          >EMAIL <small class="fst-italic">(Opsional)</small>
+                        </label>
                         <input-text
                           :error="form.errors.email"
                           v-model="form.email"
@@ -870,7 +870,7 @@ const dpAmount = computed(() => {
                   <label
                     for="notes_sales_input"
                     class="form-label small fw-bold text-muted"
-                    >CATATAN TRANSAKSI (Opsional)</label
+                    >CATATAN TRANSAKSI <small class="fst-italic">(Opsional)</small></label
                   >
                   <text-area
                     :disabled="isLocked"
