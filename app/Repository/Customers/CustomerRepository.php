@@ -12,7 +12,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class CustomerRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'customer_cache';
-
     protected int $cacheMinutes = 30;
     protected function buildBaseQuery()
     {
@@ -29,12 +28,18 @@ class CustomerRepository extends BaseCacheRepository
                 'customers.id_customer',
                 'customers.created_of_branch',
                 'branches.name as branch_name',
+                'customers.customer_code',
                 'customers.name',
+                'customers.pic_name',
                 'customers.phone',
                 'customers.email',
+                'customers.tax_number',
+                'customers.city',
                 'customers.address',
                 'customers.business_type',
                 'customers.customer_type',
+                'customers.status',
+                'customers.is_member',
                 'customers.created_at',
                 'customers.updated_at',
 

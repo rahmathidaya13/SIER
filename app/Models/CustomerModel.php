@@ -19,11 +19,18 @@ class CustomerModel extends Model
         'created_by',
         'updated_by',
         'created_of_branch',
+        'customer_code',
         'name',
+        'pic_name',
         'phone',
         'email',
+        'tax_number',
         'business_type',
         'customer_type',
+        'customer_tag',
+        'status',
+        'is_member',
+        'city',
         'address',
     ];
     protected $dates    = ["deleted_at"];
@@ -32,6 +39,7 @@ class CustomerModel extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'is_member' => 'boolean',
     ];
 
     public function creator()
@@ -49,5 +57,10 @@ class CustomerModel extends Model
     public function leads()
     {
         return $this->hasMany(LeadModel::class, 'id_customer', 'id_customer');
+    }
+
+    public function sales()
+    {
+        return $this->hasMany(SalesModel::class, 'id_customer', 'id_customer');
     }
 }

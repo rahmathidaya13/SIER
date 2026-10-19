@@ -1,15 +1,17 @@
 <script setup>
-import { Head } from "@inertiajs/vue3";
+import { Head, router } from "@inertiajs/vue3";
 import { ref } from "vue";
 import { useFilter } from "@/Composables/useFilter";
 import { formatDate } from "@/Helpers/formatDate";
 import FormModal from "./FormModal.vue";
-
+import { useConfirm } from "@/Composables/useConfirm";
+const confirm = useConfirm();
 const props = defineProps({
   customers: Object,
   filters: Object,
+  branches: Array,
 });
-
+console.log(props.branches);
 const header = [
   {
     label: "No",
@@ -26,28 +28,28 @@ const header = [
     },
   },
   {
-    label: "Kontak",
+    label: "Kontak & NPWP",
     key: "contact",
     attrs: {
       class: "font-medium",
     },
   },
   {
-    label: "Jenis Usaha",
+    label: "Klasifikasi",
     key: "bussiness_type",
     attrs: {
       class: "font-medium",
     },
   },
   {
-    label: "Alamat",
+    label: "Lokasi & Alamat",
     key: "address",
     attrs: {
       class: "font-medium",
     },
   },
   {
-    label: "Terdaftar",
+    label: "Status & Terdaftar",
     key: "created_at",
     attrs: {
       class: "font-medium",
@@ -80,6 +82,7 @@ const getInitials = (name) => {
   if (!name) return "?";
   return name
     .split(" ")
+    .filter(Boolean)
     .map((n) => n[0])
     .slice(0, 2)
     .join("")
@@ -107,6 +110,47 @@ const customerTypeMeta = (type) => {
   };
   return map[type] || map.individual;
 };
+const customerTagMeta = (tag) => {
+  const map = {
+    new: {
+      label: "Pelanggan Baru",
+      icon: "bi-sparkles",
+      class: "bg-info bg-opacity-10 text-info-emphasis border-info-subtle",
+    },
+    repeat: {
+      label: "Pelanggan Lama",
+      icon: "bi-arrow-repeat",
+      class: "bg-primary bg-opacity-10 text-primary border-primary-subtle",
+    },
+    has_cancelled: {
+      label: "Pernah Cancel",
+      icon: "bi-exclamation-triangle-fill",
+      class: "bg-warning bg-opacity-15 text-warning-emphasis border-warning-subtle",
+    },
+  };
+  return map[tag] || map.new;
+};
+
+const statusMeta = (status) => {
+  const map = {
+    active: {
+      label: "Aktif",
+      icon: "bi-check-circle-fill",
+      class: "bg-success bg-opacity-10 text-success border-success-subtle",
+    },
+    inactive: {
+      label: "Nonaktif",
+      icon: "bi-pause-circle-fill",
+      class: "bg-secondary bg-opacity-10 text-secondary border-secondary-subtle",
+    },
+    blacklisted: {
+      label: "Blacklist",
+      icon: "bi-slash-circle-fill",
+      class: "bg-danger text-white border-danger shadow-sm",
+    },
+  };
+  return map[status] || map.active;
+};
 
 // Styling & Label untuk business_type
 const businessTypeMeta = (type) => {
@@ -128,6 +172,27 @@ const openCreateModal = () => {
 const openEditModal = (data) => {
   showModal.value = true;
   selectedId.value = data.id_customer;
+};
+
+const deleted = async (nameRoute, data) => {
+  const setConfirm = await confirm.ask({
+    title: "Hapus",
+    message: `Kamu ingin menghapus Data Pelanggan ${data.name} ?`,
+    confirmText: "Ya, Hapus",
+    variant: "danger",
+  });
+
+  if (setConfirm) {
+    isLoading.value = true;
+    router.delete(route(nameRoute, data.id_customer), {
+      preserveScroll: false,
+      replace: true,
+      preserveState: true,
+      onFinish: () => {
+        isLoading.value = false;
+      },
+    });
+  }
 };
 console.log(props.customers);
 </script>
@@ -174,35 +239,89 @@ console.log(props.customers);
                   </td>
 
                   <!-- Info Pelanggan (Avatar + Nama) -->
-                  <td class="align-middle">
+                  <td class="align-middle" style="min-width: 220px">
                     <div class="d-flex align-items-center gap-2">
-                      <div
-                        class="avatar-circle bg-primary bg-opacity-10 text-primary fw-bold rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 border border-primary border-opacity-10"
-                      >
-                        {{ getInitials(item.name) }}
-                      </div>
-                      <div class="min-w-0">
+                      <!-- Avatar dengan Indikator Bintang Member -->
+                      <div class="position-relative flex-shrink-0">
                         <div
-                          class="fw-bold text-dark text-capitalize text-truncate"
-                          style="max-width: 180px"
-                          :title="item.name"
+                          class="avatar-circle fw-bold rounded-circle d-flex align-items-center justify-content-center border"
+                          :class="
+                            item.status === 'blacklisted'
+                              ? 'bg-danger bg-opacity-10 text-danger border-danger-subtle'
+                              : item.is_member
+                              ? 'bg-warning bg-opacity-15 text-warning-emphasis border-warning'
+                              : 'bg-primary bg-opacity-10 text-primary border-primary-subtle'
+                          "
                         >
-                          {{ item.name }}
+                          {{ getInitials(item.name) }}
                         </div>
-                        <small class="text-muted d-block" style="font-size: 12px">
-                          ID: {{ item.id_customer?.substring(0, 8).toUpperCase() }}
-                        </small>
+                        <span
+                          v-if="item.is_member"
+                          class="member-star-badge bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center shadow-sm border border-white"
+                          title="Pelanggan Member"
+                        >
+                          <i class="bi bi-star-fill" style="font-size: 8px"></i>
+                        </span>
+                      </div>
+
+                      <div class="min-w-0">
+                        <div class="d-flex align-items-center gap-2">
+                          <span
+                            class="fw-bold text-dark text-capitalize text-truncate"
+                            style="max-width: 170px; font-size: 14px"
+                            :title="item.name"
+                          >
+                            {{ item.name }}
+                          </span>
+                        </div>
+
+                        <!-- Baris Kode Pelanggan & Badge Member -->
+                        <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                          <span class="text-muted font-monospace" style="font-size: 12px">
+                            {{
+                              item.customer_code ||
+                              item.id_customer?.substring(0, 8).toUpperCase()
+                            }}
+                          </span>
+                          <span
+                            v-if="item.is_member"
+                            class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning-subtle rounded-pill px-1 py-0"
+                            style="font-size: 10px"
+                          >
+                            Member
+                          </span>
+                        </div>
+
+                        <!-- Baris PIC (Muncul jika ada nama PIC) -->
+                        <div
+                          v-if="item.pic_name"
+                          class="text-muted d-flex align-items-center gap-1 mt-1"
+                          style="font-size: 11px"
+                        >
+                          <i class="bi bi-person-badge text-secondary"></i>
+                          <span
+                            class="text-truncate"
+                            style="max-width: 150px"
+                            :title="`PIC: ${item.pic_name}`"
+                          >
+                            PIC:
+                            <strong class="text-dark fw-medium text-capitalize">{{
+                              item.pic_name
+                            }}</strong>
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </td>
 
                   <!-- Kontak (Telepon & Email) -->
-                  <td class="align-middle">
+                  <td class="align-middle" style="min-width: 170px">
                     <div class="d-flex flex-column gap-1">
+                      <!-- Nomor Telepon / WhatsApp -->
                       <a
                         :href="`https://wa.me/${item.phone?.replace(/^0/, '62')}`"
                         target="_blank"
-                        class="text-decoration-none text-dark fw-medium d-inline-flex align-items-center gap-2 hover-whatsapp"
+                        class="text-decoration-none text-dark fw-semibold d-inline-flex align-items-center gap-2 hover-whatsapp"
                         style="font-size: 14px"
                         title="Hubungi via WhatsApp"
                       >
@@ -210,6 +329,7 @@ console.log(props.customers);
                         <span>{{ item.phone }}</span>
                       </a>
 
+                      <!-- Email -->
                       <div
                         v-if="item.email"
                         class="text-muted d-flex align-items-center gap-2"
@@ -218,26 +338,38 @@ console.log(props.customers);
                         <i class="bi bi-envelope text-secondary"></i>
                         <span
                           class="text-truncate"
-                          style="max-width: 160px"
+                          style="max-width: 155px"
                           :title="item.email"
                         >
                           {{ item.email }}
                         </span>
                       </div>
                       <span v-else class="text-muted fst-italic" style="font-size: 12px">
-                        Email belum diatur
+                        Tanpa email
                       </span>
+
+                      <!-- NPWP (Muncul jika ada tax_id) -->
+                      <div
+                        v-if="item.tax_number"
+                        class="d-inline-flex align-items-center gap-1 text-secondary bg-light border rounded px-2 py-0 align-self-start mt-1"
+                        style="font-size: 12px"
+                        :title="`NPWP: ${item.tax_number}`"
+                      >
+                        <i class="bi bi-card-heading"></i>
+                        <span class="text-truncate" style="max-width: 130px">{{
+                          item.tax_number
+                        }}</span>
+                      </div>
                     </div>
                   </td>
 
-                  <!-- Tipe Pelanggan & Sektor Bisnis -->
+                  <!-- 4. Klasifikasi (Tipe Pelanggan & Sektor Bisnis) -->
                   <td class="align-middle">
                     <div class="d-flex flex-column align-items-start gap-2">
-                      <!-- Badge Customer Type -->
                       <span
                         class="badge border rounded-pill fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1"
                         :class="customerTypeMeta(item.customer_type).class"
-                        style="font-size: 14px"
+                        style="font-size: 12px"
                       >
                         <i
                           class="bi"
@@ -246,9 +378,8 @@ console.log(props.customers);
                         {{ customerTypeMeta(item.customer_type).label }}
                       </span>
 
-                      <!-- Sektor Bisnis -->
                       <span
-                        class="text-muted d-inline-flex align-items-center gap-1"
+                        class="text-muted d-inline-flex align-items-center gap-2"
                         style="font-size: 12px"
                       >
                         <i
@@ -260,57 +391,89 @@ console.log(props.customers);
                     </div>
                   </td>
 
-                  <!-- Alamat & Cabang -->
-                  <td class="align-middle" style="max-width: 220px">
+                  <!-- 5. Lokasi & Cabang (Kota + Alamat + Cabang) -->
+                  <td class="align-middle" style="max-width: 230px; min-width: 180px">
                     <div class="d-flex flex-column gap-1">
+                      <!-- Kota & Cabang -->
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span
+                          v-if="item.city"
+                          class="badge bg-light text-dark border fw-semibold px-2 py-1 text-capitalize"
+                          style="font-size: 11px"
+                        >
+                          <i class="bi bi-pin-map-fill text-primary me-1"></i
+                          >{{ item.city }}
+                        </span>
+                        <span
+                          class="text-muted d-inline-flex align-items-center gap-2"
+                          style="font-size: 12px"
+                          title="Cabang Terdaftar"
+                        >
+                          <i class="bi bi-geo-alt-fill text-danger opacity-75"></i>
+                          <span class="fw-medium">{{
+                            item.branch_name || item.branch?.name || "Pusat"
+                          }}</span>
+                        </span>
+                      </div>
+
+                      <!-- Alamat Lengkap (Maksimal 2 Baris) -->
                       <p
-                        class="mb-0 text-dark line-clamp-2"
-                        style="font-size: 13px; line-height: 1.4"
+                        class="mb-0 text-muted line-clamp-2"
+                        style="font-size: 12px; line-height: 1.35"
                         :title="item.address"
                       >
                         {{ item.address || "-" }}
                       </p>
-                      <div
-                        class="d-flex align-items-center gap-1 text-muted"
-                        style="font-size: 12px"
-                      >
-                        <i class="bi bi-geo-alt-fill text-danger opacity-75"></i>
-                        <span class="fw-medium">
-                          {{ item.branch_name || "Cabang Utama" }}
-                        </span>
-                      </div>
                     </div>
                   </td>
 
                   <!-- 6. Info Pencatatan (Created At & Created By) -->
                   <td class="align-middle">
-                    <div class="d-flex flex-column">
-                      <span class="text-dark fw-medium" style="font-size: 13px">
-                        {{ formatDate(item.created_at) }}
-                      </span>
-                      <!-- Nama Pembuat (Sesuaikan dengan field relasi/join dari tabel users) -->
-                      <small
-                        class="text-muted d-flex align-items-center gap-1"
-                        style="font-size: 12px"
+                    <div class="d-flex flex-column align-items-start gap-1">
+                      <!-- Badge Status -->
+                      <span
+                        class="badge border rounded-pill fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1"
+                        :class="statusMeta(item.status).class"
+                        style="font-size: 11px"
                       >
-                        <i class="bi bi-person-check"></i>
-                        <span class="text-truncate" style="max-width: 110px">
-                          {{ item.creator_name || "Sistem" }}
+                        <i class="bi" :class="statusMeta(item.status).icon"></i>
+                        {{ statusMeta(item.status).label }}
+                      </span>
+
+                      <!-- Tanggal & Pembuat -->
+                      <div class="d-flex flex-column mt-1">
+                        <span class="text-dark fw-medium" style="font-size: 12px">
+                          {{ formatDate(item.created_at) }}
                         </span>
-                      </small>
+                        <small
+                          class="text-muted d-flex align-items-center gap-1"
+                          style="font-size: 11px"
+                        >
+                          <i class="bi bi-person-check"></i>
+                          <span class="text-truncate" style="max-width: 105px">
+                            {{ item.creator_name || item.creator?.name || "Sistem" }}
+                          </span>
+                        </small>
+                      </div>
                     </div>
                   </td>
+
                   <td class="text-center">
                     <div class="d-flex gap-1 justify-content-center">
                       <button
-                        @click.prevent="openEditModal(item.id_customer)"
+                        @click.prevent="openEditModal(item)"
                         type="button"
                         class="btn btn-c-slate"
                         title="Edit"
                       >
                         <i class="bi bi-pencil-square"></i>
                       </button>
-                      <button type="button" class="btn btn-c-danger" title="Hapus">
+                      <button
+                        @click.prevent="deleted('customer.delete', item)"
+                        type="button"
+                        class="btn btn-c-danger"
+                        title="Hapus"
+                      >
                         <i class="bi bi-trash"></i>
                       </button>
                     </div>
@@ -344,6 +507,7 @@ console.log(props.customers);
         </div>
       </div>
       <FormModal
+        :branches="props.branches"
         :idCustomer="selectedId"
         :show="showModal"
         @update:show="showModal = $event"
@@ -358,7 +522,16 @@ console.log(props.customers);
   font-size: 13px;
   letter-spacing: 0.5px;
 }
-
+.member-star-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+}
+.cursor-help {
+  cursor: help;
+}
 /* Memotong teks alamat maksimal 2 baris */
 .line-clamp-2 {
   display: -webkit-box;
