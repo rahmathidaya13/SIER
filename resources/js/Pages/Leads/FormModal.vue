@@ -3,9 +3,8 @@ import { computed, reactive, ref, watch } from "vue";
 import { useForm, router, usePage } from "@inertiajs/vue3";
 import { hasRole } from "@/Composables/useAuth";
 import { useRowAlert } from "@/Composables/useAlert";
+import { useAsyncSearch } from "@/Composables/useAsyncSearch";
 import { currencyFormat } from "@/Helpers/currencyFormat";
-import { formatDate } from "@/Helpers/formatDate";
-import { formatForDatetimeLocal } from "@/Helpers/formatForDatetimeLocal";
 import { debounce } from "lodash";
 const { show, __alert, hide } = useRowAlert();
 import axios from "axios";
@@ -390,25 +389,45 @@ const selectedChannel = computed({
 const productOptions = ref([]);
 const loadingProduct = ref(false);
 const selectedProductObj = ref([]);
-const searchProduct = debounce(async (query) => {
-  if (query.length < 2) {
-    productOptions.value = [];
-    return;
-  }
+const customerOptions = ref([]);
+const loadingCustomer = ref(false);
+const selectedCustomer = ref([]);
 
-  loadingProduct.value = true;
-  try {
-    const { data } = await axios.get(route("product.search"), {
-      params: { keyword: query },
-    });
-    productOptions.value = data;
-    console.log(data);
-  } catch (error) {
-    console.error("Gagal mengambil data produk", error);
-  } finally {
-    loadingProduct.value = false;
-  }
-}, 400);
+const productSelect = useAsyncSearch(
+  "product.search",
+  true,
+  (selectedList) => {
+    form.id_product = selectedList.map((item) => item.id_product);
+    console.log(selectedList.map((item) => item.id_product))
+  },
+  "Produk",
+  400
+);
+
+// const searchProduct = debounce(async (query) => {
+//   if (query.length < 2) {
+//     productOptions.value = [];
+//     return;
+//   }
+
+//   loadingProduct.value = true;
+//   try {
+//     const { data } = await axios.get(route("product.search"), {
+//       params: { keyword: query },
+//     });
+//     productOptions.value = data;
+//   } catch (error) {
+//     console.error("Gagal mengambil data produk", error);
+//   } finally {
+//     loadingProduct.value = false;
+//   }
+// }, 400);
+
+// const searchCustomer = debounce(async (query) => {
+//   if (query.length < 2) {
+//     customerOptions.value = [];
+//     return;
+//   });
 
 const onSelectProduct = (product) => {
   // form.id_product = product?.id_product ?? null;
@@ -621,18 +640,17 @@ const dpAmount = computed(() => {
                           :class="{ 'is-invalid': form.errors.id_product }"
                           :multiple="true"
                           placeholder="Ketik minimal 2 huruf..."
-                          v-model="selectedProductObj"
-                          :options="productOptions"
-                          :loading="loadingProduct"
+                          v-model="productSelect.selected"
+                          :options="productSelect.options"
+                          :loading="productSelect.loading"
                           track-by="id_product"
                           label="name"
                           :internal-search="false"
                           :clear-on-select="false"
                           :close-on-select="false"
                           :searchable="true"
-                          @search-change="searchProduct"
-                          @update:model-value="onSelectProduct"
-                          @remove="onRemoveProduct"
+                          @search-change="productSelect.search"
+                          @update:model-value="productSelect.onSelect"
                           :show-labels="false"
                           open-direction="bottom"
                         >

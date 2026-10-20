@@ -210,6 +210,7 @@ class LeadController extends Controller
                 'id_lead',
                 'id_user',
                 'id_channel',
+                'id_customer',
                 'name',
                 'phone',
                 'email',
@@ -226,6 +227,7 @@ class LeadController extends Controller
                 'channel:id_channel,name,icon',
                 'leadProduct:id_lead,id_product',
                 'leadProduct.product:id_product,name,image_link,image_path',
+                'customer:id_customer,name,phone,email,customer_tag,address',
             ])
             ->withCount('leadProduct')
             ->findOrFail($id);
@@ -329,5 +331,11 @@ class LeadController extends Controller
         $admins = User::role(['super_admin', 'developer'])->get();
 
         return $branchUsers->merge($admins)->unique('id');
+    }
+
+    public function customerSearch(Request $request)
+    {
+        $keyword = $request->input('keyword');
+
     }
 }

@@ -49,7 +49,7 @@ const header = [
     },
   },
   {
-    label: "Status & Terdaftar",
+    label: "Status & Riwayat",
     key: "created_at",
     attrs: {
       class: "font-medium",
@@ -428,32 +428,50 @@ console.log(props.customers);
                   </td>
 
                   <!-- 6. Info Pencatatan (Created At & Created By) -->
+                  <!-- 6. Status Operasional, Riwayat (Customer Tag) & Info Pencatatan -->
                   <td class="align-middle">
                     <div class="d-flex flex-column align-items-start gap-1">
-                      <!-- Badge Status -->
-                      <span
-                        class="badge border rounded-pill fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1"
-                        :class="statusMeta(item.status).class"
-                        style="font-size: 11px"
-                      >
-                        <i class="bi" :class="statusMeta(item.status).icon"></i>
-                        {{ statusMeta(item.status).label }}
-                      </span>
+                      <!-- Baris Badge: Status & Customer Tag -->
+                      <div class="d-flex align-items-center gap-1 flex-wrap">
+                        <!-- Badge Status (Aktif / Nonaktif / Blacklist) -->
+                        <span
+                          class="badge border rounded-pill fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1"
+                          :class="statusMeta(item.status).class"
+                          style="font-size: 10px"
+                        >
+                          <i class="bi" :class="statusMeta(item.status).icon"></i>
+                          {{ statusMeta(item.status).label }}
+                        </span>
+
+                        <!-- Badge Customer Tag (Pelanggan Baru / Lama / Pernah Cancel) -->
+                        <span
+                          class="badge border rounded-pill fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1"
+                          :class="customerTagMeta(item.customer_tag).class"
+                          style="font-size: 10px"
+                        >
+                          <i
+                            class="bi"
+                            :class="customerTagMeta(item.customer_tag).icon"
+                          ></i>
+                          {{ customerTagMeta(item.customer_tag).label }}
+                        </span>
+                      </div>
 
                       <!-- Tanggal & Pembuat -->
-                      <div class="d-flex flex-column mt-1">
-                        <span class="text-dark fw-medium" style="font-size: 12px">
-                          {{ formatDate(item.created_at) }}
-                        </span>
-                        <small
-                          class="text-muted d-flex align-items-center gap-1"
-                          style="font-size: 11px"
+                      <div
+                        class="d-flex align-items-start gap-2 flex-column text-muted mt-1"
+                        style="font-size: 12px"
+                      >
+                        <span class="text-dark fw-medium">{{
+                          formatDate(item.created_at)
+                        }}</span>
+                        <span
+                          class="text-truncate text-capitalize"
+                          :title="item.creator_name || item.creator?.name"
+                          style="font-size: 12px"
                         >
-                          <i class="bi bi-person-check"></i>
-                          <span class="text-truncate" style="max-width: 105px">
-                            {{ item.creator_name || item.creator?.name || "Sistem" }}
-                          </span>
-                        </small>
+                          {{ `(${item.creator_name} - ${item.branch_name})` }}
+                        </span>
                       </div>
                     </div>
                   </td>

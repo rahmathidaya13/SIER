@@ -63,6 +63,7 @@ class CustomerService
                 'phone' => $validated['phone'],
                 'address' => $validated['address'],
                 'customer_type' => $validated['customer_type'],
+                'customer_tag'      => $validated['customer_tag'] ?? 'new',
                 'business_type' => $validated['business_type'],
                 'status'            => $validated['status'] ?? $customer->status,
                 'is_member'         => (bool) ($validated['is_member'] ?? false),

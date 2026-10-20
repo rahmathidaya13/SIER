@@ -94,6 +94,7 @@ class CustomerController extends Controller
                 'email',
                 'tax_number',
                 'customer_type',
+                'customer_tag',
                 'business_type',
                 'status',
                 'is_member',

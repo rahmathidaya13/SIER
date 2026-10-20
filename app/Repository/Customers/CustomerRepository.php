@@ -38,6 +38,7 @@ class CustomerRepository extends BaseCacheRepository
                 'customers.address',
                 'customers.business_type',
                 'customers.customer_type',
+                'customers.customer_tag',
                 'customers.status',
                 'customers.is_member',
                 'customers.created_at',
