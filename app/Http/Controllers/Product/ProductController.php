@@ -141,33 +141,5 @@ class ProductController extends Controller
         $this->invalidateCaches([ProductRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
         return redirect()->back()->with('message', 'Data produk ' . $product->name . ' berhasil dihapus');
     }
-    public function productSearch(Request $request)
-    {
-        $keyword = $request->input('keyword');
-        $products = ProductModel::with('prices:id_product,status')
-            ->whereHas('prices', function ($q) {
-                $q->where('status', 'published');
-            })
-            ->select('id_product', 'name', 'image_link', 'image_path', 'category')
-            ->when($keyword, function ($q, $search) {
-                $cleanSearch = addcslashes($search, '%_');
-                $q->where('name', 'like', "%{$cleanSearch}%")
-                    ->orWhere('id_product', 'like', "%{$cleanSearch}%");
-            })
-            ->limit(10) // HANYA AMBIL 10 TERATAS!
-            ->get()
-            ->map(function ($product) {
-                $product->image_link = !empty($product->image_link)
-                    ? $product->image_link
-                    : (
-                        !empty($product->image_path)
-                        ? asset('storage/' . ltrim($product->image_path, '/'))
-                        : null
-                    );
 
-                return $product;
-            });
-
-        return response()->json($products);
-    }
 }

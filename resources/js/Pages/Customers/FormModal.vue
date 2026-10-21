@@ -669,11 +669,11 @@ const submitTextButton = computed(() => {
 
         <template #footer>
           <div
-            class="d-flex justify-content-end align-items-center gap-2 p-2 bg-transparent w-100"
+            class="d-flex justify-content-end gap-2 p-2 bg-transparent"
           >
             <button
               type="button"
-              class="btn btn-light border fw-medium px-4 rounded-3"
+              class="btn btn-c-slate border-0 fw-medium px-4"
               @click.prevent="close"
             >
               Batal
@@ -682,7 +682,7 @@ const submitTextButton = computed(() => {
               @click.prevent="submit"
               type="button"
               :disabled="form.processing || isLoadingData"
-              class="btn btn-height-1 fw-semibold px-4 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+              class="btn btn-height-1 fw-semibold rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
               :class="isEdit ? 'btn-c-success' : 'btn-c-primary'"
             >
               <span

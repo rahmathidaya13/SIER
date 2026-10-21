@@ -16,14 +16,10 @@ return new class extends Migration
             $table->foreignUuid('id_user')->constrained('users', 'id')->onDelete('cascade'); // CS/Admin yang memegang lead ini
             $table->foreignUuid('id_channel')->constrained('channels', 'id_channel')->cascadeOnDelete(); // Datang dari mana?
 
-            $table->string('name', 100);
-            $table->string('phone', 25); // WAJIB DI-INDEX karena bakal sering dicari via form pencarian!
-            $table->string('email', 100)->unique()->nullable();
 
             // Suhu Ketertarikan
             $table->enum('temperature', ['HOT', 'WARM', 'COLD'])->default('WARM');
 
-            $table->enum('customer_type', ['NEW_CUSTOMER', 'REPEAT_ORDER', 'WIN_BACK'])->default('NEW_CUSTOMER');
             // Status Hidup Prospek
             $table->enum('status', ['NEW', 'FOLLOW_UP', 'CLOSED_WON', 'CLOSED_LOST'])->default('NEW');
 
@@ -36,7 +32,7 @@ return new class extends Migration
 
             $table->softDeletes();
             $table->timestamps();
-            $table->index(['name', 'phone', 'closed_at', 'archived_at','created_at']);
+            $table->index(['closed_at', 'archived_at','created_at']);
         });
     }
 

@@ -20,6 +20,7 @@ use App\Repository\User\UserRepository;
 use App\Repository\Lead\LeadsRepository;
 use App\Traits\ActivityMessageFormatter;
 use App\Http\Resources\LeadActivityResource;
+use App\Models\CustomerModel;
 use Illuminate\Support\Facades\Notification;
 use App\Repository\Channel\ChannelRepository;
 use App\Services\Lead\LeadConversionServices;
@@ -127,7 +128,7 @@ class LeadController extends Controller
             );
 
             return redirect()->back()->with([
-                'message' => 'Lead dari ' . strtoupper($request['name']) . ' berhasil ditambahkan',
+                'message' => 'Lead dari ' . strtoupper($leads->customer->name) . ' berhasil ditambahkan',
             ]);
         } catch (\Exception $error) {
             $errorMessage = config('app.debug') ? $error->getMessage() : 'Terjadi kesalahan pada server. Silakan coba lagi.';
@@ -192,7 +193,7 @@ class LeadController extends Controller
                     ScopeKey::GLOBAL_SUPER_ADMIN
                 ]
             );
-            return redirect()->back()->with('message', 'Lead ' . strtoupper($leads->name) . ' berhasil diperbarui!');
+            return redirect()->back()->with('message', 'Lead ' . ucwords($leads->customer->name) . ' berhasil diperbarui!');
         } catch (\Exception $error) {
             $errorMessage = config('app.debug')
                 ? $error->getMessage()
@@ -211,12 +212,8 @@ class LeadController extends Controller
                 'id_user',
                 'id_channel',
                 'id_customer',
-                'name',
-                'phone',
-                'email',
                 'status',
                 'temperature',
-                'customer_type',
                 'notes',
                 'follow_up_date',
                 'closed_at'
@@ -227,7 +224,7 @@ class LeadController extends Controller
                 'channel:id_channel,name,icon',
                 'leadProduct:id_lead,id_product',
                 'leadProduct.product:id_product,name,image_link,image_path',
-                'customer:id_customer,name,phone,email,customer_tag,address',
+                'customer:id_customer,customer_code,name,phone,email,customer_tag,city,address,is_member',
             ])
             ->withCount('leadProduct')
             ->findOrFail($id);
@@ -333,9 +330,65 @@ class LeadController extends Controller
         return $branchUsers->merge($admins)->unique('id');
     }
 
-    public function customerSearch(Request $request)
+    public function productSearch(Request $request)
     {
         $keyword = $request->input('keyword');
+        $products = ProductModel::with('prices:id_product,status')
+            ->whereHas('prices', function ($q) {
+                $q->where('status', 'published');
+            })
+            ->select('id_product', 'name', 'image_link', 'image_path', 'category')
+            ->when(!empty($keyword), function ($q) use ($keyword) {
+                $cleanSearch = addcslashes($keyword, '%_');
+                $q->where('name', 'like', "%{$cleanSearch}%");
+            })
+            ->limit(10) // HANYA AMBIL 10 TERATAS!
+            ->get()
+            ->map(function ($product) {
+                $product->image_link = !empty($product->image_link)
+                    ? $product->image_link
+                    : (
+                        !empty($product->image_path)
+                        ? asset('storage/' . ltrim($product->image_path, '/'))
+                        : null
+                    );
 
+                return $product;
+            });
+
+        return response()->json($products);
+    }
+    public function customerSearch(Request $request)
+    {
+        $user = auth()->user();
+        $keyword = trim((string) $request->input('keyword', ''));
+        $query = CustomerModel::query()
+            ->select([
+                'id_customer',
+                'customer_code',
+                'name',
+                'phone',
+                'email',
+                'customer_tag',
+                'address',
+                'city',
+                'is_member',
+                'created_of_branch',
+            ])
+            ->where('status', 'active');
+
+        if (!$user->hasRole(['super_admin', 'developer'])) {
+            $query->where('created_of_branch', $user->id_branch);
+        }
+
+        $query->when(!empty($keyword), function ($q) use ($keyword) {
+            $cleanSearch = addcslashes($keyword, '%_');
+            $q->where('name', 'like', "%{$cleanSearch}%")
+                ->orWhere('phone', 'like', "%{$cleanSearch}%");
+        });
+
+
+        $customer = $query->limit(10)->get();
+        return response()->json($customer);
     }
 }

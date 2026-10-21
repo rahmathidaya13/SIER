@@ -18,13 +18,8 @@ class LeadResource extends JsonResource
         return [
             // 1. Data Dasar
             'id_lead'        => $this->id_lead,
-            'id_customer' => $this->id_customer,
-            'name'           => $this->name,
-            'phone'          => $this->phone,
-            'email'          => $this->email,
             'status'         => $this->status,
             'temperature'    => $this->temperature,
-            'customer_type'  => $this->customer_type,
             'notes'          => $this->notes,
             'follow_up_date' => $this->follow_up_date,
             'closed_at'      => $this->closed_at,
@@ -61,14 +56,17 @@ class LeadResource extends JsonResource
                 });
             }),
 
-            'customer' => $this->whenLoaded('customer', function () {
+            'customers' => $this->whenLoaded('customer', function () {
                 return [
                     'id_customer' => $this->customer?->id_customer,
                     'name' => $this->customer?->name,
+                    'customer_code' => $this->customer?->customer_code,
                     'phone' => $this->customer?->phone,
                     'email' => $this->customer?->email,
+                    'city' => $this->customer?->city,
                     'address' => $this->customer?->address,
-                    'customer_tag' => $this->customer?->customer_tag
+                    'customer_tag' => $this->customer?->customer_tag,
+                    'is_member' => $this->customer?->is_member
                 ];
             })
 

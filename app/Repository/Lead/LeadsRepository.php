@@ -21,6 +21,7 @@ class LeadsRepository extends BaseCacheRepository
             ->joinUserRole()
             ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')
             ->leftJoin('sales', 'sales.id_lead', '=', 'leads.id_lead')
+            ->leftJoin('customers', 'customers.id_customer', '=', 'leads.id_customer')
             ->leftJoin('branches', 'branches.id_branch', '=', 'users.id_branch');
         return $query;
     }
@@ -39,9 +40,7 @@ class LeadsRepository extends BaseCacheRepository
                 'leads.id_lead',
                 'leads.id_user',
                 'leads.id_branch',
-                'leads.name',
-                'leads.email',
-                'leads.phone',
+                'leads.id_customer',
                 'leads.temperature',
                 'leads.status',
                 'leads.follow_up_date',
@@ -54,6 +53,10 @@ class LeadsRepository extends BaseCacheRepository
                 'channels.name as channel_name',
                 'channels.icon',
                 'sales.invoice',
+                'customers.name as customer_name',
+                'customers.phone as customer_phone',
+                'customers.email as customer_email',
+                'customers.customer_tag',
             ]);
     }
     protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator

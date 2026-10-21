@@ -18,6 +18,7 @@ const props = defineProps({
   channels: Array,
   role_name: String,
 });
+console.log(props.leads.data);
 const getCurrentMonth = () => {
   const today = new Date();
   const year = today.getFullYear();
@@ -272,7 +273,7 @@ const actionLabel = (item) => {
     <template #content>
       <div class="row g-3 view-section">
         <div class="col-12">
-          <callout />
+          <callout :duration="0" />
           <div class="card border-0 rounded-4 overflow-hidden">
             <div class="card-header p-4 bg-white">
               <div
@@ -392,22 +393,22 @@ const actionLabel = (item) => {
                       <div
                         @click.prevent="openHistoryModal(item)"
                         class="fw-bold text-primary mb-1 text-decoration-none cursor-pointer"
-                        v-html="highlight(item.name, filters.keyword)"
+                        v-html="highlight(item.customer_name, filters.keyword)"
                       ></div>
                     </div>
-                    <div v-if="item.email" class="text-muted small mb-2">
-                      <a :href="getEmail(item.email)" class="text-decoration-none">{{
-                        item.email
+                    <div v-if="item.customer_email" class="text-muted small mb-2">
+                      <a :href="getEmail(item.customer_email)" class="text-decoration-none">{{
+                        item.customer_email
                       }}</a>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                       <a
-                        :href="getWaLink(item.phone)"
+                        :href="getWaLink(item.customer_phone)"
                         target="_blank"
                         class="badge badge-soft-success text-success rounded-pill d-flex align-items-center gap-1 py-1 px-2 text-decoration-none"
                         title="Chat langsung via WhatsApp"
                       >
-                        <i class="bi bi-whatsapp"></i> {{ item.phone }}
+                        <i class="bi bi-whatsapp"></i> {{ item.customer_phone }}
                       </a>
                     </div>
                   </td>

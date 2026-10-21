@@ -52,6 +52,10 @@ Route::middleware(['auth', 'check.status.active', 'idle.timeout', 'verified.emai
         Route::post('/leads/store', 'store')->name('leads.store');
         Route::put('/leads/update/{id}', 'update')->name('leads.update');
         Route::delete('/leads/delete/{leads}', 'destroy')->name('leads.delete');
+
+
+        Route::get('/leads/search-customer', 'customerSearch')->name('leads.search.customer');
+        Route::get('/leads/search-product', 'productSearch')->name('leads.search.product');
     });
     Route::controller(LeadActivityController::class)->group(function () {
         Route::post('/leads/activity/store/{id}', 'store')->name('leads.activity.store');

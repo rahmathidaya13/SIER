@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, ref, watch } from "vue";
-import { useForm, router, usePage } from "@inertiajs/vue3";
+import { useForm, router, usePage, Link } from "@inertiajs/vue3";
 import { hasRole } from "@/Composables/useAuth";
 import { useRowAlert } from "@/Composables/useAlert";
 import { useAsyncSearch } from "@/Composables/useAsyncSearch";
@@ -16,7 +16,6 @@ const props = defineProps({
   show: Boolean,
   channels: Array,
 });
-
 const isEdit = computed(() => !!props.idLead);
 const isLoading = ref(false);
 const dataLead = ref(null);
@@ -24,13 +23,10 @@ const dataLead = ref(null);
 // 1. STATE SAKELAR TAB
 const activeTab = ref("prospect");
 
-const form = useForm({
-  name: "",
-  phone: "",
-  email: "",
+const getDefaultForm = () => ({
   id_channel: null,
+  id_customer: null,
   temperature: null,
-  customer_type: null,
   status: null,
   notes: "",
   id_product: [],
@@ -45,6 +41,7 @@ const form = useForm({
   bank_name: "",
   notes_sales: "",
 });
+const form = useForm(getDefaultForm());
 
 // Auto-Kalkulasi Uang
 watch(
@@ -93,12 +90,9 @@ watch(
 );
 const fillForm = (data) => {
   form.defaults({
-    name: data.name,
-    phone: data.phone,
-    email: data.email,
     id_channel: data.channel?.id_channel,
+    id_customer: data.customers?.id_customer,
     temperature: data.temperature,
-    customer_type: data.customer_type,
 
     status: data.status,
     notes: data.notes,
@@ -116,45 +110,23 @@ const fillForm = (data) => {
     notes_sales: "",
   });
 
-  if (data.products && data.products.length > 0) {
-    selectedProductObj.value = data.products?.map((p) => ({
-      id_product: p.id_product,
-      name: p.product_name || "Produk Terpilih",
-      image_path: p.image_path || "",
-      image_link: p.image_link || "",
-    }));
-    productOptions.value = [...selectedProductObj.value];
-  } else {
-    selectedProductObj.value = [];
-    productOptions.value = [];
-  }
   dataLead.value = data;
+  customerSelect.selected = data.customers || null;
+  productSelect.selected = data.products?.map((p) => ({
+    id_product: p.id_product,
+    name: p.product_name || "Produk Terpilih",
+    image_path: p.image_path || "",
+    image_link: p.image_link || "",
+  }));
   form.reset();
 };
 const resetForm = () => {
-  form.defaults({
-    name: "",
-    phone: "",
-    email: "",
-    id_channel: null,
-    temperature: null,
-    customer_type: null,
-    status: null,
-    notes: "",
-    id_product: [],
-    product_name: [],
-
-    deal_price: 0,
-    paid_amount: 0,
-    payment_status: "LUNAS",
-    payment_method: "cash",
-    quantity: "",
-    bank_name: "",
-    notes_sales: "",
-  });
+  form.defaults(getDefaultForm());
   form.reset();
   form.clearErrors();
   dataLead.value = null;
+  customerSelect.selected = null;
+  productSelect.selected = [];
 };
 const tabList = computed(() => {
   let tabs = [];
@@ -181,9 +153,10 @@ const loadLead = async () => {
   }
 
   try {
-    const { data } = await axios.get(`/leads/show/${props.idLead}`);
+    const { data } = await axios.get(route("leads.show", props.idLead));
     const cleanData = data.data;
     fillForm(cleanData);
+    console.log(cleanData);
   } catch (error) {
     console.error("Gagal mengambil data:", error);
     alert("Terjadi kesalahan saat memuat data.");
@@ -228,9 +201,7 @@ const submit = () => {
     },
     onError: (errors) => {
       const prospectFields = [
-        "name",
-        "phone",
-        "email",
+        "id_customer",
         "id_channel",
         "id_product",
         "temperature",
@@ -287,50 +258,12 @@ const emit = defineEmits(["update:show", "saved"]);
 const close = () => {
   emit("update:show", false);
   resetForm();
-  selectedProductObj.value = null;
-  productOptions.value = [];
 };
 const submitTextButton = computed(() => {
   if (form.processing) return "Memproses...";
   if (form.status === "CLOSED_WON" && form.temperature === "HOT") return "Proses Closing";
   return isEdit.value ? "Simpan Perubahan" : "Simpan Prospek";
 });
-
-const updateActivity = () => {
-  router.put(
-    route("leads.activity.update", activityEdit.id),
-    {
-      description: activityEdit.new_value,
-    },
-    {
-      preserveScroll: true,
-      preserveState: true,
-      onSuccess: () => {
-        const activity = dataLead.value.activity.find(
-          (actv) => actv.id_lead_activity === activityEdit.id
-        );
-        if (activity) {
-          activity.description = activityEdit.new_value;
-        }
-        show({
-          id: activityEdit.id,
-          message: "Aktivitas berhasil diperbarui",
-          type: "success",
-          duration: 5000,
-        });
-        cancelEditActivity();
-      },
-      onError: (errors) => {
-        show({
-          id: activityEdit.id,
-          message: errors.description,
-          type: "danger",
-          duration: 5000,
-        });
-      },
-    }
-  );
-};
 
 // kunci field status dan temperature jika sudah pernah disahkan menjadi prospek HOT & CLOSING
 const isLocked = computed(() => {
@@ -377,6 +310,7 @@ const prospectOptions = computed(() => {
 
   return options;
 });
+
 const selectedChannel = computed({
   get() {
     return props.channels.find((x) => x.id_channel === form.id_channel) || null;
@@ -386,70 +320,28 @@ const selectedChannel = computed({
     form.id_channel = value?.id_channel ?? null;
   },
 });
-const productOptions = ref([]);
-const loadingProduct = ref(false);
-const selectedProductObj = ref([]);
-const customerOptions = ref([]);
-const loadingCustomer = ref(false);
-const selectedCustomer = ref([]);
 
 const productSelect = useAsyncSearch(
-  "product.search",
+  "leads.search.product",
   true,
   (selectedList) => {
     form.id_product = selectedList.map((item) => item.id_product);
-    console.log(selectedList.map((item) => item.id_product))
   },
   "Produk",
   400
 );
 
-// const searchProduct = debounce(async (query) => {
-//   if (query.length < 2) {
-//     productOptions.value = [];
-//     return;
-//   }
+const customerSelect = useAsyncSearch(
+  "leads.search.customer",
+  false,
+  (selected) => {
+    console.log(selected);
+    form.id_customer = selected ? selected.id_customer : "";
+  },
+  "Pelanggan",
+  400
+);
 
-//   loadingProduct.value = true;
-//   try {
-//     const { data } = await axios.get(route("product.search"), {
-//       params: { keyword: query },
-//     });
-//     productOptions.value = data;
-//   } catch (error) {
-//     console.error("Gagal mengambil data produk", error);
-//   } finally {
-//     loadingProduct.value = false;
-//   }
-// }, 400);
-
-// const searchCustomer = debounce(async (query) => {
-//   if (query.length < 2) {
-//     customerOptions.value = [];
-//     return;
-//   });
-
-const onSelectProduct = (product) => {
-  // form.id_product = product?.id_product ?? null;
-  // form.product_name = product?.name ?? null;
-
-  if (product && product.length > 0) {
-    form.id_product = product.map((p) => p.id_product);
-    form.product_name = product.map((p) => p.name);
-  } else {
-    form.id_product = [];
-    form.product_name = [];
-  }
-};
-const onRemoveProduct = (removedProduct) => {
-  // form.id_product = null;
-  // form.product_name = null;
-
-  if (removedProduct && removedProduct.id_product) {
-    form.id_product = form.id_product.filter((id) => id !== removedProduct.id_product);
-    form.product_name = form.product_name.filter((name) => name !== removedProduct.name);
-  }
-};
 const imageSource = (product) => {
   if (product?.image_link) {
     return product?.image_link;
@@ -464,6 +356,27 @@ const dpAmount = computed(() => {
   }
   return form.deal_price;
 });
+
+const customerTagMeta = (tag) => {
+  const map = {
+    new: {
+      label: "Pelanggan Baru",
+      icon: "bi-sparkles",
+      class: "bg-info bg-opacity-10 text-info-emphasis border-info-subtle",
+    },
+    repeat: {
+      label: "Pelanggan Lama",
+      icon: "bi-arrow-repeat",
+      class: "bg-primary bg-opacity-10 text-primary border-primary-subtle",
+    },
+    has_cancelled: {
+      label: "Pernah Cancel",
+      icon: "bi-exclamation-triangle-fill",
+      class: "bg-warning bg-opacity-15 text-warning-emphasis border-warning-subtle",
+    },
+  };
+  return map[tag] || map.new;
+};
 </script>
 <template>
   <div class="row" v-if="props.show">
@@ -522,69 +435,174 @@ const dpAmount = computed(() => {
                     >
                       <i class="bi bi-person-badge me-1"></i> 1. IDENTITAS PELANGGAN
                     </h6>
-                    <div class="row g-2">
-                      <div class="col-md-6 mb-2">
-                        <label class="form-label small fw-bold text-muted"
-                          >NAMA
-                          <span class="text-danger">*</span>
-                        </label>
-                        <input-text
-                          :error="form.errors.name"
-                          v-model="form.name"
-                          name="name"
-                          placeholder="Cth: Budi Santoso"
-                        />
-                        <input-error :message="form.errors.name" />
-                      </div>
+                    <div class="row">
+                      <div class="col-12 mb-3">
+                        <div class="d-flex flex-column mb-2">
+                          <label class="form-label small fw-bold text-muted">
+                            PELANGGAN <span class="text-danger">*</span>
+                          </label>
 
-                      <div class="col-md-6 mb-2">
-                        <label class="form-label small fw-bold text-muted"
-                          >NO. HANDPHONE / WA
-                          <span class="text-danger">*</span>
-                        </label>
-                        <input-number
-                          :maxChar="15"
-                          :error="form.errors.phone"
-                          v-model="form.phone"
-                          name="phone"
-                          placeholder="081233445566"
-                        />
-                        <input-error :message="form.errors.phone" />
-                      </div>
+                          <multi-select
+                            :class="{ 'is-invalid': form.errors.id_customer }"
+                            :multiple="false"
+                            placeholder="Ketik minimal 2 huruf nama / No. HP pelanggan..."
+                            v-model="customerSelect.selected"
+                            :options="customerSelect.options"
+                            :loading="customerSelect.loading"
+                            track-by="id_customer"
+                            label="name"
+                            :internal-search="false"
+                            :clear-on-select="true"
+                            :close-on-select="true"
+                            :searchable="true"
+                            :show-labels="false"
+                            open-direction="bottom"
+                            @search-change="customerSelect.search"
+                            @update:model-value="customerSelect.onSelect"
+                          >
+                            <!-- Tampilan daftar saat dropdown terbuka -->
+                            <template #option="{ option }">
+                              <div
+                                class="d-flex justify-content-between align-items-center py-1"
+                              >
+                                <div>
+                                  <div class="fw-bold text-dark text-capitalize">
+                                    {{ option.name }}
+                                    <span
+                                      v-if="option.is_member"
+                                      class="badge bg-warning text-dark ms-1"
+                                      style="font-size: 9px"
+                                    >
+                                      ★ Member
+                                    </span>
+                                  </div>
+                                  <small class="text-muted">
+                                    <i class="bi bi-whatsapp text-success me-1"></i
+                                    >{{ option.phone }}
+                                    <span v-if="option.city"> • {{ option.city }}</span>
+                                  </small>
+                                </div>
+                                <span
+                                  class="badge bg-light text-secondary border font-monospace"
+                                >
+                                  {{ option.customer_code }}
+                                </span>
+                              </div>
+                            </template>
 
-                      <div class="col-md-6 mb-2">
-                        <label class="form-label small fw-bold text-muted"
-                          >EMAIL <small class="fst-italic">(Opsional)</small>
-                        </label>
-                        <input-text
-                          :error="form.errors.email"
-                          v-model="form.email"
-                          name="email"
-                          placeholder="Cth: dimas@perusahaan.com"
-                        />
-                        <input-error :message="form.errors.email" />
-                      </div>
+                            <!-- Kosongkan singleLabel agar nama tampil di kartu bawah field (Opsional: hapus template ini jika ingin tetap tampil di dalam input juga) -->
+                            <template #singleLabel>
+                              <span class="text-muted"
+                                >Pelanggan telah dipilih di bawah</span
+                              >
+                            </template>
+                          </multi-select>
 
-                      <div class="col-md-6 mb-2">
-                        <label class="form-label small fw-bold text-muted"
-                          >TIPE PELANGGAN
-                          <span class="text-danger">*</span>
-                        </label>
-                        <select-input
-                          text="--Pilih Tipe Pelanggan--"
-                          :error="form.errors.customer_type"
-                          name="customer_type"
-                          v-model="form.customer_type"
-                          :options="[
-                            { value: 'NEW_CUSTOMER', label: '🌱 Pelanggan Baru' },
-                            {
-                              value: 'REPEAT_ORDER',
-                              label: '🔁 Pelanggan Lama / Beli Ulang',
-                            },
-                            { value: 'WIN_BACK', label: '♻️ Reaktivasi / Pernah Cancel' },
-                          ]"
-                        />
-                        <input-error :message="form.errors.customer_type" />
+                          <input-error :message="form.errors.id_customer" />
+
+                          <!-- KARTU PELANGGAN TERPILIH DI BAWAH FIELD -->
+                          <div
+                            v-if="customerSelect.selected"
+                            class="mt-2 p-3 rounded-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 d-flex align-items-center justify-content-between gap-2"
+                          >
+                            <div class="d-flex align-items-center gap-3 min-w-0">
+                              <div
+                                class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                style="width: 38px; height: 38px"
+                              >
+                                <i class="bi bi-person-check-fill"></i>
+                              </div>
+                              <div class="min-w-0">
+                                <div class="d-flex align-items-center gap-1 flex-wrap">
+                                  <span
+                                    class="fw-bold text-dark text-capitalize text-truncate"
+                                    style="font-size: 14px"
+                                  >
+                                    {{ customerSelect.selected.name }}
+                                  </span>
+                                  <span
+                                    v-if="customerSelect.selected.customer_code"
+                                    class="badge bg-white text-primary border border-primary-subtle rounded-pill"
+                                    style="font-size: 12px"
+                                  >
+                                    {{ customerSelect.selected.customer_code }}
+                                  </span>
+                                  <span
+                                    v-if="customerSelect.selected.is_member"
+                                    class="badge bg-warning text-dark rounded-pill"
+                                    style="font-size: 12px"
+                                  >
+                                    ★ Member
+                                  </span>
+                                  <span
+                                    :class="`badge ${
+                                      customerTagMeta(
+                                        customerSelect.selected.customer_tag
+                                      ).class
+                                    } rounded-pill`"
+                                  >
+                                    <i
+                                      :class="`bi ${
+                                        customerTagMeta(
+                                          customerSelect.selected.customer_tag
+                                        ).icon
+                                      }`"
+                                    ></i>
+                                    {{
+                                      customerTagMeta(
+                                        customerSelect.selected.customer_tag
+                                      ).label
+                                    }}</span
+                                  >
+                                </div>
+
+                                <small class="text-muted d-block">
+                                  <i class="bi bi-whatsapp text-success me-1"></i
+                                  >{{ customerSelect.selected.phone }}
+                                  <span v-if="customerSelect.selected.email">
+                                    • {{ customerSelect.selected.email }}</span
+                                  >
+                                </small>
+                                <small class="text-muted d-block">
+                                  <i class="bi bi-geo-alt-fill text-danger"></i>
+                                  {{
+                                    `${customerSelect.selected.address} - ${customerSelect.selected.city}`
+                                  }}
+                                </small>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              class="btn btn-sm btn-light border text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                              style="width: 30px; height: 30px"
+                              title="Hapus pilihan pelanggan"
+                              @click="customerSelect.clear()"
+                            >
+                              <i class="bi bi-x-lg" style="font-size: 11px"></i>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div
+                          v-if="!customerSelect.selected"
+                          class="alert alert-info d-flex align-items-center gap-2 py-2 px-3 rounded-3 border-info-subtle small mb-3"
+                          role="alert"
+                        >
+                          <i
+                            class="bi bi-info-circle-fill text-info-emphasis fs-6 flex-shrink-0"
+                          ></i>
+                          <div>
+                            <span class="fw-bold">Catatan:</span> Pastikan data pelanggan
+                            sudah terdaftar. Jika belum ditemukan, klik
+                            <Link
+                              class="text-decoration-none"
+                              :href="route('customer.index')"
+                              >Tambah Pelanggan</Link
+                            >
+                            untuk mendaftarkan pelanggan baru
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -48,24 +48,12 @@ trait LeadsValidation
     public function validateLeads(array $request, ?string $id = null)
     {
         $rules = [
-            'name' => [
+
+            'id_customer' => [
                 'required',
-                'string',
-                'max:100',
+                'exists:customers,id_customer',
             ],
 
-            'phone' => [
-                'required',
-                'string',
-                'max:15',
-            ],
-
-            'email' => [
-                'nullable',
-                'email',
-                'max:100',
-                Rule::unique('leads', 'email')->ignore($id, 'id_lead'),
-            ],
 
             'id_channel' => [
                 'required',
@@ -87,11 +75,6 @@ trait LeadsValidation
                     'COLD'
                 ]),
             ],
-            'customer_type' => [
-                'required',
-                'in:NEW_CUSTOMER,REPEAT_ORDER,WIN_BACK',
-            ],
-
             'status' => [
                 'required',
                 Rule::in([
@@ -127,15 +110,8 @@ trait LeadsValidation
             $request,
             $rules,
             [
-                'name.required' => 'Nama prospek wajib diisi.',
-                'name.max' => 'Nama maksimal 100 karakter.',
-
-                'phone.required' => 'Nomor WhatsApp wajib diisi.',
-                'phone.max' => 'Nomor WhatsApp maksimal 20 karakter.',
-
-                'email.email' => 'Format email tidak valid.',
-                'email.max' => 'Email maksimal 100 karakter.',
-                'email.unique' => 'Email sudah terdaftar.',
+                'id_customer.required' => 'Silakan pilih pelanggan.',
+                'id_customer.exists' => 'Pelanggan tidak ditemukan.',
 
                 'id_channel.required' => 'Silakan pilih sumber prospek.',
                 'id_channel.exists' => 'Sumber prospek tidak ditemukan.',
@@ -147,8 +123,6 @@ trait LeadsValidation
                 'temperature.required' => 'Silakan pilih suhu prospek.',
                 'temperature.in' => 'Suhu prospek tidak valid.',
 
-                'customer_type.required' => 'Silakan pilih tipe pelanggan.',
-                'customer_type.in' => 'Tipe pelanggan tidak valid.',
 
                 'status.required' => 'Status prospek wajib dipilih.',
                 'status.in' => 'Status prospek tidak valid.',

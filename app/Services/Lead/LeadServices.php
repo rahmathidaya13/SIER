@@ -31,12 +31,9 @@ class LeadServices
                 'id_user' => $user->id,
                 'id_branch' => $user->id_branch,
                 'id_channel' => $validated['id_channel'],
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'phone' => $validated['phone'],
+                'id_customer' => $validated['id_customer'],
                 'status' => $validated['status'],
                 'temperature' => $validated['temperature'],
-                'customer_type' => $validated['customer_type'],
                 'notes' => $validated['notes'],
                 'closed_at' => $validated['status'] === 'CLOSED_WON' ? now()->toDateTimeString() : null
             ]);
@@ -77,18 +74,15 @@ class LeadServices
             ]);
 
             $leads->update([
+                'id_customer' => $validated['id_customer'],
                 'id_channel' => $validated['id_channel'],
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'phone' => $validated['phone'],
-                'customer_type' => $validated['customer_type'],
                 'status' => $validated['status'],
                 'temperature' => $validated['temperature'],
                 'notes' => $validated['notes'],
                 'closed_at' => $validated['status'] === 'CLOSED_WON' ? now()->toDateTimeString() : null
             ]);
 
-           
+
             if (array_key_exists('id_product', $validated)) {
                 $this->syncLeadProducts($leads, (array) $validated['id_product']);
             }
