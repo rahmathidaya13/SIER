@@ -23,7 +23,7 @@ trait CustomerValidation
                 'status' => 'required|in:active,inactive,blacklisted',
                 'is_member' => 'required|boolean',
                 'city' => 'required|string|max:100',
-                'address' => 'required|string|max:255',
+                'address' => 'nullable|string|max:255',
                 'created_of_branch' => 'required|exists:branches,id_branch',
             ],
             [
@@ -66,7 +66,6 @@ trait CustomerValidation
                 'customer_tag.required' => 'Kategori pelanggan wajib dipilih',
                 'customer_tag.in' => 'Kategori pelanggan tidak sesuai',
 
-                'address.required' => 'Alamat tidak boleh kosong',
                 'address.string' => 'Alamat harus berupa teks',
                 'address.max' => 'Alamat maksimal 255 karakter',
 

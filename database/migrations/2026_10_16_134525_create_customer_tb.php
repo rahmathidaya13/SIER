@@ -38,7 +38,7 @@ return new class extends Migration
             // Penanda Member Sederhana (Bisa dikombinasikan dengan tabel terpisah nantinya)
             $table->boolean('is_member')->default(false)->index();
             $table->string('city', 100)->index();
-            $table->string('address', 255);
+            $table->string('address', 255)->nullable();
             $table->softDeletes();
             $table->timestamps();
             $table->index(['created_of_branch', 'created_at']);

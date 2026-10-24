@@ -18,6 +18,7 @@ class PaymentHistory extends Model
         'id_sales',
         'id_user',
         'id_lead',
+        'id_customer',
         'payment_method',
         'bank_name',
         'paid_amount',

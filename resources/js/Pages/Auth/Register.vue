@@ -252,7 +252,7 @@ const passwordStrength = computed(() => {
                                                 autocomplete="off" v-model="form.password_confirmation"
                                                 name="password_confirmation" />
                                             <i @click="togglePasswordConfirm"
-                                                :class="['input-icon-right', 'cursor-pointer', showPasswordConfirm ? 'fas fa-eye-slash' : 'fas fa-eye']"></i>
+                                                :class="['input-icon-right', 'cursor-pointer', showPasswordConfirm ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill']"></i>
                                         </div>
                                         <input-error :message="form.errors.password_confirmation" />
                                     </div>

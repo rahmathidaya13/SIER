@@ -5,13 +5,13 @@ import { useFilter } from "@/Composables/useFilter";
 import { formatDate } from "@/Helpers/formatDate";
 import FormModal from "./FormModal.vue";
 import { useConfirm } from "@/Composables/useConfirm";
+import { highlight } from "@/Helpers/Highlight";
 const confirm = useConfirm();
 const props = defineProps({
   customers: Object,
   filters: Object,
   branches: Array,
 });
-console.log(props.branches);
 const header = [
   {
     label: "No",
@@ -202,7 +202,8 @@ console.log(props.customers);
     <template #content>
       <div class="row g-3 view-section">
         <div class="col-12">
-          <callout :duration="0" />
+          <toast :duration="10" />
+
           <div class="card border-0 rounded-4 overflow-hidden">
             <div class="card-header p-4 bg-white">
               <div
@@ -217,6 +218,47 @@ console.log(props.customers);
                 >
                   <i class="bi bi-person-plus-fill me-1"></i> Pelanggan Baru
                 </button>
+              </div>
+            </div>
+
+            <div class="row p-3 g-2 align-items-center">
+              <div class="col-12 col-md-12 col-lg-12 col-xl-6">
+                <div class="position-relative">
+                  <i class="bi bi-search input-icon-left"></i>
+                  <input-text
+                    ref="keywordRef"
+                    :isValid="false"
+                    v-model="filters.keyword"
+                    inputClass="input-fixed-height input-height-1 rounded-pill"
+                    placeholder="Cari nama pelanggan & No.Handphone ...."
+                  />
+                </div>
+              </div>
+              <div class="col-xl-1 col-3 col-md-3 col-lg-3">
+                <select-input
+                  :isValid="false"
+                  name="limit"
+                  v-model="filters.limit"
+                  text="Pilih Batas Data"
+                  :options="[
+                    { label: '☰ 10 Data', value: 10 },
+                    { label: '☰ 25 Data', value: 25 },
+                    { label: '☰ 50 Data', value: 50 },
+                    { label: '☰ 100 Data', value: 100 },
+                  ]"
+                />
+              </div>
+              <div class="col-xl-1 col-3 col-md-3 col-lg-3">
+                <select-input
+                  :isValid="false"
+                  name="order_by"
+                  v-model="filters.order_by"
+                  text="Pilih Urutan"
+                  :options="[
+                    { label: '🔼 Terbaru', value: 'latest' },
+                    { label: '🔽 Terlama', value: 'oldest' },
+                  ]"
+                />
               </div>
             </div>
 
@@ -270,8 +312,8 @@ console.log(props.customers);
                             class="fw-bold text-dark text-capitalize text-truncate"
                             style="max-width: 170px; font-size: 14px"
                             :title="item.name"
+                            v-html="highlight(item.name, filters.keyword)"
                           >
-                            {{ item.name }}
                           </span>
                         </div>
 
@@ -326,7 +368,7 @@ console.log(props.customers);
                         title="Hubungi via WhatsApp"
                       >
                         <i class="bi bi-whatsapp text-success"></i>
-                        <span>{{ item.phone }}</span>
+                        <span v-html="highlight(item.phone,filters.keyword)"></span>
                       </a>
 
                       <!-- Email -->

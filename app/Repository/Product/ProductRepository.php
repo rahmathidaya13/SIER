@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\DB;
 class ProductRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'product_cache_';
+    protected int $cacheMinutes = 30;
+
     public function buildBaseQuery($filters = [])
     {
         $query = DB::table('products')

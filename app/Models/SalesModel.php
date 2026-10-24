@@ -19,6 +19,7 @@ class SalesModel extends Model
         'id_lead',
         'id_user',
         'id_branch',
+        'id_customer',
         'deal_price',
         'remaining_bill',
         'paid_amount',
@@ -114,5 +115,10 @@ class SalesModel extends Model
     public function cancelledBy()
     {
         return $this->belongsTo(User::class, 'cancelled_by', 'id');
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(CustomerModel::class, 'id_customer', 'id_customer');
     }
 }

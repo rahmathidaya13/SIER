@@ -67,9 +67,10 @@ class LeadsRepository extends BaseCacheRepository
         $this->applyScope($query, $scopeKey);
         $this->applyFilters($query, $filters);
         [$column, $direction] = $this->resolveSorting($filters);
+        $limit = min((int) ($filters['limit'] ?? 10), 100);
         return $query
             ->orderBy($column, $direction)
-            ->paginate($filters['limit'] ?? 10);
+            ->paginate($limit);
     }
 
     // ------------------------------------------------------------------
@@ -139,8 +140,8 @@ class LeadsRepository extends BaseCacheRepository
             $search = (string) $filters['keyword'];
             $cleanSearch = addcslashes($search, '%_');
             $q->where(function ($subQuery) use ($cleanSearch) {
-                $subQuery->where('leads.name', 'like', "%{$cleanSearch}%")
-                    ->orWhere('leads.phone', 'like', "%{$cleanSearch}%");
+                $subQuery->where('customers.name', 'like', "%{$cleanSearch}%")
+                    ->orWhere('customers.phone', 'like', "%{$cleanSearch}%");
             });
         });
     }

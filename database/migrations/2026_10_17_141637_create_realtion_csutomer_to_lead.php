@@ -21,6 +21,11 @@ return new class extends Migration
                 ->constrained('customers', 'id_customer')->cascadeOnDelete();
             $table->index('id_customer');
         });
+        Schema::table('payment_histories', function (Blueprint $table) {
+            $table->foreignUuid('id_customer')->after('id_lead')
+                ->constrained('customers', 'id_customer')->cascadeOnDelete();
+            $table->index('id_customer');
+        });
     }
 
     /**
@@ -33,6 +38,10 @@ return new class extends Migration
             $table->dropColumn('id_customer');
         });
         Schema::table('sales', function (Blueprint $table) {
+            $table->dropForeign(['id_customer']);
+            $table->dropColumn('id_customer');
+        });
+        Schema::table('payment_histories', function (Blueprint $table) {
             $table->dropForeign(['id_customer']);
             $table->dropColumn('id_customer');
         });

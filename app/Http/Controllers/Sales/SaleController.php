@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Sales;
 use App\Traits\UserScope;
 use App\Models\SalesModel;
 use App\Models\BranchModel;
+use Illuminate\Support\Arr;
 use Illuminate\Http\Request;
 use App\Models\PaymentHistory;
 use App\Traits\SalesValidation;
 use App\Models\LeadActivityModel;
 use App\Models\SalesProductModel;
+use App\Traits\InvalidatesCaches;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Traits\BranchMutationHelper;
@@ -27,7 +29,7 @@ use App\Services\Authorization\ScopeResolverService;
 
 class SaleController extends Controller
 {
-    use UserScope, BranchMutationHelper, SalesValidation;
+    use UserScope, SalesValidation, InvalidatesCaches;
     protected $saleRepository;
     protected $paymentValidationService;
     protected $salePaymentService;
@@ -63,7 +65,9 @@ class SaleController extends Controller
 
         // inject id_branch and id_user untuk unique cache
         $filters = app(ScopeResolverService::class)->filters($filters);
-        $sales   = $this->saleRepository->getCached($filters['scope'], $filters);
+        $cleanFilters = Arr::except($filters, ['scope', 'page']); // Hapus 'scope' dan 'page' dari $filters sebelumnya
+
+        $sales   = $this->saleRepository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
 
         $salesStats = $this->saleRepository->getSalesStats($filters);
         $branch     = BranchModel::select('id_branch', 'name')->get();

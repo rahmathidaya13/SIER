@@ -28,13 +28,15 @@ class CustomerController extends Controller
     }
     public function index(Request $request)
     {
-        $filters = $request->only([
-            'keyword',
-            'limit',
-            'order_by',
-            'page',
-
+        $validated = $request->validate([
+            'keyword' => 'nullable|string|max:255',
+            'limit' => 'nullable|integer|min:1|max:100',
+            'order_by' => 'nullable|string|in:oldest,latest',
+            'page' => 'nullable|integer|min:1',
         ]);
+
+        $filters = $request->only(array_keys($validated));
+
         $filters = app(ScopeResolverService::class)->filters($filters); // Gunakan ScopeResolverService untuk memproses filter berdasarkan scope yang diperlukan
         $cleanFilters = Arr::except($filters, ['scope', 'page']); // Hapus 'scope' dan 'page' dari $filters sebelumnya
         $customer = $this->repository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);

@@ -362,7 +362,7 @@ const customerTagMeta = (tag) => {
     new: {
       label: "Pelanggan Baru",
       icon: "bi-sparkles",
-      class: "bg-info bg-opacity-10 text-info-emphasis border-info-subtle",
+      class: "bg-info bg-opacity-10 text-dark border-info-subtle",
     },
     repeat: {
       label: "Pelanggan Lama",
@@ -439,7 +439,7 @@ const customerTagMeta = (tag) => {
                       <div class="col-12 mb-3">
                         <div class="d-flex flex-column mb-2">
                           <label class="form-label small fw-bold text-muted">
-                            PELANGGAN <span class="text-danger">*</span>
+                            CARI PELANGGAN <span class="text-danger">*</span>
                           </label>
 
                           <multi-select
@@ -463,24 +463,30 @@ const customerTagMeta = (tag) => {
                             <!-- Tampilan daftar saat dropdown terbuka -->
                             <template #option="{ option }">
                               <div
-                                class="d-flex justify-content-between align-items-center py-1"
+                                class="d-flex justify-content-between align-items-center py-1 gap-2"
                               >
                                 <div>
-                                  <div class="fw-bold text-dark text-capitalize">
+                                  <div class="fw-bold text-dark text-capitalize mb-2">
                                     {{ option.name }}
                                     <span
                                       v-if="option.is_member"
                                       class="badge bg-warning text-dark ms-1"
-                                      style="font-size: 9px"
+                                      style="font-size: 12px"
                                     >
                                       ★ Member
                                     </span>
+                                    <span
+                                      :class="`badge ${customerTagMeta(option.customer_tag).class} ms-1`"
+                                      style="font-size: 12px"
+                                    >
+                                     {{ customerTagMeta(option.customer_tag).label }}
+                                    </span>
                                   </div>
-                                  <small class="text-muted">
+                                  <span class="text-muted">
                                     <i class="bi bi-whatsapp text-success me-1"></i
                                     >{{ option.phone }}
-                                    <span v-if="option.city"> • {{ option.city }}</span>
-                                  </small>
+                                    <span > • {{ option.email || 'Email tidak ditemukan' }}</span>
+                                  </span>
                                 </div>
                                 <span
                                   class="badge bg-light text-secondary border font-monospace"
@@ -516,7 +522,6 @@ const customerTagMeta = (tag) => {
                                 <div class="d-flex align-items-center gap-1 flex-wrap">
                                   <span
                                     class="fw-bold text-dark text-capitalize text-truncate"
-                                    style="font-size: 14px"
                                   >
                                     {{ customerSelect.selected.name }}
                                   </span>

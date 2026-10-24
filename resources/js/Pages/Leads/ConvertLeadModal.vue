@@ -117,7 +117,7 @@ const dpAmount = computed(() => {
                                 <i class="bi bi-person-bounding-box"></i>
                             </div>
                             <div>
-                                <h6 class="mb-1 fw-bold text-dark fs-5">{{ dataLead?.name }}</h6>
+                                <h6 class="mb-1 fw-bold text-dark fs-5">{{ dataLead?.customers?.name }}</h6>
                                 <div class="text-primary fw-medium small">
                                     <i class="bi bi-cart-check-fill me-1"></i>
                                     Closing <strong>{{ dataLead?.products?.length || 0 }}</strong> Produk

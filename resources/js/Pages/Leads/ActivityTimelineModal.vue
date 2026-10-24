@@ -81,20 +81,6 @@ watch(
 }
 );
 
-// Filter Cerdas: Menentukan Icon dan Warna berdasarkan isi teks
-const getTimelineStyle = (description) => {
-    if (description.includes('💰')) {
-        return { icon: 'bi-cash-stack', color: 'success', bg: 'bg-success-subtle', text: 'text-success' };
-    }
-    if (description.includes('🎉') || description.includes('DEAL')) {
-        return { icon: 'bi-bag-check-fill', color: 'primary', bg: 'bg-primary-subtle', text: 'text-primary' };
-    }
-    if (description.includes('❌') || description.includes('LOST')) {
-        return { icon: 'bi-x-circle-fill', color: 'danger', bg: 'bg-danger-subtle', text: 'text-danger' };
-    }
-    // Default untuk Follow Up biasa
-    return { icon: 'bi-chat-dots-fill', color: 'secondary', bg: 'bg-light', text: 'text-secondary' };
-};
 const getRoleName = (roleName) => {
     const roles = {
         'super_admin': {
@@ -123,25 +109,25 @@ const getRoleName = (roleName) => {
         color: 'bg-light text-dark border'
     };
 };
-const customerType = (type) => {
-    const types = {
-        'NEW_CUSTOMER': {
-            label: 'Pelanggan Baru',
-            color: 'bg-success text-white'
-        },
-        'REPEAT_ORDER': {
-            label: 'Pelanggan Lama',
-            color: 'bg-primary text-white'
-        },
-        'WIN_BACK': {
-            label: 'Pelanggan Pernah Refund',
-            color: 'bg-danger text-white'
-        },
-    };
-    return types[type] || {
-        label: 'Pelanggan Baru',
-        color: 'bg-light text-dark border'
-    };
+const customerTagMeta = (tag) => {
+  const map = {
+    new: {
+      label: "Pelanggan Baru",
+      icon: "bi-sparkles",
+      class: "bg-info bg-opacity-10 text-dark border-info-subtle",
+    },
+    repeat: {
+      label: "Pelanggan Lama",
+      icon: "bi-arrow-repeat",
+      class: "bg-primary bg-opacity-10 text-primary border-primary-subtle",
+    },
+    has_cancelled: {
+      label: "Pernah Cancel",
+      icon: "bi-exclamation-triangle-fill",
+      class: "bg-warning bg-opacity-15 text-warning-emphasis border-warning-subtle",
+    },
+  };
+  return map[tag] || map.new;
 };
 const statusProspect = (value) => {
     const types = {
@@ -214,15 +200,15 @@ const getTimeOnly = (date) => {
 
                                 <!-- Detail Kontak -->
                                 <div class="flex-grow-1">
-                                    <h5 class="fw-bold text-dark mb-1 text-capitalize">{{ leads.name }}</h5>
+                                    <h5 class="fw-bold text-dark mb-1 text-capitalize">{{ leads.customers?.name }}</h5>
                                     <div class="d-flex flex-wrap gap-3 text-muted" style="font-size: 13px;">
                                         <span class="d-flex align-items-center">
                                             <i class="bi bi-telephone-fill me-1 text-secondary opacity-75"></i> {{
-                                                leads.phone }}
+                                                leads.customers?.phone }}
                                         </span>
                                         <span class="d-flex align-items-center">
                                             <i class="bi bi-envelope-fill me-1 text-secondary opacity-75"></i> {{
-                                                leads.email || 'Tidak ada email' }}
+                                                leads.customers?.email || 'Tidak ada email' }}
                                         </span>
                                     </div>
                                 </div>
@@ -315,7 +301,7 @@ const getTimeOnly = (date) => {
                                 <i class="bi bi-person-badge"></i>
                             </div>
                             <span class="text-muted me-1">Tipe:</span>
-                            <span class="fw-bold text-dark text-capitalize">{{ customerType(leads.customer_type).label
+                            <span class="fw-bold text-dark text-capitalize">{{ customerTagMeta(leads.customers?.customer_tag).label
                                 }}</span>
                         </div>
 

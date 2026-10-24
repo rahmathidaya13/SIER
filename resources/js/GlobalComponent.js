@@ -23,6 +23,7 @@ import AlertErrorAll from "./Component/AlertErrorAll.vue";
 import ChartBar from "./Component/ChartBar.vue";
 import Multiselect from "vue-multiselect";
 import RadioBox from "./Component/RadioBox.vue";
+import ToastNotification from "./Component/ToastNotification.vue";
 export default {
     install(app) {
         app.component("app-layout", AppLayout);
@@ -50,5 +51,6 @@ export default {
         app.component("chart-bar", ChartBar);
         app.component("multi-select", Multiselect);
         app.component("radio-button", RadioBox);
+        app.component("toast", ToastNotification);
     },
 };

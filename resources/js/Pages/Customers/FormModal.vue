@@ -254,7 +254,6 @@ const submitTextButton = computed(() => {
       >
         <template #body>
           <alert-error-all :errors="form.errors" @close="form.clearErrors()" />
-
           <div v-if="isLoadingData" class="py-5 text-center">
             <div class="spinner-border text-primary mb-2" role="status"></div>
             <p class="text-muted small mb-0">Memuat informasi pelanggan...</p>
@@ -645,13 +644,9 @@ const submitTextButton = computed(() => {
 
               <!-- Alamat Lengkap -->
               <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <label
-                    class="form-label text-uppercase text-muted fw-bold tracking-wide"
-                  >
-                    Alamat Lengkap <span class="text-danger">*</span>
-                  </label>
-                </div>
+                <label class="form-label text-uppercase text-muted fw-bold tracking-wide">
+                  Alamat Lengkap
+                </label>
 
                 <text-area
                   v-model="form.address"
@@ -661,16 +656,14 @@ const submitTextButton = computed(() => {
                   :error="form.errors.address"
                   placeholder="Masukkan alamat yang sesuai..."
                 ></text-area>
-                <input-error :message="form.errors.address" class="mt-1" />
+                <input-error :message="form.errors.address" />
               </div>
             </div>
           </form-wrapper>
         </template>
 
         <template #footer>
-          <div
-            class="d-flex justify-content-end gap-2 p-2 bg-transparent"
-          >
+          <div class="d-flex justify-content-end gap-2 p-2 bg-transparent">
             <button
               type="button"
               class="btn btn-c-slate border-0 fw-medium px-4"

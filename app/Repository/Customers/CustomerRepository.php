@@ -51,14 +51,14 @@ class CustomerRepository extends BaseCacheRepository
     protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator
     {
 
-        // $filters = array_intersect_key($filters, array_flip(self::ALLOWED_FILTERS));
         $query = $this->buildListQuery();
         $this->applyScope($query, $scopeKey);
-        $this->applyFilters($query, $filters);
+        $this->filterKeyword($query, $filters);
         [$column, $direction] = $this->resolveSorting($filters);
+        $limit = min((int) ($filters['limit'] ?? 10), 100);
         return $query
             ->orderBy($column, $direction)
-            ->paginate($filters['limit'] ?? 10);
+            ->paginate($limit);
     }
     protected function applyScope(Builder $query, string|int|null $scopeKey): void
     {
@@ -88,7 +88,7 @@ class CustomerRepository extends BaseCacheRepository
 
         throw new \InvalidArgumentException("Scope key tidak dikenal: {$scopeKey}");
     }
-    protected function applyFilters(Builder $query, array $filters): Builder
+    protected function filterKeyword(Builder $query, array $filters): Builder
     {
         $query->when(! empty($filters['keyword']), function (Builder $q) use ($filters): void {
             $escaped = addcslashes((string) $filters['keyword'], '%_\\');
@@ -98,13 +98,6 @@ class CustomerRepository extends BaseCacheRepository
                     ->orWhere('customers.phone', 'like', "%{$escaped}%");
             });
         });
-
-        // $query->when(
-        //     ! empty($filters['customer_type']),
-        //     fn(Builder $q) =>
-        //     $q->where('customers.customer_type', $filters['customer_type'])
-        // );
-
         return $query;
     }
     protected function resolveSorting(array $filters): array

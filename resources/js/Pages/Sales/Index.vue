@@ -18,6 +18,7 @@ const props = defineProps({
   stats: Object,
   branch: Array,
 });
+console.log(props.sales.data)
 const { filters, isLoading } = useFilter({
   routeName: "sales.index",
   initialFilters: {
@@ -382,21 +383,21 @@ const getEmail = (email) => {
                       <div
                         @click.prevent="openActivityModal(item)"
                         class="fw-bold text-primary mb-1 text-decoration-none cursor-pointer"
-                        v-html="highlight(item.lead_customer_name, filters.keyword)"
+                        v-html="highlight(item.customer_name, filters.keyword)"
                       ></div>
                     </div>
-                    <div v-if="item.lead_customer_email" class="text-muted small mb-1">
+                    <div v-if="item.customer_email" class="text-muted small mb-1">
                       <a
-                        :href="getEmail(item.lead_customer_email)"
+                        :href="getEmail(item.customer_email)"
                         class="text-decoration-none"
                       >
                         <i class="bi bi-envelope-fill me-1"></i>
-                        {{ item.lead_customer_email }}</a
+                        {{ item.customer_email }}</a
                       >
                     </div>
                     <div class="d-flex align-items-center gap-2">
                       <a
-                        :href="getWaLink(item.lead_customer_phone)"
+                        :href="getWaLink(item.customer_phone)"
                         target="_blank"
                         class="badge bg-success text-white text-decoration-none px-2 py-1 d-inline-flex align-items-center gap-1"
                         title="Chat langsung via WhatsApp"
