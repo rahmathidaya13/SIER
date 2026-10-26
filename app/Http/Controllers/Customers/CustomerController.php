@@ -10,7 +10,10 @@ use App\Models\CustomerModel;
 use App\Traits\InvalidatesCaches;
 use App\Traits\CustomerValidation;
 use App\Http\Controllers\Controller;
+use App\Repository\Sale\SaleRepository;
+use App\Repository\User\UserRepository;
 use App\Http\Resources\CustomerResource;
+use App\Repository\Lead\LeadsRepository;
 use App\Services\Customers\CustomerService;
 use Illuminate\Validation\ValidationException;
 use App\Repository\Customers\CustomerRepository;
@@ -39,8 +42,7 @@ class CustomerController extends Controller
         $filters = $request->only(array_keys($validated));
 
         $filters = app(ScopeResolverService::class)->filters($filters); // Gunakan ScopeResolverService untuk memproses filter berdasarkan scope yang diperlukan
-        $cleanFilters = Arr::except($filters, ['scope']); // Hapus 'scope' dan 'page' dari $filters sebelumnya
-        $customer = $this->repository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
+        $customer = $this->repository->getCached($filters['scope'], $filters, $filters['page'] ?? 1);
 
         $branch = BranchModel::select('id_branch', 'name')->get();
         return inertia(
@@ -62,7 +64,10 @@ class CustomerController extends Controller
 
             $this->invalidateCaches(
                 [
-                    CustomerRepository::class
+                    CustomerRepository::class,
+                    LeadsRepository::class,
+                    SaleRepository::class,
+                    UserRepository::class
                 ],
                 [
                     ScopeKey::user($customer->created_by),

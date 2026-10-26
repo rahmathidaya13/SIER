@@ -43,7 +43,7 @@ class ChannelController extends Controller
         ]);
 
         $filters = app(ScopeResolverService::class)->filters($filters);
-        $channels = $this->repository->getCached($filters['scope'], $filters);
+        $channels = $this->repository->getCached($filters['scope'], $filters, $filters['page'] ?? 1);
         return inertia('Channels/Index', [
             'channels' => $channels,
             'filters' => $filters

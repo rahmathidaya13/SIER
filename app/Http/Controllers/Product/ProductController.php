@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 use App\Traits\InvalidatesCaches;
 use App\Traits\ProductValidation;
 use App\Http\Controllers\Controller;
-use App\Traits\BranchMutationHelper;
 use Illuminate\Support\Facades\Gate;
 use App\Services\Product\ProductService;
 use App\Repository\Product\ProductRepository;
@@ -40,8 +39,7 @@ class ProductController extends Controller
 
         $filters = $request->only(array_keys($validated));
         $filters = app(ScopeResolverService::class)->filters($filters);
-        $cleanFilters = Arr::except($filters, ['scope']);
-        $products = $this->repository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
+        $products = $this->repository->getCached($filters['scope'], $filters, $filters['page'] ?? 1);
         $category = ProductModel::select('category')->distinct()->get();
         return inertia('Product/Index', [
             'products' => $products,
@@ -121,6 +119,7 @@ class ProductController extends Controller
             ]);
         }
 
+        // policy penghapusan data
         $response = Gate::inspect('deleted', $product);
         if ($response->denied()) {
             throw ValidationException::withMessages([
@@ -136,7 +135,14 @@ class ProductController extends Controller
                 'error' => "Sistem gagal menghapus data {$product->name} secara aman."
             ]);
         }
-        $this->invalidateCaches([ProductRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
+        $this->invalidateCaches([
+            ProductRepository::class
+        ], [
+            ScopeKey::GLOBAL,
+            ScopeKey::GLOBAL_SUPER_ADMIN,
+            ScopeKey::branch($user->id_branch),
+            ScopeKey::user($user->id)
+        ]);
         return redirect()->back()->with('message', 'Data produk ' . $product->name . ' berhasil dihapus');
     }
 }

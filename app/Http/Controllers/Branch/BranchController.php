@@ -7,16 +7,16 @@ use App\Models\BranchModel;
 use Illuminate\Http\Request;
 use App\Traits\BranchValidation;
 use App\Http\Controllers\Controller;
-use App\Traits\BranchMutationHelper;
 use App\Services\Branches\BranchServices;
 use App\Repository\Branches\BranchRepository;
 use App\Repository\User\UserRepository;
 use Illuminate\Validation\ValidationException;
 use App\Services\Authorization\ScopeResolverService;
+use App\Traits\InvalidatesCaches;
 
 class BranchController extends Controller
 {
-    use BranchMutationHelper, BranchValidation;
+    use InvalidatesCaches, BranchValidation;
     protected $repository;
     protected $branchServices;
 
@@ -27,21 +27,17 @@ class BranchController extends Controller
     }
     public function index(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'keyword' => 'nullable|string|max:255',
             'limit' => 'nullable|integer|min:1|max:100',
             'order_by' => 'nullable|string|in:oldest,latest',
             'page' => 'nullable|integer|min:1',
         ]);
 
-        $filters = $request->only([
-            'keyword',
-            'limit',
-            'order_by',
-            'page',
-        ]);
+        $filters = $request->only(array_keys($validated));
+
         $filters = app(ScopeResolverService::class)->filters($filters);
-        $branches = $this->repository->getCached($filters['scope'], $filters);
+        $branches = $this->repository->getCached($filters['scope'], $filters, $filters['page'] ?? 1);
         return inertia('Branches/Index', [
             'branches' => $branches,
             'filters' => $filters
