@@ -143,7 +143,8 @@ const branchOptions = computed(() => [
   <app-layout>
     <template #content>
       <div class="row g-3 view-section">
-        <callout />
+
+        <toast :duration="10" />
 
         <div class="col-12">
           <div class="card p-2 d-flex border overflow-hidden">

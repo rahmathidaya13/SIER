@@ -10,11 +10,8 @@ const props = defineProps({
 });
 
 const page = usePage();
-
 const visible = ref(false);
-
 const countdown = ref(props.duration);
-
 const toast = ref(null);
 
 let timer = null;

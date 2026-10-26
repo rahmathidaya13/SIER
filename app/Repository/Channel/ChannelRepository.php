@@ -41,7 +41,6 @@ class ChannelRepository extends BaseCacheRepository
         return $query
             ->orderBy($column, $direction)
             ->paginate($filters['limit'] ?? 10)
-            ->withQueryString()
             ->through(function ($channel) {
 
                 $conversionRate = $channel->total_leads > 0

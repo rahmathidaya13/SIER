@@ -140,7 +140,7 @@ class SaleRepository extends BaseCacheRepository
             });
         });
     }
-    protected function filterBranch(Builder $query, array $filters): Builder // Filter berdasarkan branch 
+    protected function filterBranch(Builder $query, array $filters): Builder // Filter berdasarkan branch
     {
         $user = auth()->user();
         if (!$user->hasRole(['super_admin', 'developer'])) return $query;

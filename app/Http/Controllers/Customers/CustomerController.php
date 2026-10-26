@@ -33,12 +33,13 @@ class CustomerController extends Controller
             'limit' => 'nullable|integer|min:1|max:100',
             'order_by' => 'nullable|string|in:oldest,latest',
             'page' => 'nullable|integer|min:1',
+            'branch' => 'nullable|string|in:all,' . implode(',', BranchModel::pluck('name')->toArray()),
         ]);
 
         $filters = $request->only(array_keys($validated));
 
         $filters = app(ScopeResolverService::class)->filters($filters); // Gunakan ScopeResolverService untuk memproses filter berdasarkan scope yang diperlukan
-        $cleanFilters = Arr::except($filters, ['scope', 'page']); // Hapus 'scope' dan 'page' dari $filters sebelumnya
+        $cleanFilters = Arr::except($filters, ['scope']); // Hapus 'scope' dan 'page' dari $filters sebelumnya
         $customer = $this->repository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
 
         $branch = BranchModel::select('id_branch', 'name')->get();
@@ -157,8 +158,15 @@ class CustomerController extends Controller
         $user = auth()->user();
         $customer = CustomerModel::findOrFail($id);
 
+        if ($customer->leads()->exists() || $customer->sales()->exists()) {
+            throw ValidationException::withMessages([
+                'error' => 'Pelanggan ' . ucwords($customer->name) . ' tidak dapat dihapus karena sudah memiliki riwayat leads atau transaksi.'
+            ]);
+        }
+
         // Simpan data untuk keperluan hapus cache sebelum datanya di-delete
         $CustomerName = $customer->name;
+
         $cacheScopes = [
             ScopeKey::user($user->id),
             ScopeKey::user($customer->created_by),

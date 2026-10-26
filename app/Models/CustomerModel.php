@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class CustomerModel extends Model
 {
@@ -42,6 +43,26 @@ class CustomerModel extends Model
         'is_member' => 'boolean',
     ];
 
+    /**
+     * Generate kode unik pelanggan (Contoh: CUST-2610-X9B2).
+     */
+    public static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            $model->customer_code = self::generateUniqueCode();
+        });
+    }
+    public static function generateUniqueCode()
+    {
+        $prefix = 'CUST-' . now()->format('ym') . '-';
+
+        do {
+            $code = $prefix . strtoupper(Str::random(4));
+        } while (CustomerModel::withTrashed()->where('customer_code', $code)->exists());
+
+        return $code;
+    }
 
     public function creator()
     {

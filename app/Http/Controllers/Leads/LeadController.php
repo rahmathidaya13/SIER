@@ -71,7 +71,7 @@ class LeadController extends Controller
 
         ]);
         $filters = app(ScopeResolverService::class)->filters($filters); // Gunakan ScopeResolverService untuk memproses filter berdasarkan scope yang diperlukan
-        $cleanFilters = Arr::except($filters, ['scope', 'page']); // Hapus 'scope' dan 'page' dari $filters sebelumnya
+        $cleanFilters = Arr::except($filters, ['scope']); // Hapus 'scope' dan 'page' dari $filters sebelumnya
         $leads = $this->repository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
         $channels = ChannelModel::select('id_channel', 'name', 'icon')->get();
         return inertia(

@@ -7,15 +7,17 @@ use App\Models\ChannelModel;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
-use App\Traits\BranchMutationHelper;
 use Illuminate\Support\Facades\Gate;
 use App\Repository\Channel\ChannelRepository;
+use App\Repository\Lead\LeadsRepository;
 use Illuminate\Validation\ValidationException;
 use App\Services\Authorization\ScopeResolverService;
+use App\Traits\InvalidatesCaches;
+use App\Support\ScopeKey;
 
 class ChannelController extends Controller
 {
-    use UserScope, BranchMutationHelper;
+    use UserScope, InvalidatesCaches;
     protected $repository;
     public function __construct(ChannelRepository $channelRepository)
     {
@@ -137,9 +139,22 @@ class ChannelController extends Controller
                 'error' => 'Anda tidak memiliki akses untuk menghapus channel!'
             ]);
         }
+        if($channel->leads()->exists()) {
+            throw ValidationException::withMessages([
+                'error' => 'Sumber trafik ini masih memiliki leads!'
+            ]);
+        }
 
         $channel->delete();
-        $this->invalidateCaches([ChannelRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
+        $this->invalidateCaches([
+            ChannelRepository::class,
+            LeadsRepository::class,
+        ], [
+            ScopeKey::GLOBAL,
+            ScopeKey::GLOBAL_SUPER_ADMIN,
+            ScopeKey::branch($user->id_branch),
+            ScopeKey::user($user->id)
+        ]);
         return redirect()->back()->with('message', 'Channel ' . $channel->name . ' berhasil dihapus!');
     }
 }

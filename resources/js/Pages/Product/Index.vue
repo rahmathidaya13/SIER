@@ -136,7 +136,8 @@ const canAccess = (permission, role = []) => {
     <template #content>
       <div class="row g-3 view-section">
         <div class="col-12">
-          <callout />
+          <toast :duration="10" />
+
           <div class="card border-0 rounded-4 overflow-hidden">
             <div class="card-header p-4 bg-white">
               <div

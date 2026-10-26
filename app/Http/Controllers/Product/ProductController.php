@@ -22,29 +22,25 @@ class ProductController extends Controller
     use UserScope, InvalidatesCaches, ProductValidation;
     protected $repository;
     protected $services;
-    public function __construct(ProductRepository $repository)
+    public function __construct()
     {
-        $this->repository = $repository;
+        $this->repository = new ProductRepository();
         $this->services = new ProductService();
     }
     public function index(Request $request)
     {
         $this->authorize('view', ProductModel::class);
-        $request->validate([
+
+        $validated = $request->validate([
             'keyword' => 'nullable|string|max:255',
             'limit' => 'nullable|integer|min:1|max:100',
             'order_by' => 'nullable|string|in:oldest,latest',
             'page' => 'nullable|integer|min:1',
         ]);
 
-        $filters = $request->only([
-            'keyword',
-            'limit',
-            'order_by',
-            'page',
-        ]);
+        $filters = $request->only(array_keys($validated));
         $filters = app(ScopeResolverService::class)->filters($filters);
-        $cleanFilters = Arr::except($filters, ['scope', 'page']);
+        $cleanFilters = Arr::except($filters, ['scope']);
         $products = $this->repository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
         $category = ProductModel::select('category')->distinct()->get();
         return inertia('Product/Index', [
@@ -68,11 +64,13 @@ class ProductController extends Controller
                 'unauthorized_action' => $response->message()
             ]);
         }
-        $this->validateProduct($request->all());
+        $validated = $this->validateProduct($request->all());
         $user = auth()->user();
-        $product = $this->services->store($request->all());
+        $product = $this->services->store($validated);
         $this->invalidateCaches(
-            [ProductRepository::class],
+            [
+                ProductRepository::class,
+            ],
             [
                 ScopeKey::GLOBAL,
                 ScopeKey::GLOBAL_SUPER_ADMIN,
@@ -141,5 +139,4 @@ class ProductController extends Controller
         $this->invalidateCaches([ProductRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
         return redirect()->back()->with('message', 'Data produk ' . $product->name . ' berhasil dihapus');
     }
-
 }

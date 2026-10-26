@@ -18,7 +18,7 @@ const props = defineProps({
   stats: Object,
   branch: Array,
 });
-console.log(props.sales.data)
+console.log(props.sales.data);
 const { filters, isLoading } = useFilter({
   routeName: "sales.index",
   initialFilters: {
@@ -200,7 +200,7 @@ const getEmail = (email) => {
     <template #content>
       <div class="row g-3 view-section">
         <div class="col-12">
-          <callout />
+          <toast :duration="10" />
 
           <div class="row g-3 mb-4">
             <div class="col-md-12 col-12 col-xl-4">

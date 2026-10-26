@@ -2,6 +2,7 @@
 
 namespace App\Repository\Customers;
 
+use App\Models\BranchModel;
 use App\Models\User;
 use App\Support\ScopeKey;
 use App\Models\CustomerModel;
@@ -50,10 +51,10 @@ class CustomerRepository extends BaseCacheRepository
     }
     protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator
     {
-
         $query = $this->buildListQuery();
         $this->applyScope($query, $scopeKey);
         $this->filterKeyword($query, $filters);
+        $this->filterBranch($query, $filters);
         [$column, $direction] = $this->resolveSorting($filters);
         $limit = min((int) ($filters['limit'] ?? 10), 100);
         return $query
@@ -108,5 +109,22 @@ class CustomerRepository extends BaseCacheRepository
             'name_desc' => ['customers.name', 'desc'],
             default     => ['customers.created_at', 'desc'],
         };
+    }
+
+    protected function filterBranch(Builder $query, array $filters) // Filter berdasarkan branch
+    {
+        $user = auth()->user();
+        $isSuperAdmin = $user->hasRole(['super_admin', 'developer']);
+
+        $branchName = trim((string) ($filters['branch'] ?? 'all'));
+
+        return $query
+            // Jika bukan admin, wajib kunci ke id_branch milik user
+            ->when(!$isSuperAdmin, fn($q) => $q->where('created_of_branch', $user->id_branch ?? '__not_found__'))
+
+            // Jika super admin dan memilih nama cabang tertentu, cari via subquery
+            ->when($isSuperAdmin && $branchName !== '' && $branchName !== 'all', function ($q) use ($branchName) {
+                $q->where('created_of_branch', BranchModel::select(['id_branch', 'name'])->where('name', $branchName)->value('id_branch'));
+            });
     }
 }

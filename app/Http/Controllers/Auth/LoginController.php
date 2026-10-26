@@ -55,7 +55,7 @@ class LoginController extends Controller
             return $this->handleUnverifiedUser($request, $user);
         }
 
-        return redirect(RouteServiceProvider::HOME)->with('message', 'Login berhasil. Selamat datang kembali.');
+        return redirect(RouteServiceProvider::HOME)->with('message', 'Berhasil masuk kesistem dengan email ' . $user->email);
     }
     public function authenticate(Request $request): void
     {

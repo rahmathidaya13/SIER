@@ -179,7 +179,8 @@ const deleted = async (nameRoute, data) => {
   <app-layout>
     <template #content>
       <div class="row g-3 view-section">
-        <callout />
+        <toast :duration="10" />
+
         <div class="col-12 col-md-12 col-lg-12 col-xl-12">
           <div class="card border-0 rounded-4 overflow-hidden">
             <div class="card-header p-4 bg-white">

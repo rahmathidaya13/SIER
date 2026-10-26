@@ -19,7 +19,6 @@ class CustomerService
             $customer = CustomerModel::create([
                 'created_by' => $user->id,
                 'created_of_branch' => $branchId,
-                'customer_code'     => $this->generateUniqueCustomerCode(),
                 'name'              => $validated['name'],
                 'pic_name'          => $this->nullIfEmpty($validated['pic_name'] ?? null),
                 'email'             => $this->nullIfEmpty($validated['email'] ?? null),
@@ -112,19 +111,6 @@ class CustomerService
         }
     }
 
-    /**
-     * Generate kode unik pelanggan (Contoh: CUST-2610-X9B2).
-     */
-    private function generateUniqueCustomerCode(): string
-    {
-        $prefix = 'CUST-' . now()->format('ym') . '-';
-
-        do {
-            $code = $prefix . strtoupper(Str::random(4));
-        } while (CustomerModel::withTrashed()->where('customer_code', $code)->exists());
-
-        return $code;
-    }
 
     /**
      * Ubah string kosong "" menjadi null agar aman di database.

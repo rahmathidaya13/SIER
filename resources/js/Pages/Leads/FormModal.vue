@@ -605,7 +605,8 @@ const customerTagMeta = (tag) => {
                               :href="route('customer.index')"
                               >Tambah Pelanggan</Link
                             >
-                            untuk mendaftarkan pelanggan baru
+                            untuk mendaftarkan pelanggan baru. Pelanggan yang dapat dicari
+                            adalah pelanggan yang memiliki status <b class="fst-italic">ACTIVE</b>.
                           </div>
                         </div>
                       </div>

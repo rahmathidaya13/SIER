@@ -1,17 +1,31 @@
 <script setup>
-import { Head, router } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { Head, router, usePage } from "@inertiajs/vue3";
+import { ref, computed, h } from "vue";
 import { useFilter } from "@/Composables/useFilter";
 import { formatDate } from "@/Helpers/formatDate";
 import FormModal from "./FormModal.vue";
 import { useConfirm } from "@/Composables/useConfirm";
 import { highlight } from "@/Helpers/Highlight";
+import { hasRole } from "@/Composables/useAuth";
+
 const confirm = useConfirm();
 const props = defineProps({
   customers: Object,
   filters: Object,
   branches: Array,
 });
+
+const page = usePage();
+const canSelectBranch = computed(() => hasRole(["super_admin", "developer"]));
+const branchName = computed(() => {
+  const user = page.props.auth?.user;
+  return (
+    user?.branch?.name ||
+    props.branches?.find((b) => b.id_branch === user?.id_branch)?.name ||
+    "Cabang Tidak Diketahui"
+  );
+});
+console.log(page.props.auth?.user);
 const header = [
   {
     label: "No",
@@ -71,8 +85,9 @@ const { filters, isLoading } = useFilter({
     limit: props.filters.limit ?? 10,
     order_by: props.filters.order_by ?? "latest",
     page: props.filters.page ?? 1,
+    branch: !canSelectBranch.value ? props.filters.branch ?? branchName.value : null,
   },
-  watchFields: ["keyword", "limit", "order_by"],
+  watchFields: ["keyword", "limit", "order_by", "branch"],
   only: ["customers", "filters"],
   debounceTime: 500,
 });
@@ -194,6 +209,25 @@ const deleted = async (nameRoute, data) => {
     });
   }
 };
+const branchOptions = computed(() => {
+  const branches = props.branches ?? [];
+  // Super Admin & Developer: tampilkan semua cabang
+  if (canSelectBranch.value) {
+    return branches.map((data) => ({
+      label: data.name,
+      value: data.name,
+    }));
+  }
+
+  // User Cabang: tampilkan cabang user
+  const userBranchId = page.props.auth?.user?.id_branch;
+  return branches
+    .filter((data) => data.id_branch === userBranchId)
+    .map((data) => ({
+      label: data.name,
+      value: data.name,
+    }));
+});
 console.log(props.customers);
 </script>
 <template>
@@ -234,7 +268,18 @@ console.log(props.customers);
                   />
                 </div>
               </div>
-              <div class="col-xl-1 col-3 col-md-3 col-lg-3">
+              <div class="col-xl-2 col-4 col-md-4 col-lg-4">
+                <select-input
+                  :disabled="!canSelectBranch"
+                  :isValid="false"
+                  name="branch_selected"
+                  v-model="filters.branch"
+                  text="Pilih pelanggan cabang
+                  "
+                  :options="branchOptions"
+                />
+              </div>
+              <div class="col-xl-2 col-4 col-md-4 col-lg-4">
                 <select-input
                   :isValid="false"
                   name="limit"
@@ -248,7 +293,7 @@ console.log(props.customers);
                   ]"
                 />
               </div>
-              <div class="col-xl-1 col-3 col-md-3 col-lg-3">
+              <div class="col-xl-2 col-4 col-md-4 col-lg-4">
                 <select-input
                   :isValid="false"
                   name="order_by"
@@ -368,7 +413,7 @@ console.log(props.customers);
                         title="Hubungi via WhatsApp"
                       >
                         <i class="bi bi-whatsapp text-success"></i>
-                        <span v-html="highlight(item.phone,filters.keyword)"></span>
+                        <span v-html="highlight(item.phone, filters.keyword)"></span>
                       </a>
 
                       <!-- Email -->
@@ -556,6 +601,7 @@ console.log(props.customers);
                         keyword: filters.keyword,
                         limit: filters.limit,
                         sort_order: filters.order_by,
+                        branch: filters.branch,
                       }"
                       :only="['customers', 'filters']"
                     />

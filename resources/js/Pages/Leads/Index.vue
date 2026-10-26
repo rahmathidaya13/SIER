@@ -273,7 +273,8 @@ const actionLabel = (item) => {
     <template #content>
       <div class="row g-3 view-section">
         <div class="col-12">
-          <callout :duration="0" />
+          <toast :duration="10" />
+
           <div class="card border-0 rounded-4 overflow-hidden">
             <div class="card-header p-4 bg-white">
               <div
@@ -397,9 +398,11 @@ const actionLabel = (item) => {
                       ></div>
                     </div>
                     <div v-if="item.customer_email" class="text-muted small mb-2">
-                      <a :href="getEmail(item.customer_email)" class="text-decoration-none">{{
-                        item.customer_email
-                      }}</a>
+                      <a
+                        :href="getEmail(item.customer_email)"
+                        class="text-decoration-none"
+                        >{{ item.customer_email }}</a
+                      >
                     </div>
                     <div class="d-flex align-items-center gap-2">
                       <a
