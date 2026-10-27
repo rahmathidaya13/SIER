@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('leads', function (Blueprint $table) {
             $table->uuid('id_lead')->primary();
-            $table->foreignUuid('id_user')->constrained('users', 'id')->onDelete('cascade'); // CS/Admin yang memegang lead ini
+            $table->foreignUuid('created_by')->constrained('users', 'id')->onDelete('cascade'); // CS/Admin yang memegang lead ini
+            $table->foreignUuid('updated_by')->nullable()->constrained('users', 'id')->onDelete('cascade');
             $table->foreignUuid('id_channel')->constrained('channels', 'id_channel')->cascadeOnDelete(); // Datang dari mana?
 
 
@@ -32,7 +33,7 @@ return new class extends Migration
 
             $table->softDeletes();
             $table->timestamps();
-            $table->index(['closed_at', 'archived_at','created_at']);
+            $table->index(['closed_at', 'archived_at', 'created_at']);
         });
     }
 

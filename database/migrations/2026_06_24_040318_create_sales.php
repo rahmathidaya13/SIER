@@ -16,7 +16,8 @@ return new class extends Migration
             $table->string('invoice', 30)->unique(); // Cth: INV-202606-0001
 
             $table->foreignUuid('id_lead')->constrained('leads', 'id_lead')->cascadeOnDelete(); // Menautkan data closing ke riwayat prospeknya
-            $table->foreignUuid('id_user')->constrained('users', 'id')->cascadeOnDelete(); // CS yang berhasil closing
+            $table->foreignUuid('created_by')->constrained('users', 'id')->cascadeOnDelete(); // CS yang berhasil closing
+            $table->foreignUuid('updated_by')->nullable()->constrained('users', 'id')->cascadeOnDelete(); // CS yang berhasil closing
 
             $table->unsignedBigInteger('deal_price')->default(0); // Harga deal (bisa beda dengan base_price kalau dikasih diskon)
             $table->unsignedBigInteger('paid_amount')->default(0); // Berapa duit yang udah masuk ke rekening?

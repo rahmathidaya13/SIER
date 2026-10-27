@@ -255,7 +255,7 @@ const isSupervisorOrAbove = computed(() =>
 );
 const actionLabel = (item) => {
   // Tentukan base label dari status
-  const base = item.status === "NEW" ? "Mulai Follow Up" : "Catat Aktivitas";
+  const base = item.status === "NEW" ? " Follow Up" : "Catat Aktivitas";
 
   // Kalau pemilik lead → tanpa prefix
   if (isOwner(item)) return base;

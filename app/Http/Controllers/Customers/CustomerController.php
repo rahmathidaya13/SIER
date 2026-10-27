@@ -43,7 +43,6 @@ class CustomerController extends Controller
 
         $filters = app(ScopeResolverService::class)->filters($filters); // Gunakan ScopeResolverService untuk memproses filter berdasarkan scope yang diperlukan
         $customer = $this->repository->getCached($filters['scope'], $filters, $filters['page'] ?? 1);
-
         $branch = BranchModel::select('id_branch', 'name')->get();
         return inertia(
             'Customers/Index',
@@ -62,20 +61,7 @@ class CustomerController extends Controller
         try {
             $customer = $this->services->store($validated, $user);
 
-            $this->invalidateCaches(
-                [
-                    CustomerRepository::class,
-                    LeadsRepository::class,
-                    SaleRepository::class,
-                    UserRepository::class
-                ],
-                [
-                    ScopeKey::user($customer->created_by),
-                    ScopeKey::branch($customer->created_of_branch),
-                    ScopeKey::GLOBAL,
-                    ScopeKey::GLOBAL_SUPER_ADMIN,
-                ]
-            );
+            $this->clearCustomerCaches($customer);
 
             return redirect()->back()->with([
                 'message' => 'Pelanggan baru ' . strtoupper($validated['name']) . ' berhasil ditambahkan',
@@ -126,27 +112,12 @@ class CustomerController extends Controller
 
         $validated = $this->customerValidation($request->all(), $id);
 
-        $oldUpdatedBy = $customer->updated_by;
-        $oldBranchId  = $customer->created_of_branch;
+        $oldBranchId  = $customer->getOriginal('created_of_branch');
+        $oldUpdatedBy = $customer->getOriginal('updated_by');
         try {
             $this->services->update($customer, $validated, $user);
 
-            $cacheScopes = [
-                ScopeKey::user($user->id),                        // User yang mengedit saat ini
-                ScopeKey::user($customer->created_by),            // User pembuat awal
-                ScopeKey::branch($oldBranchId),                   // Cabang lama
-                ScopeKey::branch($customer->created_of_branch),   // Cabang baru (jika dipindah oleh Super Admin)
-                ScopeKey::GLOBAL,
-                ScopeKey::GLOBAL_SUPER_ADMIN,
-            ];
-            // Hanya tambahkan $oldUpdatedBy jika sebelumnya sudah pernah diedit (tidak null)
-            if (!empty($oldUpdatedBy)) {
-                $cacheScopes[] = ScopeKey::user($oldUpdatedBy);
-            }
-            $this->invalidateCaches(
-                [CustomerRepository::class],
-                array_values(array_unique($cacheScopes))
-            );
+            $this->clearCustomerCaches($customer, $user->id, $oldBranchId, $oldUpdatedBy);
             return redirect()->back()->with([
                 'message' => 'Pelanggan ' . strtoupper($validated['name']) . ' berhasil diperbarui',
             ]);
@@ -172,27 +143,13 @@ class CustomerController extends Controller
         // Simpan data untuk keperluan hapus cache sebelum datanya di-delete
         $CustomerName = $customer->name;
 
-        $cacheScopes = [
-            ScopeKey::user($user->id),
-            ScopeKey::user($customer->created_by),
-            ScopeKey::branch($customer->created_of_branch),
-            ScopeKey::GLOBAL,
-            ScopeKey::GLOBAL_SUPER_ADMIN,
-        ];
 
-        if (!empty($customer->updated_by)) {
-            $cacheScopes[] = ScopeKey::user($customer->updated_by);
-        }
 
         try {
             // Eksekusi service delete
             $this->services->delete($customer, $user);
 
-            // Bersihkan cache
-            $this->invalidateCaches(
-                [CustomerRepository::class],
-                array_values(array_unique($cacheScopes))
-            );
+            $this->clearCustomerCaches($customer, $user->id);
 
             return redirect()->back()->with([
                 'message' => 'Pelanggan ' . strtoupper($CustomerName) . ' berhasil dihapus.',
@@ -207,5 +164,31 @@ class CustomerController extends Controller
 
             return redirect()->back()->withErrors(['error' => $errorMessage]);
         }
+    }
+
+    protected function clearCustomerCaches(
+        CustomerModel $customer,
+        ?string $actorUserId = null,
+        ?string $oldBranchId = null,
+        ?string $oldUpdatedBy = null
+    ) {
+        $cacheScopes = [
+            $actorUserId ? ScopeKey::user($actorUserId) : null, // User yang mengedit/menghapus saat ini
+            ScopeKey::user($customer->created_by), // User pembuat awal
+            $customer->updated_by ? ScopeKey::user($customer->updated_by) : null, // User pengedit terakhir di DB
+            $oldUpdatedBy ? ScopeKey::user($oldUpdatedBy) : null,         // User pengedit sebelumnya (saat update)
+            $oldBranchId ? ScopeKey::branch($oldBranchId) : null, // Cabang lama (jika pindah cabang)
+            ScopeKey::branch($customer->created_of_branch), // Cabang saat ini
+            ScopeKey::GLOBAL,
+            ScopeKey::GLOBAL_SUPER_ADMIN,
+        ];
+        $this->invalidateCaches(
+            [
+                CustomerRepository::class,
+                LeadsRepository::class,
+                SaleRepository::class,
+            ],
+            $cacheScopes
+        );
     }
 }

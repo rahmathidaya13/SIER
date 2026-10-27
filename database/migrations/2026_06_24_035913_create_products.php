@@ -18,6 +18,10 @@ return new class extends Migration
                 ->nullable()
                 ->constrained('users', 'id')
                 ->nullOnDelete();
+            $table->foreignUuid('updated_by')
+                ->nullable()
+                ->constrained('users', 'id')
+                ->nullOnDelete();
 
             $table->string('product_code', 20)->unique()->index();
             $table->enum('source', ['manual', 'scrape'])->default('manual')->index();

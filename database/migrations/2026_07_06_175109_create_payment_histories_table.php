@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('payment_histories', function (Blueprint $table) {
             $table->uuid('id_payment_history')->primary();
             $table->foreignUuid('id_sales')->constrained('sales', 'id_sales')->cascadeOnDelete();
-            $table->foreignUuid('id_user')->constrained('users', 'id')->cascadeOnDelete();
+            $table->foreignUuid('created_by')->constrained('users', 'id')->cascadeOnDelete();
+            $table->foreignUuid('updated_by')->nullable()->constrained('users', 'id')->cascadeOnDelete();
             $table->foreignUuid('id_lead')->constrained('leads', 'id_lead')->cascadeOnDelete();
 
             $table->enum('payment_method', ['cash', 'transfer', 'debit', 'qris'])->default('cash'); // Kalau Lunas, diisi tunai]; // Cth: 'BCA - 123456', 'QRIS'

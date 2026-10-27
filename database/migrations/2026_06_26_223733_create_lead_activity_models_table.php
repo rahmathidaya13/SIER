@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('lead_activity', function (Blueprint $table) {
             $table->uuid('id_lead_activity')->primary();
             $table->foreignUuid('id_lead')->constrained('leads', 'id_lead')->cascadeOnDelete();
-            $table->foreignUuid('id_user')->constrained('users', 'id')->cascadeOnDelete();
+            $table->foreignUuid('created_by')->constrained('users', 'id')->cascadeOnDelete();
             $table->foreignUuid('updated_by')->nullable()->constrained('users', 'id')->cascadeOnDelete();
             $table->enum('source', ['transaction', 'created', 'updated', 'deleted'])->default('created');
             $table->text('description')->nullable();
