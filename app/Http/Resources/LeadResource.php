@@ -24,11 +24,14 @@ class LeadResource extends JsonResource
             'follow_up_date' => $this->follow_up_date,
             'closed_at'      => $this->closed_at,
 
-            'user' => UserResource::make($this->whenLoaded('user')),
+            // 'user' => UserResource::make($this->whenLoaded('user')),
             // 2. Manipulasi Alias Langsung (Tidak perlu "as creator_name" di query DB)
             // whenLoaded() memastikan data ini HANYA dirender jika relasinya dipanggil (menghindari error N+1)
-            'creator_name' => $this->whenLoaded('user', function () {
-                return $this->user?->name;
+            'creator_name' => $this->whenLoaded('creator', function () {
+                return $this->creator?->name;
+            }),
+            'updater_name' => $this->whenLoaded('updater', function () {
+                return $this->updater?->name;
             }),
 
             'channel' => $this->whenLoaded('channel', function () {

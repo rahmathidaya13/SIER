@@ -249,7 +249,7 @@ const canAccess = (permission, role = []) => {
 
 const page = usePage();
 const authUserId = computed(() => String(page.props.auth?.user_id ?? ""));
-const isOwner = (item) => String(item?.id_user) === authUserId.value;
+const isOwner = (item) => String(item?.created_by) === authUserId.value;
 const isSupervisorOrAbove = computed(() =>
   hasRole(["supervisor", "super_admin", "developer"])
 );
@@ -537,15 +537,6 @@ const actionLabel = (item) => {
                           formatDate(item.activity[0].created_at)
                         }}</span>
                       </div>
-
-                      <div>
-                        <span
-                          class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"
-                          style="font-size: 10px"
-                        >
-                          {{ item.activity ? item.activity.length : 0 }}x Interaksi
-                        </span>
-                      </div>
                     </div>
 
                     <div
@@ -589,7 +580,7 @@ const actionLabel = (item) => {
                       <div class="d-flex flex-column small" style="line-height: 1.3">
                         <span class="fw-bold text-dark mb-1 text-capitalize"
                           >{{ item.creator_name || "Sistem" }} -
-                          {{ `${getRoleName(item.role_name).label}` }}
+                          {{ `${getRoleName(item.creator_role_name).label}` }}
                         </span>
                         <span class="small mb-1 fw-semibold">
                           <i class="bi bi-geo-alt-fill text-danger"></i>

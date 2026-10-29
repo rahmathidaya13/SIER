@@ -12,11 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('leads', function (Blueprint $table) {
-            $table->foreignUuid('id_branch')->after('created_by')->nullable()->constrained('branches', 'id_branch')->cascadeOnDelete();
+            $table->foreignUuid('id_branch')->after('updated_by')->nullable()->constrained('branches', 'id_branch')->restrictOnDelete();
         });
 
         Schema::table('sales', function (Blueprint $table) {
-            $table->foreignUuid('id_branch')->after('created_by')->nullable()->constrained('branches', 'id_branch')->cascadeOnDelete();
+            $table->foreignUuid('id_branch')->after('updated_by')->nullable()->constrained('branches', 'id_branch')->restrictOnDelete();
         });
     }
 

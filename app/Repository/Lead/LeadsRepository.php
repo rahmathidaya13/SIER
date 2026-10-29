@@ -22,7 +22,7 @@ class LeadsRepository extends BaseCacheRepository
             ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')
             ->leftJoin('sales', 'sales.id_lead', '=', 'leads.id_lead')
             ->leftJoin('customers', 'customers.id_customer', '=', 'leads.id_customer')
-            ->leftJoin('branches', 'branches.id_branch', '=', 'users.id_branch');
+            ->leftJoin('branches', 'branches.id_branch', '=', 'creator.id_branch');
         return $query;
     }
     protected function buildListQuery(): Builder
@@ -38,7 +38,8 @@ class LeadsRepository extends BaseCacheRepository
                 },
             ])->select([
                 'leads.id_lead',
-                'leads.id_user',
+                'leads.created_by as creator',
+                'leads.updated_by as updater',
                 'leads.id_branch',
                 'leads.id_customer',
                 'leads.temperature',
@@ -47,8 +48,10 @@ class LeadsRepository extends BaseCacheRepository
                 'leads.notes',
                 'leads.created_at',
                 'leads.updated_at',
-                'users.name as creator_name',
-                'roles.name as role_name',
+                'creator.name as creator_name',
+                'updater.name as updater_name',
+                'creator_role.name as creator_role_name',
+                'updater_role.name as updater_role_name',
                 'branches.name as branch_name',
                 'channels.name as channel_name',
                 'channels.icon',

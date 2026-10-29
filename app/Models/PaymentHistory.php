@@ -16,7 +16,8 @@ class PaymentHistory extends Model
     protected $keyType = 'string';
     protected $fillable = [
         'id_sales',
-        'id_user',
+        'created_by',
+        'updated_by',
         'id_lead',
         'id_customer',
         'payment_method',
@@ -31,9 +32,13 @@ class PaymentHistory extends Model
         'payment_at' => 'datetime',
         'paid_amount' => 'integer',
     ];
-    public function user()
+    public function creator()
     {
-        return $this->belongsTo(User::class, 'id_user', 'id');
+        return $this->belongsTo(User::class, 'created_by', 'id');
+    }
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by', 'id');
     }
     public function lead()
     {

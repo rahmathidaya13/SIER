@@ -599,9 +599,11 @@ console.log(props.customers);
                       routeName="customer.index"
                       :additionalQuery="{
                         keyword: filters.keyword,
-                        limit: filters.limit,
-                        sort_order: filters.order_by,
+                        status: filters.status,
                         branch: filters.branch,
+                        periode: filters.periode,
+                        limit: filters.limit,
+                        order_by: filters.order_by,
                       }"
                       :only="['customers', 'filters']"
                     />

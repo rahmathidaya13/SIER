@@ -2,21 +2,22 @@
 
 namespace App\Models;
 
-use App\Traits\HasRoleJoin;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 
 class LeadModel extends Model
 {
-    use HasFactory, HasUuids, SoftDeletes, HasRoleJoin;
+    use HasFactory, HasUuids, SoftDeletes;
     protected $table = 'leads';
     protected $primaryKey = 'id_lead';
     public $incrementing = false; // Karena pakai UUID
     protected $keyType = 'string';
     protected $fillable = [
-        'id_user',
+        'created_by',
+        'updated_by',
         'id_channel',
         'id_branch',
         'id_customer',
@@ -38,6 +39,27 @@ class LeadModel extends Model
         'archived_at' => 'datetime',
     ];
 
+    public function scopeJoinUserRole(Builder $query): Builder
+    {
+        $table = $this->getTable();
+
+        return $query // 1. Join User & Role untuk Creator (created_by)
+            ->leftJoin('users as creator', 'creator.id', '=', "{$table}.created_by")
+            ->leftJoin('model_has_roles as creator_mhr', function ($join) {
+                $join->on('creator_mhr.model_id', '=', 'creator.id')
+                    ->where('creator_mhr.model_type', User::class);
+            })
+            ->leftJoin('roles as creator_role', 'creator_role.id', '=', 'creator_mhr.role_id')
+
+            // 2. Join User & Role untuk Updater (updated_by)
+            ->leftJoin('users as updater', 'updater.id', '=', "{$table}.updated_by")
+            ->leftJoin('model_has_roles as updater_mhr', function ($join) {
+                $join->on('updater_mhr.model_id', '=', 'updater.id')
+                    ->where('updater_mhr.model_type', User::class);
+            })
+            ->leftJoin('roles as updater_role', 'updater_role.id', '=', 'updater_mhr.role_id');
+    }
+
     public function scopeAllowedForUser($query)
     {
         $user = auth()->user();
@@ -46,7 +68,7 @@ class LeadModel extends Model
             $user->hasRole('developer') => $query,
             $user->hasRole('super_admin') => $query,
             $user->hasRole('supervisor') => $query->where('leads.id_branch', $user->id_branch),
-            default => $query->where('leads.id_user', $user->id),
+            default => $query->where('leads.created_by', $user->id),
         };
     }
     public function paymentHistory()
@@ -54,9 +76,14 @@ class LeadModel extends Model
         return $this->hasMany(PaymentHistory::class, 'id_lead', 'id_lead')->latest();
     }
 
-    public function user()
+    public function creator()
     {
-        return $this->belongsTo(User::class, 'id_user', 'id');
+        return $this->belongsTo(User::class, 'created_by', 'id')->withTrashed();
+    }
+
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by', 'id')->withTrashed();
     }
 
     public function channel()

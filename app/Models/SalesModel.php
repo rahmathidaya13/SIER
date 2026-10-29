@@ -17,7 +17,8 @@ class SalesModel extends Model
     protected $fillable = [
         'invoice',
         'id_lead',
-        'id_user',
+        'created_by',
+        'updated_by',
         'id_branch',
         'id_customer',
         'deal_price',
@@ -49,7 +50,7 @@ class SalesModel extends Model
             $user->hasRole('developer') => $query,
             $user->hasRole('super_admin') => $query,
             $user->hasRole('supervisor') => $query->where('sales.id_branch', $user->id_branch),
-            default => $query->where('sales.id_user', $user->id),
+            default => $query->where('sales.created_by', $user->id),
         };
     }
     public static function boot()
@@ -100,9 +101,13 @@ class SalesModel extends Model
     {
         return $this->belongsTo(LeadModel::class, 'id_lead', 'id_lead');
     }
-    public function user()
+    public function creator()
     {
-        return $this->belongsTo(User::class, 'id_user', 'id');
+        return $this->belongsTo(User::class, 'created_by', 'id');
+    }
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by', 'id');
     }
     public function salesProduct()
     {

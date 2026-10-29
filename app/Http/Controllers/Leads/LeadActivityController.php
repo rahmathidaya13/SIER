@@ -4,17 +4,19 @@ namespace App\Http\Controllers\Leads;
 
 use Illuminate\Http\Request;
 use App\Models\LeadActivityModel;
+use App\Traits\InvalidatesCaches;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Traits\BranchMutationHelper;
 use App\Repository\Sale\SaleRepository;
+use App\Repository\User\UserRepository;
 use App\Repository\Lead\LeadsRepository;
 use App\Repository\Channel\ChannelRepository;
-use App\Repository\User\UserRepository;
+use App\Support\ScopeKey;
 
 class LeadActivityController extends Controller
 {
-    use BranchMutationHelper;
+    use InvalidatesCaches;
     public function store(Request $request, string $id)
     {
         $request->validate(
@@ -31,7 +33,8 @@ class LeadActivityController extends Controller
         try {
             $activity = LeadActivityModel::create([
                 'id_lead' => $id,
-                'id_user' => auth()->user()->id,
+                'created_by' => auth()->user()->id,
+                'updated_by' => auth()->user()->id,
                 'description' => $request['description']
             ]);
 
@@ -52,9 +55,20 @@ class LeadActivityController extends Controller
             }
 
             DB::commit();
+
             $this->invalidateCaches(
-                [UserRepository::class, LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
-                ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+                [
+                    UserRepository::class,
+                    LeadsRepository::class,
+                    SaleRepository::class,
+                    ChannelRepository::class
+                ],
+                [
+                    ScopeKey::branch($user->id_branch),
+                    ScopeKey::user($user->id),
+                    ScopeKey::GLOBAL,
+                    ScopeKey::GLOBAL_SUPER_ADMIN,
+                ]
             );
 
 
@@ -67,6 +81,7 @@ class LeadActivityController extends Controller
     }
     public function update(Request $request, string $id)
     {
+        $user = auth()->user();
         $request->validate(
             [
                 'description' => 'required'
@@ -79,14 +94,24 @@ class LeadActivityController extends Controller
         $leadActivity = LeadActivityModel::findOrFail($id);
 
         $leadActivity->update([
-            'updated_by' => auth()->user()->id,
+            'updated_by' => $user->id !== $leadActivity->created_by ? $user->id : $leadActivity->created_by,
             'description' => $request['description']
         ]);
 
         $user = auth()->user();
         $this->invalidateCaches(
-            [UserRepository::class, LeadsRepository::class, SaleRepository::class, ChannelRepository::class],
-            ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+            [
+                UserRepository::class,
+                LeadsRepository::class,
+                SaleRepository::class,
+                ChannelRepository::class
+            ],
+            [
+                ScopeKey::branch($user->id_branch),
+                ScopeKey::user($user->id),
+                ScopeKey::GLOBAL,
+                ScopeKey::GLOBAL_SUPER_ADMIN,
+            ]
         );
         return redirect()->back();
     }

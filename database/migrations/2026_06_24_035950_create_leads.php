@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('leads', function (Blueprint $table) {
             $table->uuid('id_lead')->primary();
-            $table->foreignUuid('created_by')->constrained('users', 'id')->onDelete('cascade'); // CS/Admin yang memegang lead ini
-            $table->foreignUuid('updated_by')->nullable()->constrained('users', 'id')->onDelete('cascade');
+            $table->foreignUuid('created_by')->nullable()->constrained('users', 'id')->nullOnDelete(); // CS/Admin yang memegang lead ini
+            $table->foreignUuid('updated_by')->nullable()->constrained('users', 'id')->nullOnDelete(); // CS/Admin yang memegang lead ini
             $table->foreignUuid('id_channel')->constrained('channels', 'id_channel')->cascadeOnDelete(); // Datang dari mana?
 
 

@@ -96,7 +96,6 @@ const resetFlash = () => {
 watch(
   () => [page.props.flash, page.props.errors],
   ([flash, errorMsg]) => {
-    console.log(flash);
     let message = null;
     let type = null;
 

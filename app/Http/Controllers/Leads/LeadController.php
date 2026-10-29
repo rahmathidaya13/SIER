@@ -52,7 +52,7 @@ class LeadController extends Controller
     {
         $this->authorize('viewAny', LeadModel::class);
 
-        $request->validate([
+        $validated = $request->validate([
             'keyword' => 'nullable|string|max:255',
             'limit' => 'nullable|integer|min:1|max:100',
             'periode' => 'nullable|date|date_format:Y-m',
@@ -61,15 +61,7 @@ class LeadController extends Controller
             'page' => 'nullable|integer|min:1',
         ]);
 
-        $filters = $request->only([
-            'keyword',
-            'limit',
-            'periode',
-            'status',
-            'order_by',
-            'page',
-
-        ]);
+        $filters = $request->only(array_keys($validated));
         $filters = app(ScopeResolverService::class)->filters($filters); // Gunakan ScopeResolverService untuk memproses filter berdasarkan scope yang diperlukan
         $cleanFilters = Arr::except($filters, ['scope']); // Hapus 'scope' dan 'page' dari $filters sebelumnya
         $leads = $this->repository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
@@ -112,20 +104,7 @@ class LeadController extends Controller
             $recipients = $this->getLeadNotificationRecipients($leads, $user);
             Notification::send($recipients, new LeadCreateNotification($leads, $user));
 
-            $this->invalidateCaches(
-                [
-                    UserRepository::class,
-                    LeadsRepository::class,
-                    SaleRepository::class,
-                    ChannelRepository::class
-                ],
-                [
-                    ScopeKey::user($leads->id_user),
-                    ScopeKey::branch($leads->id_branch),
-                    ScopeKey::GLOBAL,
-                    ScopeKey::GLOBAL_SUPER_ADMIN,
-                ]
-            );
+            $this->clearLeadCaches($leads, $user->id_user);
 
             return redirect()->back()->with([
                 'message' => 'Lead dari ' . strtoupper($leads->customer->name) . ' berhasil ditambahkan',
@@ -159,8 +138,11 @@ class LeadController extends Controller
             ]);
         }
 
-        $oldUserId = $leads->id_user;
-        $oldBranchId = $leads->id_branch;
+        $oldCreatedBy = $leads->getOriginal('created_by');
+        $oldUpdatedBy = $leads->getOriginal('updated_by');
+        $oldBranchId  = $leads->getOriginal('id_branch');
+
+        // Aturan updated_by: hanya ubah jika pengedit berbeda dengan pembuat awal
 
         try {
             $leads = $this->leadServices->update($leads, $validated, $user);
@@ -177,22 +159,9 @@ class LeadController extends Controller
                     $user
                 )
             );
-            $this->invalidateCaches(
-                [
-                    UserRepository::class,
-                    LeadsRepository::class,
-                    SaleRepository::class,
-                    ChannelRepository::class
-                ],
-                [
-                    ScopeKey::user($oldUserId),
-                    ScopeKey::branch($oldBranchId),
-                    ScopeKey::user($leads->id_user),
-                    ScopeKey::branch($leads->id_branch),
-                    ScopeKey::GLOBAL,
-                    ScopeKey::GLOBAL_SUPER_ADMIN
-                ]
-            );
+
+            $this->clearLeadCaches($leads, $user->id_user, $oldCreatedBy, $oldUpdatedBy, $oldBranchId);
+
             return redirect()->back()->with('message', 'Lead ' . ucwords($leads->customer->name) . ' berhasil diperbarui!');
         } catch (\Exception $error) {
             $errorMessage = config('app.debug')
@@ -209,7 +178,8 @@ class LeadController extends Controller
         $leads = LeadModel::query()
             ->select([
                 'id_lead',
-                'id_user',
+                'created_by',
+                'updated_by',
                 'id_channel',
                 'id_customer',
                 'status',
@@ -219,8 +189,8 @@ class LeadController extends Controller
                 'closed_at'
             ])
             ->with([
-                'user:id,name',
-                'user.roles:id,name',
+                'creator:id,name',
+                'creator.roles:id,name',
                 'channel:id_channel,name,icon',
                 'leadProduct:id_lead,id_product',
                 'leadProduct.product:id_product,name,image_link,image_path',
@@ -239,7 +209,7 @@ class LeadController extends Controller
             ->select([
                 'id_lead_activity',
                 'id_lead',
-                'id_user',
+                'created_by',
                 'updated_by',
                 'description',
                 'source',
@@ -247,8 +217,8 @@ class LeadController extends Controller
                 'updated_at',
             ])
             ->with([
-                'user:id,name',
-                'user.roles:id,name',
+                'creator:id,name',
+                'creator.roles:id,name',
 
                 'userUpdate:id,name',
                 'userUpdate.roles:id,name',
@@ -390,5 +360,35 @@ class LeadController extends Controller
 
         $customer = $query->limit(10)->get();
         return response()->json($customer);
+    }
+
+    public function clearLeadCaches(
+        LeadModel $leads,
+        ?string $actorUserId = null,
+        ?string $oldCreatedBy = null,
+        ?string $oldUpdatedBy = null,
+        ?string $oldBranchId = null
+    ) {
+        $cacheScopes = [
+            $actorUserId ? ScopeKey::user($actorUserId) : null,
+            $oldCreatedBy ? ScopeKey::user($oldCreatedBy) : null,
+            $oldUpdatedBy ? ScopeKey::user($oldUpdatedBy) : null,
+            $oldBranchId ? ScopeKey::branch($oldBranchId) : null,
+            ScopeKey::user($leads->created_by),
+            ScopeKey::user($leads->updated_by),
+            ScopeKey::branch($leads->id_branch),
+            ScopeKey::GLOBAL,
+            ScopeKey::GLOBAL_SUPER_ADMIN,
+        ];
+
+        $this->invalidateCaches(
+            [
+                UserRepository::class,
+                LeadsRepository::class,
+                SaleRepository::class,
+                ChannelRepository::class,
+            ],
+            $cacheScopes
+        );
     }
 }

@@ -133,6 +133,7 @@ class CustomerService
         return $user->id_branch;
     }
 
+
     /**
      * Cek apakah user memiliki hak akses lintas cabang.
      */

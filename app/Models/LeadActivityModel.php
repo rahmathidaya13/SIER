@@ -16,15 +16,17 @@ class LeadActivityModel extends Model
     protected $keyType = 'string';
     protected $fillable = [
         'id_lead',
-        'id_user',
+        'created_by',
+        'updated_by',
         'source',
         'updated_by',
         'description',
     ];
-    public function user()
+    public function creator()
     {
-        return $this->belongsTo(User::class, 'id_user', 'id');
+        return $this->belongsTo(User::class, 'created_by', 'id');
     }
+
     public function userUpdate()
     {
         return $this->belongsTo(User::class, 'updated_by', 'id');

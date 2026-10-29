@@ -28,7 +28,8 @@ class LeadServices
         try {
 
             $leads = LeadModel::create([
-                'id_user' => $user->id,
+                'created_by' => $user->id,
+                'updated_by' => $user->id,
                 'id_branch' => $user->id_branch,
                 'id_channel' => $validated['id_channel'],
                 'id_customer' => $validated['id_customer'],
@@ -76,6 +77,7 @@ class LeadServices
             $leads->update([
                 'id_customer' => $validated['id_customer'],
                 'id_channel' => $validated['id_channel'],
+                'updated_by' => $user->id !== $leads->created_by ? $user->id : $leads->created_by,
                 'status' => $validated['status'],
                 'temperature' => $validated['temperature'],
                 'notes' => $validated['notes'],
@@ -125,7 +127,8 @@ class LeadServices
 
         $sales->paymentHistory()->create([
             'id_sales'       => $sales->id_sales,
-            'id_user'        => $user->id,
+            'created_by'        => $user->id,
+            'updated_by'        => $user->id,
             'id_lead'        => $leads->id_lead,
             'payment_method' => $validated['payment_method'],
             'bank_name'      => $validated['bank_name'] ?? null,
@@ -134,7 +137,8 @@ class LeadServices
             'payment_at'     => now()->toDateTimeString()
         ]);
         $leads->activity()->create([
-            'id_user'     => $user->id,
+            'created_by'     => $user->id,
+            'updated_by'     => $user->id,
             'id_lead'     => $leads->id_lead,
             'description' => $this->msgClosingDeal($validated)
         ]);
@@ -158,7 +162,8 @@ class LeadServices
 
         $sales = SalesModel::create([
             'id_lead'        => $leads->id_lead,
-            'id_user'        => $leads->id_user,
+            'created_by'        => $leads->created_by,
+            'updated_by'        => $leads->updated_by,
             'id_branch'      => $leads->id_branch,
             'deal_price'     => $validated['deal_price'],
             'paid_amount'    => $validated['paid_amount'],
@@ -179,7 +184,7 @@ class LeadServices
             'status' => 'CLOSED_WON',
             'temperature' => 'HOT',
             'closed_at' => now()->toDateTimeString(),
-            'updated_by' => auth()->id(),
+            'updated_by' => auth()->id() !== $leads->created_by ? auth()->id() : $leads->created_by,
         ]);
 
         return $sales;
