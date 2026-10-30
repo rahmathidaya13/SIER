@@ -490,7 +490,7 @@ class DashboardService
         } else {
             // Sales/Admin dll: Kunci mati di cabang AND hanya miliknya sendiri
             $query->where('id_branch', $user->id_branch)
-                ->where('id_user', $user->id);
+                ->where('created_by', $user->id);
         }
     }
 }

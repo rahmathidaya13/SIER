@@ -17,8 +17,8 @@ class LeadsRepository extends BaseCacheRepository
     protected function buildBaseQuery()
     {
         $query = LeadModel::query()
-            ->whereNull('leads.archived_at')
             ->joinUserRole()
+            ->whereNull('leads.archived_at')
             ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')
             ->leftJoin('sales', 'sales.id_lead', '=', 'leads.id_lead')
             ->leftJoin('customers', 'customers.id_customer', '=', 'leads.id_customer')
@@ -38,8 +38,8 @@ class LeadsRepository extends BaseCacheRepository
                 },
             ])->select([
                 'leads.id_lead',
-                'leads.created_by as creator',
-                'leads.updated_by as updater',
+                'leads.created_by as creator_id',
+                'leads.updated_by as updater_id',
                 'leads.id_branch',
                 'leads.id_customer',
                 'leads.temperature',
@@ -104,7 +104,7 @@ class LeadsRepository extends BaseCacheRepository
         }
 
         if (str_starts_with($scopeKey, 'user_')) {
-            $query->where('leads.id_user', substr($scopeKey, strlen('user_')));
+            $query->where('leads.created_by', substr($scopeKey, strlen('user_')));
 
             return;
         }

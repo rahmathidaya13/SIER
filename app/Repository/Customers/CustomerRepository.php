@@ -28,6 +28,8 @@ class CustomerRepository extends BaseCacheRepository
             ->select([
                 'customers.id_customer',
                 'customers.created_of_branch',
+                'customers.created_by as creator_id',
+                'customers.updated_by as updater_id',
                 'branches.name as branch_name',
                 'customers.customer_code',
                 'customers.name',

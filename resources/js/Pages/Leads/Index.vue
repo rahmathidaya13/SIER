@@ -249,20 +249,18 @@ const canAccess = (permission, role = []) => {
 
 const page = usePage();
 const authUserId = computed(() => String(page.props.auth?.user_id ?? ""));
-const isOwner = (item) => String(item?.created_by) === authUserId.value;
+const isOwner = (item) => String(item?.creator_id) === authUserId.value;
 const isSupervisorOrAbove = computed(() =>
   hasRole(["supervisor", "super_admin", "developer"])
 );
 const actionLabel = (item) => {
   // Tentukan base label dari status
   const base = item.status === "NEW" ? " Follow Up" : "Catat Aktivitas";
-
   // Kalau pemilik lead → tanpa prefix
   if (isOwner(item)) return base;
 
   // Kalau supervisor ke atas → tambah "Bantu"
   if (isSupervisorOrAbove.value) return `Bantu ${base}`;
-
   // Fallback (misal sales lain) — tampilkan base saja, tombol mungkin disembunyikan
   return base;
 };

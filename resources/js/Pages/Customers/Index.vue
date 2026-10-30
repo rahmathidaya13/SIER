@@ -228,7 +228,25 @@ const branchOptions = computed(() => {
       value: data.name,
     }));
 });
-console.log(props.customers);
+const isOwner = (val) => {
+  console.log(val);
+
+  if (!val) return false;
+
+  // 1. Super Admin, Developer, dan Supervisor bebas edit & hapus
+  if (hasRole(["super_admin", "developer", "supervisor"])) {
+    return true;
+  }
+
+  // 2. Ambil ID user yang sedang login
+  const currentUserId = page.props.auth?.user_id || page.props.auth?.user?.id;
+
+  // 3. Ambil ID pembuat data (mendukung format val.creator, val.created_by.id, atau val.created_by)
+  const creatorId =  val.creator_id;
+  // 4. Role di bawah SPV HANYA boleh edit/hapus jika dia adalah pembuat datanya sendiri
+  return Boolean(currentUserId && creatorId && String(creatorId) === String(currentUserId));
+};
+// console.log(props.customers);
 </script>
 <template>
   <Head title="Halaman Pelanggan" />
@@ -564,7 +582,7 @@ console.log(props.customers);
                   </td>
 
                   <td class="text-center">
-                    <div class="d-flex gap-1 justify-content-center">
+                    <div v-if="isOwner(item)" class="d-flex gap-1 justify-content-center">
                       <button
                         @click.prevent="openEditModal(item)"
                         type="button"
@@ -581,6 +599,12 @@ console.log(props.customers);
                       >
                         <i class="bi bi-trash"></i>
                       </button>
+                    </div>
+                    <div v-else>
+                      <span class="badge badge-soft-info rounded-3 py-1">
+                        <i class="bi bi-lock"></i>
+                        Tidak Ada Aksi
+                        </span>
                     </div>
                   </td>
                 </template>

@@ -7,6 +7,7 @@ use App\Repository\BaseCacheRepository;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use App\Support\ScopeKey;
+
 class SaleRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'sales_cache_';
@@ -30,7 +31,8 @@ class SaleRepository extends BaseCacheRepository
             ->select([
                 'sales.id_sales',
                 'sales.id_lead',
-                'sales.id_user',
+                'sales.created_by',
+                'sales.updated_by',
                 'sales.id_branch',
                 'sales.invoice',
                 'sales.deal_price',
@@ -48,8 +50,10 @@ class SaleRepository extends BaseCacheRepository
                 'sales.updated_at',
 
 
-                'users.name as sales_name',
-                'roles.name as role_name',
+                'creator.name as creator_name',
+                'updater.name as updater_name',
+                'creator_role.name as creator_role_name',
+                'updater_role.name as updater_role_name',
 
                 'branches.name as branch_name',
                 'customers.id_customer',
@@ -81,7 +85,7 @@ class SaleRepository extends BaseCacheRepository
         }
 
         if (str_starts_with($scopeKey, 'user_')) {
-            $query->where('sales.id_user', substr($scopeKey, strlen('user_')));
+            $query->where('sales.created_by', substr($scopeKey, strlen('user_')));
 
             return;
         }
