@@ -17,9 +17,8 @@ class CustomerRepository extends BaseCacheRepository
     protected function buildBaseQuery()
     {
         $query = CustomerModel::query()
-            ->leftJoin('branches', 'branches.id_branch', '=', 'customers.created_of_branch')
-            ->leftJoin('users as creator', 'creator.id', '=', 'customers.created_by')
-            ->leftJoin('users as updater', 'updater.id', '=', 'customers.updated_by');
+            ->joinUserRole()
+            ->leftJoin('branches', 'branches.id_branch', '=', 'customers.created_of_branch');
         return $query;
     }
     protected function buildListQuery(): Builder
@@ -30,7 +29,6 @@ class CustomerRepository extends BaseCacheRepository
                 'customers.created_of_branch',
                 'customers.created_by as creator_id',
                 'customers.updated_by as updater_id',
-                'branches.name as branch_name',
                 'customers.customer_code',
                 'customers.name',
                 'customers.pic_name',
@@ -47,8 +45,13 @@ class CustomerRepository extends BaseCacheRepository
                 'customers.created_at',
                 'customers.updated_at',
 
+                'branches.name as branch_name',
+
                 'creator.name as creator_name',
                 'updater.name as updater_name',
+
+                'creator_role.name as creator_role_name',
+                'updater_role.name as updater_role_name',
             ]);
     }
     protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator

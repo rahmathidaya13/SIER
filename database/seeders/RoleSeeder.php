@@ -33,6 +33,12 @@ class RoleSeeder extends Seeder
             'product-edit',
             'product-delete',
 
+            'customer-view',
+            'customer-create',
+            'customer-edit',
+            'customer-delete',
+
+
             // Modul Leads
             'lead-view',
             'lead-create',

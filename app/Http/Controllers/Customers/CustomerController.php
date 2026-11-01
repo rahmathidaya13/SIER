@@ -31,6 +31,8 @@ class CustomerController extends Controller
     }
     public function index(Request $request)
     {
+        $this->authorize('view');
+
         $validated = $request->validate([
             'keyword' => 'nullable|string|max:255',
             'limit' => 'nullable|integer|min:1|max:100',

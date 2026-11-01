@@ -146,6 +146,26 @@ const customerTagMeta = (tag) => {
   return map[tag] || map.new;
 };
 
+const shortNameRole = (role) => {
+  const map = {
+    super_admin: {
+      label: "VVIP",
+    },
+    supervisor: {
+      label: "SPV",
+    },
+    sales: {
+      label: "SLS",
+    },
+    admin: {
+      label: "ADM",
+    },
+    teknisi: {
+      label: "TKN",
+    },
+  };
+  return map[role] || map.supervisor;
+};
 const statusMeta = (status) => {
   const map = {
     active: {
@@ -233,18 +253,29 @@ const isOwner = (val) => {
 
   if (!val) return false;
 
-  // 1. Super Admin, Developer, dan Supervisor bebas edit & hapus
-  if (hasRole(["super_admin", "developer", "supervisor"])) {
+  // 1. Super Admin, Developer bebas edit & hapus
+  if (hasRole(["super_admin", "developer"])) {
     return true;
+  }
+
+  const creatorRole = val.creator_role_name;
+  if (hasRole("supervisor")) {
+    return !["super_admin", "developer"].includes(creatorRole);
+  }
+
+  if (["super_admin", "developer", "supervisor"].includes(creatorRole)) {
+    return false;
   }
 
   // 2. Ambil ID user yang sedang login
   const currentUserId = page.props.auth?.user_id || page.props.auth?.user?.id;
 
   // 3. Ambil ID pembuat data (mendukung format val.creator, val.created_by.id, atau val.created_by)
-  const creatorId =  val.creator_id;
+  const creatorId = val.creator_id;
   // 4. Role di bawah SPV HANYA boleh edit/hapus jika dia adalah pembuat datanya sendiri
-  return Boolean(currentUserId && creatorId && String(creatorId) === String(currentUserId));
+  return Boolean(
+    currentUserId && creatorId && String(creatorId) === String(currentUserId)
+  );
 };
 // console.log(props.customers);
 </script>
@@ -571,11 +602,11 @@ const isOwner = (val) => {
                           formatDate(item.created_at)
                         }}</span>
                         <span
-                          class="text-truncate text-capitalize"
+                          class="text-truncate text-capitalize fw-semibold"
                           :title="item.creator_name || item.creator?.name"
                           style="font-size: 12px"
                         >
-                          {{ `(${item.creator_name} - ${item.branch_name})` }}
+                          {{ `${shortNameRole(item.creator_role_name).label} - ${item.creator_name} - ${item.branch_name}` }}
                         </span>
                       </div>
                     </div>
@@ -604,7 +635,7 @@ const isOwner = (val) => {
                       <span class="badge badge-soft-info rounded-3 py-1">
                         <i class="bi bi-lock"></i>
                         Tidak Ada Aksi
-                        </span>
+                      </span>
                     </div>
                   </td>
                 </template>

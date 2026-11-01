@@ -74,6 +74,11 @@ class RegisterService
                 'lead-delete',
                 'lead-convert',
 
+                'customer-view',
+                'customer-create',
+                'customer-edit',
+                'customer-delete',
+
                 'closing-view',
                 'closing-remaining',
                 'closing-payment_cancel',
@@ -88,6 +93,11 @@ class RegisterService
                 'lead-edit',
                 'lead-delete',
                 'lead-convert',
+
+                'customer-view',
+                'customer-create',
+                'customer-edit',
+                'customer-delete',
 
                 'closing-view',
                 'closing-remaining',
@@ -104,6 +114,11 @@ class RegisterService
                 'lead-delete',
                 'lead-convert',
 
+                'customer-view',
+                'customer-create',
+                'customer-edit',
+                'customer-delete',
+
                 'closing-view',
                 'closing-remaining',
                 'closing-payment_cancel',
@@ -118,6 +133,11 @@ class RegisterService
                 'lead-edit',
                 'lead-delete',
                 'lead-convert',
+
+                'customer-view',
+                'customer-create',
+                'customer-edit',
+                'customer-delete',
 
                 'closing-view',
                 'closing-remaining',

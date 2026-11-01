@@ -28,7 +28,7 @@ class LeadPolicy
      */
     private function isSameBranch(User $user, LeadModel $lead): bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->hasRole(['super_admin', 'supervisor'])) {
             return true;
         }
 
