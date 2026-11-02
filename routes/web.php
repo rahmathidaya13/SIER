@@ -70,6 +70,7 @@ Route::middleware(['auth', 'check.status.active', 'idle.timeout', 'verified.emai
         Route::get('/employee/show/{id}', 'show')->name('employee.show');
         Route::put('/employee/update/{id}', 'update')->name('employee.update');
         Route::delete('/employee/delete/{id}', 'destroy')->name('employee.delete');
+        Route::patch('/employee/status/{id}', 'toggleStatus')->name('employee.status');
     });
 
     Route::controller(ProductController::class)->group(function () {

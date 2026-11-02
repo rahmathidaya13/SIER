@@ -7,17 +7,17 @@ use Illuminate\Validation\ValidationException;
 
 class UserBusinessRuleService
 {
-    public function ensureUniqueRolePerBranch(User $targetUser, string $role, string $branchId, ?string $isActive): void
+    public function ensureUniqueRolePerBranch(User $targetUser, string $role, string $branchId): void
     {
         // hanya supervisor yang dibatasi oleh cabang tidak boleh ada lebih dari 1
-        if ($role !== 'supervisor' || $isActive !== 'active') {
+        if ($role !== 'supervisor') {
             return;
         }
 
         $exists = User::query()
             ->whereKeyNot($targetUser->id)
             ->where('id_branch', $branchId)
-            ->where('is_active', 'active')
+            ->where('is_active', true)
             ->role('supervisor')
             ->exists();
 

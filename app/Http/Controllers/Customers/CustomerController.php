@@ -10,6 +10,7 @@ use App\Models\CustomerModel;
 use App\Traits\InvalidatesCaches;
 use App\Traits\CustomerValidation;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Gate;
 use App\Repository\Sale\SaleRepository;
 use App\Repository\User\UserRepository;
 use App\Http\Resources\CustomerResource;
@@ -31,7 +32,7 @@ class CustomerController extends Controller
     }
     public function index(Request $request)
     {
-        $this->authorize('view');
+        $this->authorize('viewAny', CustomerModel::class);
 
         $validated = $request->validate([
             'keyword' => 'nullable|string|max:255',
@@ -57,6 +58,8 @@ class CustomerController extends Controller
     }
     public function store(Request $request)
     {
+        $this->authorize('create', CustomerModel::class, 'unauthorized_action');
+
         // dd($request->all());
         $user = auth()->user();
         $validated = $this->customerValidation($request->all());
@@ -99,12 +102,23 @@ class CustomerController extends Controller
             ])
             ->with(['branch', 'creator', 'updater'])
             ->findOrFail($id);
+
+        $this->authorize('view', $customer); // Memeriksa izin menggunakan CustomerPolicy
+
         return CustomerResource::make($customer);
     }
     public function update(Request $request, string $id)
     {
         $user = auth()->user();
-        $customer = CustomerModel::findOrFail($id);
+        $customer = CustomerModel::with([
+            // Load  relasi 'creator' & 'updater' (withTrashed) agar Policy tidak terkena N+1 query saat cek role pembuat
+            'creator' => fn($q) => $q->withTrashed(),
+            'updater' => fn($q) => $q->withTrashed()
+        ])
+            ->findOrFail($id);
+
+        // Memeriksa izin menggunakan CustomerPolicy
+        $this->authorize('update', $customer, 'unauthorized_action');
 
         if (!$user->hasRole(['super_admin', 'developer']) && $customer->created_of_branch !== $user->id_branch) {
             return redirect()->back()->with([
@@ -134,7 +148,14 @@ class CustomerController extends Controller
     public function destroy(string $id)
     {
         $user = auth()->user();
-        $customer = CustomerModel::findOrFail($id);
+        $customer = CustomerModel::with([
+            // Load  relasi 'creator' & 'updater' (withTrashed) agar Policy tidak terkena N+1 query saat cek role pembuat
+            'creator' => fn($q) => $q->withTrashed(),
+            'updater' => fn($q) => $q->withTrashed()
+        ])
+            ->findOrFail($id);
+
+        $this->authorize('delete', $customer);
 
         if ($customer->leads()->exists() || $customer->sales()->exists()) {
             throw ValidationException::withMessages([
@@ -144,9 +165,6 @@ class CustomerController extends Controller
 
         // Simpan data untuk keperluan hapus cache sebelum datanya di-delete
         $CustomerName = $customer->name;
-
-
-
         try {
             // Eksekusi service delete
             $this->services->delete($customer, $user);

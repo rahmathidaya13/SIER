@@ -51,10 +51,9 @@ class UserRepository extends BaseCacheRepository
         [$column, $direction] = $this->resolveSorting($filters);
         return $query
             ->orderBy($column, $direction)
-            ->paginate($limit)
-            ->withQueryString();
+            ->paginate($limit);
     }
-    protected function resolveStatus(array $filters): string|null
+    protected function resolveStatus(array $filters)
     {
         return match ($filters['status'] ?? 'all') {
             'active' => 'active',

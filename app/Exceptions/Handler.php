@@ -20,10 +20,6 @@ class Handler extends ExceptionHandler
         'password',
         'password_confirmation',
     ];
-
-    /**
-     * Register the exception handling callbacks for the application.
-     */
     public function render($request, Throwable $exception)
     {
         if ($exception instanceof UnauthorizedException || $exception instanceof AuthorizationException) {

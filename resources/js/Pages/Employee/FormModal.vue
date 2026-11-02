@@ -14,7 +14,6 @@ const props = defineProps({
 
 const isDeveloper = hasRole('developer');
 const isSuperadmin = hasRole('super_admin');
-const isSupervisor = hasRole('supervisor');
 
 const isEdit = computed(() => !!props.idUser);
 const isLoading = ref(false);
@@ -26,7 +25,6 @@ const form = useForm({
     password_confirmation: '',
     role: null, // Default
     id_branch: null,
-    is_active: 'active',
     permissions: []
 });
 
@@ -37,7 +35,6 @@ const fillForm = (data) => {
         email: data.email,
         role: data.roles[0]?.name,
         id_branch: data.id_branch,
-        is_active: data.is_active,
         permissions: data.permissions ? data.permissions.map(p => p.id) : [],
     });
     form.reset();
@@ -52,7 +49,6 @@ const resetForm = () => {
         password_confirmation: '',
         role: null,
         id_branch: null,
-        is_active: 'active',
         permissions: [],
     });
     form.reset();
@@ -160,39 +156,30 @@ const submitTextButton = computed(() => {
     if (form.processing) return 'Memproses...';
     return isEdit.value ? 'Simpan Perubahan' : ' Simpan Data';
 });
-const generateRandomPassword = () => {
-    const randomPass = 'VILB-' + Math.floor(1000 + Math.random() * 9000);
-    form.password = randomPass;
-    form.password_confirmation = randomPass;
-};
-const showPassword = ref(false);
-const togglePasswordVisibilty = () => {
-    showPassword.value = !showPassword.value;
-};
 
 const allowedForSuperAdmin = [
+    'customer-view', 'customer-create', 'customer-edit', 'customer-delete',
+    'channel-view', 'channel-create', 'channel-edit', 'channel-delete',
     'product-view', 'product-create', 'product-edit', 'product-delete',
     'lead-view', 'lead-create', 'lead-edit', 'lead-delete',
-    'closing-view', 'closing-create', 'closing-edit', 'closing-delete',
-    'users-view', 'users-create', 'users-edit'
+    'closing-view', 'closing-create', 'closing-edit', 'closing-delete','closing-remaining','closing-payment_cancel',
 ]
 
-const allowedForSpv = [
-    'lead-view', 'lead-create', 'lead-edit',
-    'closing-view', 'closing-create', 'closing-edit',
-]
+
 const filteredPermissions = computed(() => {
     if (isDeveloper) return props.permissions;
     if (isSuperadmin) {
         return props.permissions.filter(perm => allowedForSuperAdmin.includes(perm.name));
     }
-    if (isSupervisor) {
-        return props.permissions.filter(perm => allowedForSpv.includes(perm.name));
-    }
+    // if (isSupervisor) {
+    //     return props.permissions.filter(perm => allowedForSpv.includes(perm.name));
+    // }
 
     return [];
 })
 const categoryTranslations = {
+    'branch': 'Data Cabang',
+    'customer': 'Data Pelanggan',
     'channel': 'Sumber Trafik (Channel)',
     'product': 'Data Produk',
     'lead': 'Data Prospek (Leads)',
@@ -201,26 +188,43 @@ const categoryTranslations = {
     'data': 'Ekspor Data',
 };
 const permissionTranslations = {
+
+    'branch-view': 'Diizinkan melihat daftar cabang',
+    'branch-create': 'Diizinkan menambah cabang baru',
+    'branch-edit': 'Diizinkan mengubah data cabang',
+    'branch-delete': 'Diizinkan menghapus cabang',
+
+    // Customer
+    'customer-view': 'Diizinkan melihat daftar pelanggan',
+    'customer-create': 'Diizinkan menambah pelanggan baru',
+    'customer-edit': 'Diizinkan mengubah data pelanggan',
+    'customer-delete': 'Diizinkan menghapus pelanggan',
+
     // Channel
     'channel-view': 'Diizinkan melihat daftar channel',
     'channel-create': 'Diizinkan menambah channel baru',
     'channel-edit': 'Diizinkan mengubah data channel',
     'channel-delete': 'Diizinkan menghapus channel',
+
     // Produk
     'product-view': 'Diizinkan melihat daftar produk',
     'product-create': 'Diizinkan menambah produk baru',
     'product-edit': 'Diizinkan mengubah data produk',
     'product-delete': 'Diizinkan menghapus produk',
+
     // Lead
     'lead-view': 'Diizinkan melihat data prospek',
     'lead-create': 'Diizinkan membuat prospek baru',
     'lead-edit': 'Diizinkan mengubah data prospek',
     'lead-delete': 'Diizinkan menghapus data prospek',
+
     // Rekap Closing
     'closing-view': 'Diizinkan melihat data Closing',
     'closing-create': 'Diizinkan membuat Closing',
     'closing-edit': 'Diizinkan mengubah Closing',
     'closing-delete': 'Diizinkan menghapus Closing',
+    'closing-remaining': 'Diizinkan melakukan pembayaran Pelunasan',
+    'closing-payment_cancel': 'Diizinkan membatalkan pembayaran',
 
     'data-export': 'Diizinkan ekspor data',
 
@@ -272,7 +276,6 @@ const groupedPermissions = computed(() => {
     });
 });
 
-console.log(groupedPermissions.value);
 </script>
 <template>
     <div class="row" v-if="props.show">
@@ -300,7 +303,7 @@ console.log(groupedPermissions.value);
 
                             <div class="mb-3">
                                 <input-label labelClass="mb-1" for="name_input" value="Nama Lengkap" />
-                                <input-text :error="form.errors.name" v-model="form.name" name="name"
+                                <input-text :disabled="isEdit" :error="form.errors.name" v-model="form.name" name="name"
                                     placeholder="Cth: Dimas Anggara" />
                                 <input-error :message="form.errors.name" />
                             </div>
@@ -309,8 +312,6 @@ console.log(groupedPermissions.value);
                                 <input-label labelClass="mb-1" for="email_input" value="Email" />
                                 <input-text :disabled="isEdit" name="email" :error="form.errors.email"
                                     v-model="form.email" type="email" placeholder="dimas@perusahaan.com" />
-                                <small class="text-muted" style="font-size:12px;">*Email yang digunakan harus yang
-                                    aktif</small>
                                 <input-error :message="form.errors.email" />
                             </div>
 
@@ -329,7 +330,7 @@ console.log(groupedPermissions.value);
                                     <input-error :message="form.errors.id_branch" />
                                 </div>
                             </div>
-                            <div class="mb-3 bg-light p-3 rounded-3 border">
+                            <!-- <div class="mb-3 bg-light p-3 rounded-3 border">
                                 <input-label labelClass="mb-2" for="is_active" value="Status Pegawai" />
                                 <div class="d-flex gap-5">
                                     <radio-button name="is_active" v-model:checked="form.is_active" value="active"
@@ -338,7 +339,7 @@ console.log(groupedPermissions.value);
                                         label="Tidak Aktif (Akses ditangguhkan)" />
                                 </div>
                                 <input-error :message="form.errors.phone" />
-                            </div>
+                            </div> -->
 
                             <div class="mb-3">
                                 <input-label labelClass="mb-1" value="Hak Akses (Permissions)" />
@@ -379,32 +380,6 @@ console.log(groupedPermissions.value);
                                     </div>
                                 </div>
                                 <input-error :message="form.errors.permissions" class="mt-1" />
-                            </div>
-
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <input-label for="password_input" labelClass="mb-1" value="Kata Sandi Akses" />
-                                    <button v-if="!isEdit" type="button" @click="generateRandomPassword"
-                                        class="btn btn-sm btn-link text-decoration-none py-0 small">
-                                        <i class="bi bi-magic me-1"></i>Buat Otomatis
-                                    </button>
-                                </div>
-                                <div class="position-relative">
-                                    <input-text name="password" :disabled="isEdit"
-                                        inputClass="input-fixed-height has-icon-right input-icon-left-none"
-                                        :error="form.errors.password" v-model="form.password"
-                                        :type="showPassword ? 'text' : 'password'" placeholder="••••••••" />
-                                    <i @click="togglePasswordVisibilty" :class="[
-                                        'input-icon-right',
-                                        'cursor-pointer',
-                                        showPassword
-                                            ? 'bi bi-eye-slash-fill'
-                                            : 'bi bi-eye-fill',
-                                    ]"></i>
-                                </div>
-                                <small class="text-muted" style="font-size:12px;">*Gunakan minimal 8 karakter. Pegawai
-                                    dapat menggantinya nanti.</small>
-                                <input-error :message="form.errors.password" />
                             </div>
                         </form-wrapper>
                     </div>

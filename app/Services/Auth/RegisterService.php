@@ -52,7 +52,7 @@ class RegisterService
         $exists = User::query()
             ->whereKeyNot($user->id)
             ->where('id_branch', $branchId)
-            ->where('is_active', 'active')
+            ->where('is_active', true)
             ->role('supervisor')
             ->exists();
 
@@ -82,6 +82,7 @@ class RegisterService
                 'closing-view',
                 'closing-remaining',
                 'closing-payment_cancel',
+                'closing-create',
 
                 'data-export'
             ],
@@ -102,6 +103,8 @@ class RegisterService
                 'closing-view',
                 'closing-remaining',
                 'closing-payment_cancel',
+                'closing-create',
+
 
                 'data-export'
             ],
@@ -122,6 +125,8 @@ class RegisterService
                 'closing-view',
                 'closing-remaining',
                 'closing-payment_cancel',
+                'closing-create',
+
 
                 'data-export'
             ],
@@ -142,6 +147,8 @@ class RegisterService
                 'closing-view',
                 'closing-remaining',
                 'closing-payment_cancel',
+                'closing-create',
+
 
                 'data-export'
             ],

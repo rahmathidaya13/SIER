@@ -18,6 +18,7 @@ class CustomerService
             $branchId = $this->resolveBranchId($validated, $user);
             $customer = CustomerModel::create([
                 'created_by' => $user->id,
+                'updated_by' => $user->id,
                 'created_of_branch' => $branchId,
                 'name'              => $validated['name'],
                 'pic_name'          => $this->nullIfEmpty($validated['pic_name'] ?? null),
@@ -53,7 +54,7 @@ class CustomerService
                 : $customer->created_of_branch;
 
             $customer->update([
-                'updated_by' =>  $user->id,
+                'updated_by' =>  $user->id !== $customer->created_by ? $user->id : $customer->created_by,
                 'created_of_branch' => $branchId,
                 'name' => $validated['name'],
                 'pic_name'          => $this->nullIfEmpty($validated['pic_name'] ?? null),

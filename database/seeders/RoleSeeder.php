@@ -48,6 +48,9 @@ class RoleSeeder extends Seeder
 
             // Modul Closing/Terjual
             'closing-view',
+            'closing-create',
+            'closing-edit',
+            'closing-delete',
             'closing-remaining',
             'closing-payment_cancel',
 

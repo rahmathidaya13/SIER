@@ -9,53 +9,55 @@ use Illuminate\Http\Request;
 use App\Traits\UserValidation;
 use App\Services\User\UserService;
 use App\Http\Controllers\Controller;
-use App\Traits\BranchMutationHelper;
 use Illuminate\Support\Facades\Gate;
 use App\Repository\User\UserRepository;
 use App\Services\User\UserBusinessRuleService;
 use Illuminate\Validation\ValidationException;
 use App\Services\User\UserAuthorizationService;
 use App\Services\Authorization\ScopeResolverService;
+use App\Traits\InvalidatesCaches;
 use Spatie\Permission\Models\Permission;
+use App\Support\ScopeKey;
 
 class UserController extends Controller
 {
-    use BranchMutationHelper, UserValidation, UserScope;
+    use InvalidatesCaches, UserValidation, UserScope;
     protected $repository;
     protected $authorization;
-    protected $action;
+    protected $service;
     protected $bussinessRule;
     protected $scopeResolverService = ScopeResolverService::class;
+
     public function __construct(UserRepository $employeeRepository)
     {
         $this->repository = $employeeRepository;
         $this->authorization = new UserAuthorizationService();
-        $this->action = new UserService();
+        $this->service = new UserService();
         $this->bussinessRule = new UserBusinessRuleService();
         $this->middleware('role:developer|super_admin');
     }
     public function index(Request $request)
     {
         $this->authorize('viewAny', User::class);
-        $request->validate([
+
+        $validated = $request->validate([
             'keyword' => 'nullable|string|max:255',
             'limit' => 'nullable|integer|min:1|max:100',
             'sort_order' => 'nullable|string|in:oldest,latest',
             'status' => 'nullable|string|in:all,active,inactive',
             'page' => 'nullable|integer|min:1',
         ]);
-        $filters = $request->only([
-            'keyword',
-            'limit',
-            'status',
-            'sort_order',
-            'page',
-        ]);
+
+        $filters = $request->only(array_keys($validated));
+
         $filters = app(ScopeResolverService::class)->filters($filters);
-        $employee = $this->repository->getCached($filters['scope'], $filters);
+
+        $employee = $this->repository->getCached($filters['scope'], $filters, $filters['page'] ?? 1);
+
         $branches = BranchModel::query()
             ->select('id_branch', 'name')
             ->get();
+
         $permission = Permission::select('id', 'name')->get();
         return inertia('Employee/Index', [
             'branches' => $branches,
@@ -71,7 +73,6 @@ class UserController extends Controller
             ->findOrFail($id);
         return response()->json($user);
     }
-
 
 
     public function store(Request $request)
@@ -92,7 +93,7 @@ class UserController extends Controller
         $branchId = $user->hasRole('developer') ? $data['id_branch'] : $user->id_branch;
 
         $this->bussinessRule->ensureUniqueRolePerBranch(new User(), $data['role'], $branchId, $data['is_active']);
-        $newUser = $this->action->create($data);
+        $newUser = $this->service->create($data);
 
         $this->invalidateCaches(UserRepository::class, ['global', 'global_super_admin', 'branch_' . $newUser->id_branch, 'user_' . $newUser->id]);
         return back()->with(
@@ -103,43 +104,40 @@ class UserController extends Controller
     public function update(Request $request, string $id)
     {
         $currentUser = auth()->user();
-        $user = User::find($id);
-        $oldBranchId = $user->id_branch;
 
-        if (!$user) {
+        $targetUser = User::findOrFail($id);
+        $oldBranchId = $targetUser->id_branch;
+
+        if (!$targetUser) {
             throw ValidationException::withMessages([
-                'error' => 'Data pegawai tidak ditemukan.'
+                'unauthorized_action' => 'Data pegawai tidak ditemukan.'
             ]);
         }
 
-        // 🛡️ 1. Pengecekan Policy
-        $response = Gate::inspect('update', $user);
-        if ($response->denied()) {
-            throw ValidationException::withMessages([
-                'unauthorized_action' => $response->message() // Mengambil pesan dari Policy
-            ]);
-        }
+        // 1. Pengecekan Policy untuk user yang sedang login dan user target yang akan diubah
+        $this->authorize('update', $targetUser, 'unauthorized_action');
 
         // 2. Ambil daftar role yang boleh dimanipulasi oleh user yang sedang login
         $allowedRoles = $this->allowedRoles($currentUser);
 
-        $this->validationText($request->all(), $allowedRoles, $currentUser, $user, 'edit');
+        $validated = $this->validationText($request->all(), $allowedRoles, $currentUser, $targetUser);
 
         // Aturan Bisnis Khusus Supervisor
-        $this->bussinessRule->ensureUniqueRolePerBranch($user, $request['role'], $request['id_branch'], $request['is_active']);
+        $this->bussinessRule->ensureUniqueRolePerBranch($targetUser, $validated['role'], $validated['id_branch']);
 
         // Eksekusi Perubahan di Database Berikan akses ganti cabang untuk Developer dan Super Admin
         $canChangeBranch = $currentUser->hasAnyRole(['developer', 'super_admin']);
-        $this->action->update($user, $request->all(), $canChangeBranch);
 
-        $this->invalidateCaches(UserRepository::class, ['global', 'global_super_admin',  'branch_' . $oldBranchId, 'branch_' . $request->id_branch, 'user_' . $user->id]);
+        $this->service->update($targetUser, $validated, $canChangeBranch);
 
-        return redirect()->back()->with('message', "Data {$user->name} berhasil diperbarui!");
+        $this->clearUserCaches($targetUser, $currentUser->id, $oldBranchId);
+
+        return redirect()->back()->with('message', "Data {$targetUser->name} berhasil diperbarui!");
     }
 
     public function destroy(string $id)
     {
-        $user = User::find($id);
+        $user = User::findOrFail($id);
 
         if (!$user) {
             throw ValidationException::withMessages([
@@ -148,27 +146,58 @@ class UserController extends Controller
         }
 
         // 🛡️ 1. Pengecekan Policy
-        $response = Gate::inspect('deleted', $user);
-        if ($response->denied()) {
-            throw ValidationException::withMessages([
-                'error' => $response->message() // Mengambil pesan dari Policy
-            ]);
-        }
+        $this->authorize('delete', $user, 'unauthorized_action');
 
-        $branchId = $user->id_branch;
-        $name = $user->name;
-        $user->delete();
-
+        $this->service->delete($user);
         // cek apakah user sudah dihapus atau belum
         if (!$user->trashed()) {
             throw ValidationException::withMessages([
-                'error' => "Sistem gagal menghapus data {$name} secara aman."
+                'error' => "Sistem gagal menghapus data secara aman."
             ]);
         }
+        $this->clearUserCaches($user, auth()->id(), $user->getOriginal('id_branch'));
 
-        $this->invalidateCaches(UserRepository::class, ['global', 'global_super_admin', 'branch_' . $branchId]);
+        return redirect()->back()->with('message', "Pegawai atas nama {$user->name} telah dihapus dari sistem");
+    }
 
-        return redirect()->back()->with('message', "Pegawai atas nama {$name} telah dihapus dari sistem");
+    /**
+     * Mengubah status aktif/nonaktif pegawai (Untuk Super Admin & Developer)
+     */
+    public function toggleStatus(string $id)
+    {
+        $currentUser = auth()->user();
+        $targetUser = User::findOrFail($id);
+
+        // Cek ke UserPolicy@toggleStatus
+        $this->authorize('toggleStatus', $targetUser);
+
+        $updatedUser = $this->service->toggleStatus($targetUser);
+
+        $this->clearUserCaches($targetUser, $currentUser->id, $targetUser->getOriginal('id_branch'));
+
+        $statusText = $updatedUser->is_active ? 'diaktifkan kembali' : 'dinonaktifkan';
+        return redirect()->back()->with('message', "Akun {$updatedUser->name} berhasil {$statusText}.");
+    }
+
+    /**
+     * Helper terpusat untuk invalidate cache User
+     */
+    protected function clearUserCaches(
+        User $targetUser,
+        ?string $actorUserId = null,
+        ?string $oldBranchId = null
+    ): void {
+        $this->invalidateCaches(
+            [UserRepository::class],
+            [
+                $actorUserId ? ScopeKey::user($actorUserId) : null,
+                $oldBranchId ? ScopeKey::branch($oldBranchId) : null,
+                ScopeKey::user($targetUser->id),
+                ScopeKey::branch($targetUser->id_branch),
+                ScopeKey::GLOBAL,
+                ScopeKey::GLOBAL_SUPER_ADMIN,
+            ]
+        );
     }
 
     private function allowedRoles(User $user): array|null|string|bool
@@ -176,7 +205,7 @@ class UserController extends Controller
         $allowedRoles = match (true) {
             $user->hasRole('developer')   => ['super_admin', 'supervisor', 'admin', 'sales', 'teknisi'],
             $user->hasRole('super_admin') => ['supervisor', 'admin', 'sales', 'teknisi'],
-            $user->hasRole('supervisor')  => ['admin', 'sales', 'teknisi'],
+            // $user->hasRole('supervisor')  => ['admin', 'sales', 'teknisi'],
             default                                 => []
         };
         return $allowedRoles;

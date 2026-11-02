@@ -39,3 +39,9 @@
     color: var(--c-slate);
     border: 1px solid #e2e8f0;
 }
+
+.badge-soft-light {
+    background-color: var(--c-light-subtle);
+    color: var(--c-light);
+    border: 1px solid #f1f5f9;
+}

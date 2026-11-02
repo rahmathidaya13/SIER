@@ -13,7 +13,6 @@ trait UserValidation
         array $allowedRoles,
         User $actor,
         ?User $targetUser = null,
-        string $mode = 'create'
     ) {
         return Validator::make(
             $request,
@@ -31,19 +30,15 @@ trait UserValidation
                     Rule::unique('users', 'email')
                         ->ignore($targetUser?->id),
                 ],
-                'password' => $mode === 'edit'
-                    ? ['nullable', 'string', 'min:8']
-                    : ['required', 'string', 'min:8'],
 
                 'role' => [
                     'required',
                     Rule::in($allowedRoles),
                 ],
 
-                'id_branch' => $actor->hasRole('super_admin')
+                'id_branch' => $actor->hasRole(['developer', 'super_admin'])
                     ? ['required', 'exists:branches,id_branch']
                     : ['nullable'],
-                'is_active' => ['required', 'in:active,inactive'],
 
                 'permissions'   => 'required|array',
                 'permissions.*' => 'required|exists:permissions,id',
@@ -65,8 +60,6 @@ trait UserValidation
                 'id_branch.required' => 'Cabang tidak boleh kosong.',
                 'id_branch.exists'   => 'Cabang tidak valid.',
 
-                'is_active.required' => 'Status wajib dipilih.',
-                'is_active.in'  => 'Status tidak valid.',
 
                 'permissions.required' => 'Hak Akses wajib dipilih',
                 'permissions.*.exists' => 'Permission tidak sesuai.',

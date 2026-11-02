@@ -1,10 +1,11 @@
 <script setup>
-import { Head, router } from "@inertiajs/vue3";
+import { Head, router, usePage } from "@inertiajs/vue3";
 import { computed, onMounted, ref } from "vue";
 import { useFilter } from "@/Composables/useFilter";
 import { highlight } from "@/Helpers/Highlight";
 import { formatDate } from "@/Helpers/formatDate";
 import { useConfirm } from "@/Composables/useConfirm";
+import { hasRole, hasPermission } from "@/Composables/useAuth";
 import FormModal from "./FormModal.vue";
 const confirm = useConfirm();
 const props = defineProps({
@@ -13,6 +14,95 @@ const props = defineProps({
   permissions: Array,
   filters: Object,
 });
+
+const page = usePage();
+// Ambil ID user yang sedang login
+const authUserId = computed(() => {
+  return page.props.auth?.user_id ?? page.props.auth?.user?.id ?? null;
+});
+// Cek apakah baris tabel (item) ini adalah milik user yang sedang login
+const isCurrentLoggedUser = (item) => {
+  const itemId = item?.id ?? item?.id_user; // Antisipasi jika key id atau id_user
+  if (!itemId || !authUserId.value) return false;
+
+  return String(itemId) === String(authUserId.value);
+};
+// Helper untuk mengambil nama role dari baris data (item)
+const getItemRole = (item) => {
+  return (item?.role_name ?? item?.role ?? item?.roles?.[0]?.name ?? "").toLowerCase();
+};
+
+const visibleActions = (item, actions = []) => {
+  if (!item || !Array.isArray(actions)) return [];
+  // Jika baris ini adalah dirinya sendiri yang sedang login,
+  // langsung sembunyikan SEMUA tombol aksi (return array kosong)
+  if (isCurrentLoggedUser(item)) {
+    return [];
+  }
+  const targetRole = getItemRole(item);
+
+  //  Jika yang login adalah super_admin, sembunyikan SEMUA tombol aksi
+  // saat melihat baris milik developer atau sesama super_admin
+  if (hasRole(["super_admin"]) && ["developer", "super_admin"].includes(targetRole)) {
+    return [];
+  }
+  // Jika yang login adalah supervisor, sembunyikan SEMUA tombol aksi
+  // saat melihat baris milik developer, super_admin, atau sesama supervisor
+  if (
+    hasRole(["supervisor"]) &&
+    ["developer", "super_admin", "supervisor"].includes(targetRole)
+  ) {
+    return [];
+  }
+  // Jika lolos dari 3 aturan proteksi di atas, baru saring per tombol aksi
+  return actions.filter((action) => {
+    // Filter berdasarkan role
+    if (action.role && !hasRole(action.role)) {
+      return false;
+    }
+
+    // Filter berdasarkan permission
+    if (action.permission && !hasPermission(action.permission)) {
+      return false;
+    }
+
+    // Filter berdasarkan kondisi show/hide (mendukung boolean atau function)
+    const isShown = typeof action.show === "function" ? action.show(item) : action.show;
+    if (isShown === false) {
+      return false;
+    }
+
+    return true;
+  });
+};
+
+const rowActions = (item) => [
+  {
+    title: "Ubah Pegawai",
+    icon: "bi bi-pencil-square",
+    class: "btn btn-c-success",
+    role: ["developer", "super_admin"],
+    permission: "users-edit",
+    onClick: (row) => openEditModal(row),
+  },
+  {
+    title: item.is_active ? "Nonaktifkan Akun" : "Aktifkan Akun",
+    icon: item.is_active ? "bi bi-person-slash" : "bi bi-person-check-fill",
+    class: item.is_active ? "btn btn-c-warning" : "btn btn-c-info",
+    role: ["developer", "super_admin"],
+    permission: "users-edit",
+    onClick: (row) => toggleStatusUser("employee.status", row),
+  },
+  {
+    title: "Hapus Pegawai",
+    icon: "bi bi-trash",
+    class: "btn btn-c-primary",
+    role: ["developer", "super_admin"],
+    permission: "users-delete",
+    onClick: (row) => deleted("employee.delete", row),
+  },
+];
+
 const showModal = ref(false);
 const selectedByIdUser = ref(null);
 const openCreateModal = () => {
@@ -130,6 +220,7 @@ const header = [
     },
   },
 ];
+
 const employeeActions = [
   {
     label: "Ubah Pegawai",
@@ -148,7 +239,17 @@ const employeeActions = [
     icon: "bi bi-trash",
     buttonClass: "btn-action",
     variant: "delete",
-    title: "Hapus Produk",
+    title: "Hapus Pegawai",
+    role: ["developer"],
+  },
+  {
+    label: "Nonaktifkan Pegawai",
+    action: "status",
+    protectedSelf: true,
+    icon: "bi bi-x-circle",
+    buttonClass: "btn-action",
+    variant: "delete",
+    title: "Nonaktifkan Pegawai",
     role: ["developer", "super_admin"],
   },
 ];
@@ -164,6 +265,29 @@ const deleted = async (nameRoute, data) => {
     // loaderActive.value?.show("Sedang menghapus data...");
     router.delete(route(nameRoute, data.id), {
       preserveScroll: false,
+      replace: true,
+      preserveState: true,
+    });
+  }
+};
+const toggleStatusUser = async (nameRoute, data) => {
+  const setConfirm = await confirm.ask({
+    title: `${data.is_active ? "Nonaktifkan" : "Aktifkan kembali"} ${data.name} ?`,
+    message: `Kamu ingin ${
+      data.is_active ? "menonaktifkan" : "mengaktifkan"
+    } Data Pegawai, pegawai ${
+      data.is_active ? "tidak dapat" : "dapat"
+    } mengakses aplikasi.`,
+    confirmText: "Ya, Lanjutkan",
+    variant: data.is_active ? "warning" : "success",
+    icon: data.is_active ? "bi bi-person-slash" : "bi bi-person-check-fill",
+    variantButton: data.is_active ? "warning" : "success",
+  });
+
+  if (setConfirm) {
+    // loaderActive.value?.show("Sedang menghapus data...");
+    router.patch(route(nameRoute, data.id), {
+      preserveScroll: true,
       replace: true,
       preserveState: true,
     });
@@ -194,12 +318,6 @@ onMounted(() => {
                     >Kelola akses portal dan penempatan cabang internal.</small
                   >
                 </div>
-                <button
-                  @click.prevent="openCreateModal"
-                  class="btn btn-c-primary px-4 py-2"
-                >
-                  <i class="bi bi-person-plus-fill me-1"></i> Tambah Pegawai
-                </button>
               </div>
             </div>
 
@@ -321,32 +439,48 @@ onMounted(() => {
                     <div
                       style="font-size: 13px"
                       :class="`badge px-5 rounded-pill fw-medium ${
-                        item.is_active === 'active'
+                        Boolean(item.is_active) === true
                           ? 'badge-soft-success'
                           : 'badge-soft-danger'
                       }`"
                     >
                       <i
                         :class="` ${
-                          item.is_active === 'active'
+                          Boolean(item.is_active) === true
                             ? 'bi bi-unlock-fill'
                             : 'bi bi-lock-fill'
                         }`"
                       ></i>
-                      {{ item.is_active === "active" ? "Aktif" : "Tidak Aktif" }}
+                      {{ Boolean(item.is_active) === true ? "Aktif" : "Tidak Aktif" }}
                     </div>
                   </td>
 
                   <td class="py-3 text-center text-muted small">
                     {{ formatDate(item.created_at) }}
                   </td>
-                  <td>
-                    <action-button
-                      :item="item"
-                      :actions="employeeActions"
-                      @edit="openEditModal(item)"
-                      @delete="deleted('employee.delete', item)"
-                    />
+                  <td class="text-center">
+                    <div
+                      v-if="visibleActions(item, rowActions(item)).length > 0"
+                      class="d-flex justify-content-center gap-1"
+                    >
+                      <button
+                        v-for="(action, idx) in visibleActions(item, rowActions(item))"
+                        :key="idx"
+                        @click="action.onClick(item)"
+                        type="button"
+                        :class="action.class"
+                        :title="action.title"
+                      >
+                        <i :class="action.icon"></i>
+                      </button>
+                    </div>
+                    <div v-else class="d-flex justify-content-center">
+                      <span
+                        class="small fw-semibold badge badge-soft-light rounded-5 text-muted"
+                      >
+                        <i class="bi bi-lock-fill me-1"></i>No Action
+                      </span>
+                    </div>
                   </td>
                 </template>
                 <template #pagination>

@@ -183,7 +183,6 @@ const fillForm = (data) => {
     is_member: Boolean(data.is_member),
     city: data.city || "",
   });
-  console.log(data);
   form.reset();
 };
 const resetForm = () => {

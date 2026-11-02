@@ -3,19 +3,23 @@
 namespace App\Services\User;
 
 use App\Models\User;
+use App\Support\ScopeKey;
 use App\Models\ProfileModel;
+use App\Traits\InvalidatesCaches;
+use Illuminate\Support\Facades\DB;
+use App\Repository\User\UserRepository;
 
 class UserService
 {
+    use InvalidatesCaches;
     public function create(array $data): User
     {
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => bcrypt($data['password']),
             'id_branch' => $data['id_branch'],
             'email_verified_at' => now(),
-            'is_active' => $data['is_active'],
+            'is_active' => true,
         ]);
 
         ProfileModel::create([
@@ -36,12 +40,9 @@ class UserService
         $user->fill([
             'name' => $data['name'],
             'email' => $data['email'],
-            'is_active' => $data['is_active'],
         ]);
 
-        if (!empty($data['password'])) {
-            $user->password = bcrypt($data['password']);
-        }
+
 
         if ($canChangeBranch) {
             $user->id_branch = $data['id_branch'];
@@ -64,5 +65,25 @@ class UserService
         }
 
         return $user;
+    }
+
+    public function delete(User $user): void
+    {
+        DB::transaction(function () use ($user) {
+            $user->delete();
+            $user->profile()->delete();
+        });
+    }
+    public function toggleStatus(User $targetUser): User
+    {
+        return DB::transaction(function () use ($targetUser) {
+
+            // Balikkan status boolean is_active
+            $targetUser->is_active = !$targetUser->is_active;
+
+            $targetUser->update();
+
+            return $targetUser;
+        });
     }
 }

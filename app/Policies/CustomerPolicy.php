@@ -48,7 +48,7 @@ class CustomerPolicy
      */
     public function create(User $user): Response
     {
-        return $user->hasPermissionTo('customer-create')
+        return $user->can('customer-create')
             ? Response::allow()
             : Response::deny('Anda tidak memiliki wewenang untuk membuat data pelanggan.');
     }
@@ -58,29 +58,70 @@ class CustomerPolicy
      */
     public function update(User $user, CustomerModel $customer): Response
     {
-        if (!$user->hasPermissionTo('customer-edit')) {
+        if (!$user->can('customer-edit')) {
             return Response::deny('Anda tidak memiliki wewenang untuk mengubah data pelanggan.');
         }
 
         return $this->authorizeModification($user, $customer, 'mengubah');
     }
 
-    public function delete(User $user, CustomerModel $customer)
+    /**
+     * Izin menghapus data pelanggan (destroy).
+     */
+    public function delete(User $user, CustomerModel $customer): Response
     {
-        if (!$user->hasPermissionTo('customer-delete')) {
+        if (!$user->can('customer-delete')) {
             return Response::deny('Anda tidak memiliki wewenang untuk menghapus data pelanggan.');
         }
 
-        return $this->isSameBranch($user, $customer)
-            ? Response::allow()
-            : Response::deny('Akses ditolak: Anda hanya bisa menghapus data pelanggan dari cabang Anda sendiri.');
+        return $this->authorizeModification($user, $customer, 'menghapus');
     }
+
+    /**
+     * Cek apakah user berada di cabang yang sama dengan data pelanggan.
+     * (Berlaku untuk SPV maupun Sales karena Super Admin/Dev sudah lolos di before())
+     */
     private function isSameBranch(User $user, CustomerModel $customer): bool
     {
-        if ($user->hasRole(['super_admin', 'developer', 'supervisor'])) {
-            return true;
+        return !empty($user->id_branch)
+            && (string) $user->id_branch === (string) $customer->created_of_branch;
+    }
+
+    /**
+     * Validasi gabungan untuk Update & Delete:
+     * 1. Wajib satu cabang
+     * 2. Patuhi hierarki pembuat data (SPV vs Super Admin, Sales vs SPV/Sales lain)
+     */
+    private function authorizeModification(User $user, CustomerModel $customer, string $actionText): Response
+    {
+        // 1. Cek cabang terlebih dahulu (SPV & Sales wajib satu cabang)
+        if (!$this->isSameBranch($user, $customer)) {
+            return Response::deny("Akses ditolak: Anda hanya bisa {$actionText} data pelanggan dari cabang Anda sendiri.");
         }
 
-        return $user->id_branch === $customer->created_of_branch;
+        // Ambil user pembuat data (gunakan relasi creator yang sudah diberi withTrashed())
+        $creator = $customer->creator;
+
+        // 2. Aturan untuk Supervisor (SPV):
+        // Boleh ubah/hapus semua data di cabangnya, KECUALI data buatan super_admin / developer
+        if ($user->hasRole('supervisor')) {
+            if ($creator && $creator->hasRole(['super_admin', 'developer'])) {
+                return Response::deny("Akses ditolak: Supervisor tidak dapat {$actionText} data yang dibuat oleh Super Admin / Developer.");
+            }
+
+            return Response::allow();
+        }
+
+        // 3. Aturan untuk Role di bawah SPV (Sales / Staff):
+        // Dilarang ubah/hapus data buatan atasan, dan HANYA boleh ubah/hapus data buatannya sendiri
+        if ($creator && $creator->hasRole(['super_admin', 'developer', 'supervisor'])) {
+            return Response::deny("Akses ditolak: Anda tidak dapat {$actionText} data yang dibuat oleh atasan.");
+        }
+
+        if ((string) $customer->created_by !== (string) $user->id) {
+            return Response::deny("Akses ditolak: Anda hanya dapat {$actionText} data pelanggan yang Anda buat sendiri.");
+        }
+
+        return Response::allow();
     }
 }

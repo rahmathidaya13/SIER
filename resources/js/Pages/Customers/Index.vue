@@ -25,7 +25,6 @@ const branchName = computed(() => {
     "Cabang Tidak Diketahui"
   );
 });
-console.log(page.props.auth?.user);
 const header = [
   {
     label: "No",
@@ -249,7 +248,6 @@ const branchOptions = computed(() => {
     }));
 });
 const isOwner = (val) => {
-  console.log(val);
 
   if (!val) return false;
 
@@ -277,7 +275,6 @@ const isOwner = (val) => {
     currentUserId && creatorId && String(creatorId) === String(currentUserId)
   );
 };
-// console.log(props.customers);
 </script>
 <template>
   <Head title="Halaman Pelanggan" />

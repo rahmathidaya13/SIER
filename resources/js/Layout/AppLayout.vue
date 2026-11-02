@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onUnmounted, onMounted, provide } from "vue";
+import { ref, watch, onUnmounted, onMounted } from "vue";
 import { usePage } from "@inertiajs/vue3";
 import Sidebar from "./Sidebar.vue";
 import Header from "./Header.vue";
@@ -11,7 +11,6 @@ const { state } = useConfirm();
 
 const page = usePage();
 const userId = page.props.auth.user.id;
-
 useIdleTimeout({
   timeoutSeconds: page.props.idleTimeout?.seconds ?? 3600,
   lastActivityAt: page.props.idleTimeout?.lastActivityAt ?? null,
@@ -72,8 +71,8 @@ onMounted(() => {
         <div class="text-center mb-4">
           <div
             :class="`icon-circle bg-${
-              state.variantIcon ?? state.variant
-            } bg-opacity-10 text-${state.variantIcon ?? state.variant} mb-3`"
+              state.variant ?? state.variantIcon
+            } bg-opacity-10 text-${state.variant ?? state.variantIcon} mb-3`"
           >
             <i :class="` ${state.icon ?? 'fas fa-exclamation-triangle'} fa-2x`"></i>
           </div>

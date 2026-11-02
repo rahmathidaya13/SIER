@@ -16,7 +16,7 @@ class CheckStatusActive
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check() && Auth::user()->is_active == 'inactive') {
+        if (Auth::check() && Auth::user()->is_active === false) {
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

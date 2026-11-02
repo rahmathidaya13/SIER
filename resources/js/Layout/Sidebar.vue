@@ -40,6 +40,7 @@ const menuItems = [
     icon: "bi bi-person-fill",
     route: "customer.index",
     prefixUrl: "customer*",
+    permissions: ["customer-view"],
   },
   {
     title: "Data Leads",
@@ -171,13 +172,13 @@ const handleLogout = () => {
       aria-label="User Info"
     >
       <img
-        v-if="$page.props.auth.user.profile.photo"
-        :src="getImageUrl($page.props.auth.user.profile)"
+        v-if="$page.props.auth.user?.profile?.photo"
+        :src="getImageUrl($page.props.auth.user?.profile)"
         class="rounded-circle mb-2 object-fit-cover shadow-sm border shadow"
         width="80"
         height="80"
-        :title="$page.props.auth.user.name"
-        :alt="$page.props.auth.user.name"
+        :title="$page.props.auth.user?.name"
+        :alt="$page.props.auth.user?.name"
         loading="lazy"
         decoding="async"
       />

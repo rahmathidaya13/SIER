@@ -41,11 +41,7 @@ class UserSeeder extends Seeder
             'id_user' => $superadmin->id,
         ]);
         $superadmin->assignRole('super_admin');
-        // beri hak akses ke semua permission
-        $superadmin->givePermissionTo(Permission::all());
 
-
-
-
+        $superadmin->givePermissionTo(Permission::all()->except(['users-delete']));
     }
 }
