@@ -17,35 +17,39 @@ class ChannelPolicy
         }
         return null;
     }
-
-    public function view(User $user)
+    public function viewAny(User $user): Response
     {
-        return $user->hasPermissionTo('channel-view');
+        return $user->can('channel-view')
+            ? Response::allow()
+            : Response::deny('Anda tidak memiliki izin untuk melihat daftar sumber trafik (channel).');
     }
 
-    public function create(User $user)
+    public function view(User $user, ?ChannelModel $channel = null): Response
     {
-        if (!$user->hasPermissionTo('channel-create')) {
-            return Response::deny('Anda tidak memiliki wewenang untuk membuat sumber trafik (channel).');
-        }
-        return Response::allow();
+        return $user->can('channel-view')
+            ? Response::allow()
+            : Response::deny('Anda tidak memiliki izin untuk melihat detail sumber trafik (channel).');
     }
 
-    public function update(User $user, ChannelModel $channel)
-    {
-        if (!$user->hasPermissionTo('channel-edit')) {
-            return Response::deny('Anda tidak memiliki wewenang untuk mengubah sumber trafik (channel).');
-        }
 
-        return Response::allow();
+    public function create(User $user): Response
+    {
+        return $user->can('channel-create')
+            ? Response::allow()
+            : Response::deny('Anda tidak memiliki wewenang untuk membuat sumber trafik (channel).');
     }
 
-    public function delete(User $user, ChannelModel $channel)
+    public function update(User $user, ChannelModel $channel): Response
     {
-        if (!$user->hasPermissionTo('channel-delete')) {
-            return Response::deny('Anda tidak memiliki wewenang untuk menghapus sumber trafik (channel).');
-        }
+        return $user->can('channel-edit')
+            ? Response::allow()
+            : Response::deny('Anda tidak memiliki wewenang untuk mengubah sumber trafik (channel).');
+    }
 
-        return Response::allow();
+    public function delete(User $user, ChannelModel $channel): Response
+    {
+        return $user->can('channel-delete')
+            ? Response::allow()
+            : Response::deny('Anda tidak memiliki wewenang untuk menghapus sumber trafik (channel).');
     }
 }

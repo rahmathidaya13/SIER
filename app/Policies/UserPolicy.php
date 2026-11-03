@@ -14,7 +14,7 @@ class UserPolicy
      */
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->hasRole('developer') && !in_array($ability, ['delete', 'toggleStatus'])) {
+        if ($user->hasRole('developer') && !in_array($ability, ['update','delete', 'toggleStatus'])) {
             return true;
         }
 

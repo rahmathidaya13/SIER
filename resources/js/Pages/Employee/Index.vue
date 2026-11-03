@@ -12,6 +12,7 @@ const props = defineProps({
   employee: Object,
   branches: Array,
   permissions: Array,
+  roles: Array,
   filters: Object,
 });
 
@@ -105,10 +106,6 @@ const rowActions = (item) => [
 
 const showModal = ref(false);
 const selectedByIdUser = ref(null);
-const openCreateModal = () => {
-  showModal.value = true;
-  selectedByIdUser.value = null;
-};
 const openEditModal = (data) => {
   showModal.value = true;
   selectedByIdUser.value = data.id;
@@ -156,11 +153,13 @@ const { filters, isLoading } = useFilter({
     keyword: props.filters.keyword ?? "",
     limit: props.filters.limit ?? 10,
     status: props.filters.status ?? "all",
+    branch: props.filters.branch ?? "all",
+    roles: props.filters.roles ?? "all",
     sort_order: props.filters.sort_order ?? "latest",
     page: props.filters.page ?? 1,
   },
-  watchFields: ["keyword", "limit", "status", "sort_order"],
-  only: ["employee", "filters", "branches"],
+  watchFields: ["keyword", "limit", "status", "sort_order", "branch", "roles"],
+  only: ["employee", "filters", "branches", "roles"],
   debounceTime: 500,
 });
 
@@ -221,42 +220,10 @@ const header = [
   },
 ];
 
-const employeeActions = [
-  {
-    label: "Ubah Pegawai",
-    action: "edit",
-    protectedSelf: true,
-    icon: "bi bi-pencil-square",
-    role: ["developer", "super_admin"],
-    title: "Ubah Pegawai",
-    buttonClass: "btn-action",
-    variant: "edit",
-  },
-  {
-    label: "Hapus Pegawai",
-    action: "delete",
-    protectedSelf: true,
-    icon: "bi bi-trash",
-    buttonClass: "btn-action",
-    variant: "delete",
-    title: "Hapus Pegawai",
-    role: ["developer"],
-  },
-  {
-    label: "Nonaktifkan Pegawai",
-    action: "status",
-    protectedSelf: true,
-    icon: "bi bi-x-circle",
-    buttonClass: "btn-action",
-    variant: "delete",
-    title: "Nonaktifkan Pegawai",
-    role: ["developer", "super_admin"],
-  },
-];
 const deleted = async (nameRoute, data) => {
   const setConfirm = await confirm.ask({
-    title: "Hapus",
-    message: `Kamu ingin menghapus Data Pegawai ${data.name} ?`,
+    title: `Hapus Data Pegawai ${data.name} ?`,
+    message: `Kamu ingin menghapus data pegawai, data yang dihapus tidak dapat dikembalikan.`,
     confirmText: "Ya, Hapus",
     variant: "danger",
   });
@@ -294,6 +261,20 @@ const toggleStatusUser = async (nameRoute, data) => {
   }
 };
 
+const branchOptions = computed(() => {
+  return props.branches.map((branch) => ({
+    label: branch.name,
+    value: branch.name,
+  }));
+});
+
+const rolesOptions = computed(() => {
+  return props.roles.map((role) => ({
+    label: role.name,
+    value: role.name,
+  }));
+});
+
 const keywordRef = ref(null);
 onMounted(() => {
   keywordRef.value.focus();
@@ -322,7 +303,7 @@ onMounted(() => {
             </div>
 
             <div class="row p-3 g-2 align-items-center">
-              <div class="col-12 col-md-12 col-lg-12 col-xl-6">
+              <div class="col-12 col-md-12 col-lg-12 col-xl-8">
                 <div class="position-relative">
                   <i class="bi bi-search input-icon-left"></i>
                   <input-text
@@ -330,11 +311,12 @@ onMounted(() => {
                     :isValid="false"
                     v-model="filters.keyword"
                     inputClass="input-fixed-height input-height-1 rounded-pill"
-                    placeholder="Cari nama...."
+                    placeholder="Cari pegawai berdasarkan nama atau email..."
                   />
                 </div>
               </div>
-              <div class="col-xl-1 col-4 col-md-4 col-lg-4">
+
+              <div class="col-xl-2 col-4 col-md-4 col-lg-4">
                 <select-input
                   :isValid="false"
                   name="limit"
@@ -348,7 +330,7 @@ onMounted(() => {
                   ]"
                 />
               </div>
-              <div class="col-xl-1 col-4 col-md-4 col-lg-4">
+              <div class="col-xl-2 col-4 col-md-4 col-lg-4">
                 <select-input
                   :isValid="false"
                   name="sort_order"
@@ -360,7 +342,26 @@ onMounted(() => {
                   ]"
                 />
               </div>
-              <div class="col-xl-1 col-4 col-md-4 col-lg-4">
+
+              <div class="col-xl-4 col-4 col-md-4 col-lg-4">
+                <select-input
+                  :isValid="false"
+                  name="branch"
+                  v-model="filters.branch"
+                  text="Pilih Cabang"
+                  :options="[{ label: 'Semua Cabang', value: 'all' }, ...branchOptions]"
+                />
+              </div>
+              <div class="col-xl-4 col-6 col-md-6 col-lg-6">
+                <select-input
+                  :isValid="false"
+                  name="roles"
+                  v-model="filters.roles"
+                  text="Pilih Peran"
+                  :options="[{ label: 'Semua Peran', value: 'all' }, ...rolesOptions]"
+                />
+              </div>
+              <div class="col-xl-4 col-6 col-md-6 col-lg-6">
                 <select-input
                   :isValid="false"
                   name="status"
@@ -404,7 +405,7 @@ onMounted(() => {
                           class="mb-0 fw-bold text-dark text-capitalize"
                           v-html="highlight(item.name, filters.keyword)"
                         ></h6>
-                        <span class="text-muted small">{{ item.email }}</span>
+                        <span class="text-muted small"  v-html="highlight(item.email, filters.keyword)" ></span>
                       </div>
                     </div>
                   </td>
@@ -484,7 +485,7 @@ onMounted(() => {
                   </td>
                 </template>
                 <template #pagination>
-                  <div
+                  <div v-if="employee?.data?.length > 0"
                     class="border-top py-2 px-2 d-flex flex-column flex-md-row justify-content-between align-items-center"
                   >
                     <small class="text-muted mb-2 mb-md-0">
@@ -501,8 +502,10 @@ onMounted(() => {
                         status: filters.status,
                         limit: filters.limit,
                         sort_order: filters.sort_order,
+                        branch: filters.branch,
+                        roles: filters.roles,
                       }"
-                      :only="['employee', 'filters', 'branches']"
+                      :only="['employee', 'filters', 'branches', 'roles']"
                     />
                   </div>
                 </template>

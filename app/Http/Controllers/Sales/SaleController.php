@@ -65,9 +65,8 @@ class SaleController extends Controller
 
         // inject id_branch and id_user untuk unique cache
         $filters = app(ScopeResolverService::class)->filters($filters);
-        $cleanFilters = Arr::except($filters, ['scope', 'page']); // Hapus 'scope' dan 'page' dari $filters sebelumnya
 
-        $sales   = $this->saleRepository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
+        $sales   = $this->saleRepository->getCached($filters['scope'], $filters, $filters['page'] ?? 1);
 
         $salesStats = $this->saleRepository->getSalesStats($filters);
         $branch     = BranchModel::select('id_branch', 'name')->get();

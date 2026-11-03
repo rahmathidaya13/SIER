@@ -5,13 +5,11 @@ namespace App\Services\User;
 use App\Models\User;
 use App\Support\ScopeKey;
 use App\Models\ProfileModel;
-use App\Traits\InvalidatesCaches;
 use Illuminate\Support\Facades\DB;
 use App\Repository\User\UserRepository;
 
 class UserService
 {
-    use InvalidatesCaches;
     public function create(array $data): User
     {
         $user = User::create([
@@ -41,8 +39,6 @@ class UserService
             'name' => $data['name'],
             'email' => $data['email'],
         ]);
-
-
 
         if ($canChangeBranch) {
             $user->id_branch = $data['id_branch'];

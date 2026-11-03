@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
-
+use Illuminate\Database\Eloquent\Builder;
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable, HasRoles, HasUuids, SoftDeletes;
@@ -59,23 +59,6 @@ class User extends Authenticatable implements MustVerifyEmail
         $this->notify(
             new ResetPasswordNotification($token)
         );
-    }
-
-    public function scopeAllowedForUser($query)
-    {
-        $user = auth()->user();
-        return match (true) {
-            // 1. Developer (Pencipta): Bisa melihat semua isi tabel users
-            $user->hasRole('developer') => $query,
-            // 2. Super Admin: Bisa melihat semua, TAPI DILARANG melihat akun developer
-            $user->hasRole('super_admin') => $query->whereDoesntHave('roles', function ($q) {
-                $q->where('name', 'developer');
-            }),
-            // 3. Supervisor: Hanya bisa melihat user yang berada di cabangnya sendiri
-            $user->hasRole('supervisor') => $query->where('users.id_branch', $user->id_branch),
-            // 4. Default (Misal: Sales/Admin biasa): Hanya bisa melihat dirinya sendiri
-            default => $query->where('users.id', $user->id),
-        };
     }
     public function branch()
     {

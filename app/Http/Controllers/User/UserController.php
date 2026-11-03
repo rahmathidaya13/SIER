@@ -3,21 +3,22 @@
 namespace App\Http\Controllers\User;
 
 use App\Models\User;
+use App\Support\ScopeKey;
 use App\Traits\UserScope;
 use App\Models\BranchModel;
 use Illuminate\Http\Request;
 use App\Traits\UserValidation;
+use App\Traits\InvalidatesCaches;
 use App\Services\User\UserService;
+use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Gate;
 use App\Repository\User\UserRepository;
+use Spatie\Permission\Models\Permission;
 use App\Services\User\UserBusinessRuleService;
 use Illuminate\Validation\ValidationException;
 use App\Services\User\UserAuthorizationService;
 use App\Services\Authorization\ScopeResolverService;
-use App\Traits\InvalidatesCaches;
-use Spatie\Permission\Models\Permission;
-use App\Support\ScopeKey;
 
 class UserController extends Controller
 {
@@ -45,24 +46,27 @@ class UserController extends Controller
             'limit' => 'nullable|integer|min:1|max:100',
             'sort_order' => 'nullable|string|in:oldest,latest',
             'status' => 'nullable|string|in:all,active,inactive',
+            'branch' => 'nullable|string|in:all,' . implode(',', BranchModel::pluck('name')->toArray()),
+            'roles' => 'nullable|string|in:all,' . implode(',', Role::pluck('name')->toArray()),
             'page' => 'nullable|integer|min:1',
         ]);
 
         $filters = $request->only(array_keys($validated));
-
         $filters = app(ScopeResolverService::class)->filters($filters);
-
         $employee = $this->repository->getCached($filters['scope'], $filters, $filters['page'] ?? 1);
 
         $branches = BranchModel::query()
             ->select('id_branch', 'name')
             ->get();
 
+        $roles = Role::whereNotIn('name', ['developer', 'super_admin'])->get(['id', 'name']);
+
         $permission = Permission::select('id', 'name')->get();
         return inertia('Employee/Index', [
             'branches' => $branches,
             'employee' => $employee,
             'permissions' => $permission,
+            'roles' => $roles,
             'filters'  => $filters
         ]);
     }
@@ -72,34 +76,6 @@ class UserController extends Controller
         $user = User::with('branch', 'roles:id,name', 'permissions:id,name')
             ->findOrFail($id);
         return response()->json($user);
-    }
-
-
-    public function store(Request $request)
-    {
-        $user = auth()->user();
-
-        $response = Gate::inspect('create', $user);
-        if ($response->denied()) {
-            throw ValidationException::withMessages([
-                'unauthorized_action' => $response->message() // Mengambil pesan dari Policy
-            ]);
-        }
-
-        $allowedRoles = $this->allowedRoles($user);
-        $this->validationText($request->all(), $allowedRoles, $user, null, 'create');
-
-        $data = $request->all();
-        $branchId = $user->hasRole('developer') ? $data['id_branch'] : $user->id_branch;
-
-        $this->bussinessRule->ensureUniqueRolePerBranch(new User(), $data['role'], $branchId, $data['is_active']);
-        $newUser = $this->service->create($data);
-
-        $this->invalidateCaches(UserRepository::class, ['global', 'global_super_admin', 'branch_' . $newUser->id_branch, 'user_' . $newUser->id]);
-        return back()->with(
-            'message',
-            "Akun {$newUser->name} berhasil didaftarkan sebagai " . ucwords($data['role'] . " di cabang " . ucwords($newUser->branch->name))
-        );
     }
     public function update(Request $request, string $id)
     {
@@ -130,7 +106,7 @@ class UserController extends Controller
 
         $this->service->update($targetUser, $validated, $canChangeBranch);
 
-        $this->clearUserCaches($targetUser, $currentUser->id, $oldBranchId);
+        $this->clearUserCaches($targetUser, $currentUser->id, $oldBranchId, $validated['id_branch'] ?? null);
 
         return redirect()->back()->with('message', "Data {$targetUser->name} berhasil diperbarui!");
     }
@@ -185,13 +161,15 @@ class UserController extends Controller
     protected function clearUserCaches(
         User $targetUser,
         ?string $actorUserId = null,
-        ?string $oldBranchId = null
+        ?string $oldBranchId = null,
+        ?string $newBranchId = null
     ): void {
         $this->invalidateCaches(
             [UserRepository::class],
             [
                 $actorUserId ? ScopeKey::user($actorUserId) : null,
                 $oldBranchId ? ScopeKey::branch($oldBranchId) : null,
+                $newBranchId ? ScopeKey::branch($newBranchId) : null,
                 ScopeKey::user($targetUser->id),
                 ScopeKey::branch($targetUser->id_branch),
                 ScopeKey::GLOBAL,
