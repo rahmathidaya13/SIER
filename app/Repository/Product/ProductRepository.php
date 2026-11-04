@@ -2,19 +2,20 @@
 
 namespace App\Repository\Product;
 
+use App\Support\ScopeKey;
 use App\Models\ProductModel;
 use App\Repository\BaseCacheRepository;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
 
 class ProductRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'product_cache_';
     protected int $cacheMinutes = 30;
 
-    public function buildBaseQuery($filters = [])
+    public function buildBaseQuery()
     {
-        $query = DB::table('products')
+        $query = ProductModel::query()
             ->whereNull('products.deleted_at')
             ->leftJoin('users', 'products.created_by', '=', 'users.id')
             ->leftJoin('product_price', function ($join) {
@@ -25,7 +26,13 @@ class ProductRepository extends BaseCacheRepository
                         $q->whereNull('product_price.valid_until')
                             ->orWhere('product_price.valid_until', '>=', now()->toDateString());
                     });
-            })
+            });
+        return $query;
+    }
+
+    protected function buildListQuery(): Builder
+    {
+        return $this->buildBaseQuery()
             ->select([
                 'products.id_product',
                 'products.name as product_name',
@@ -49,36 +56,50 @@ class ProductRepository extends BaseCacheRepository
                 'product_price.discount_price',
                 'product_price.price_type',
             ]);
-
-        $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
-            $search = $filters['keyword'];
-            $cleanSearch = addcslashes($search, '%_');
-            $q->where(function ($subQuery) use ($cleanSearch) {
-                $subQuery->where('products.name', 'like', "%{$cleanSearch}%")
-                    ->orWhere('products.product_code', 'like', "%{$cleanSearch}%");
-            });
-        });
-
-        return $query;
     }
-
-    protected function getData(string|int|null $branchId, array $filters = []): LengthAwarePaginator
+    protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator
     {
-        $query = $this->buildBaseQuery($filters);
-
+        $query = $this->buildListQuery();
+        $this->applyScope($query, $scopeKey);
+        $this->filterKeyword($query, $filters);
         [$column, $direction] = $this->resolveSorting($filters);
         $limit = min((int)($filters['limit'] ?? 10), 100);
 
         return $query->orderBy($column, $direction)
             ->paginate($limit);
     }
-
-
+    protected function filterKeyword(Builder $query, array $filters): void
+    {
+        if (!empty($filters['keyword'])) {
+            $search = $filters['keyword'];
+            $cleanSearch = addcslashes($search, '%_');
+            $query->where(function ($subQuery) use ($cleanSearch) {
+                $subQuery->where('products.name', 'like', "%{$cleanSearch}%")
+                    ->orWhere('products.product_code', 'like', "%{$cleanSearch}%");
+            });
+        }
+    }
     protected function resolveSorting(array $filters): ?array
     {
         return match ($filters['order_by'] ?? 'latest') {
             'oldest' => ['products.created_at', 'asc'],
             default => ['products.created_at', 'desc'],
         };
+    }
+    protected function applyScope(Builder $query, string|int|null $scopeKey): void
+    {
+        // Karena semua cabang boleh melihat semua katalog produk,
+        // kita tidak memfilter berdasarkan id_branch di tabel products.
+        if (
+            $scopeKey === null ||
+            $scopeKey === '' ||
+            in_array($scopeKey, [ScopeKey::GLOBAL, ScopeKey::GLOBAL_SUPER_ADMIN], true) ||
+            str_starts_with((string) $scopeKey, 'branch_') ||
+            str_starts_with((string) $scopeKey, 'user_')
+        ) {
+            return;
+        }
+
+        throw new \InvalidArgumentException("Scope key tidak dikenal: {$scopeKey}");
     }
 }

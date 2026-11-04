@@ -66,7 +66,7 @@ class CustomerController extends Controller
         try {
             $customer = $this->services->store($validated, $user);
 
-            $this->clearCustomerCaches($customer);
+            $this->clearCustomerCaches($customer, $user->id);
 
             return redirect()->back()->with([
                 'message' => 'Pelanggan baru ' . strtoupper($validated['name']) . ' berhasil ditambahkan',
@@ -133,7 +133,12 @@ class CustomerController extends Controller
         try {
             $this->services->update($customer, $validated, $user);
 
-            $this->clearCustomerCaches($customer, $user->id, $oldBranchId, $oldUpdatedBy);
+            $this->clearCustomerCaches(
+                $customer,
+                $user->id,
+                $oldBranchId,
+                $oldUpdatedBy
+            );
             return redirect()->back()->with([
                 'message' => 'Pelanggan ' . strtoupper($validated['name']) . ' berhasil diperbarui',
             ]);
@@ -155,11 +160,12 @@ class CustomerController extends Controller
         ])
             ->findOrFail($id);
 
+        // Memeriksa izin menggunakan CustomerPolicy
         $this->authorize('delete', $customer);
 
         if ($customer->leads()->exists() || $customer->sales()->exists()) {
             throw ValidationException::withMessages([
-                'error' => 'Pelanggan ' . ucwords($customer->name) . ' tidak dapat dihapus karena sudah memiliki riwayat leads atau transaksi.'
+                'error' => 'Pelanggan ' . ucwords($customer->name) . ' tidak dapat dihapus karena sudah memiliki riwayat lead atau transaksi.'
             ]);
         }
 

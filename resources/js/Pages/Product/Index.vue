@@ -14,6 +14,7 @@ const props = defineProps({
   category: Array,
   filters: Object,
 });
+console.log(props.products.data);
 const { filters, isLoading } = useFilter({
   routeName: "product.index",
   initialFilters: {
@@ -72,7 +73,7 @@ const header = [
     key: "actions",
     visible:
       hasRole(["super_admin", "developer"]) ||
-      hasPermission(["product-update", "product-delete"]),
+      hasPermission(["product-edit", "product-delete"]),
     attrs: {
       class: "text-center",
     },
@@ -148,7 +149,7 @@ const canAccess = (permission, role = []) => {
                   <!-- <small class="text-muted">Semua produk yang terdaftar</small> -->
                 </div>
                 <button
-                  v-if="canAccess('product-create', ['super_admin', 'developer'])"
+                  v-if="hasPermission(['product-create'])"
                   @click.prevent="openCreateModal"
                   class="btn btn-c-primary px-4 py-2"
                 >
@@ -350,14 +351,10 @@ const canAccess = (permission, role = []) => {
 
                   <td
                     class="pe-4"
-                    v-if="
-                      hasRole(['super_admin', 'developer']) ||
-                      hasPermission(['product-update', 'product-delete'])
-                    "
+                    v-if="hasPermission(['product-edit', 'product-delete'])"
                   >
                     <div class="d-flex gap-1">
                       <button
-                        v-if="canAccess('product-edit', ['super_admin', 'developer'])"
                         @click.prevent="openEditModal(item)"
                         type="button"
                         class="btn btn-c-slate"
@@ -366,7 +363,6 @@ const canAccess = (permission, role = []) => {
                         <i class="bi bi-pencil-square"></i>
                       </button>
                       <button
-                        v-if="canAccess('product-delete', ['super_admin', 'developer'])"
                         @click.prevent="deleted('product.delete', item)"
                         type="button"
                         class="btn btn-c-danger"

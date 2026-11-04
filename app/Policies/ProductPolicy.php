@@ -10,81 +10,91 @@ use Illuminate\Auth\Access\Response;
 class ProductPolicy
 {
     use HandlesAuthorization;
-    public function before(User $user, $ability)
+
+    /**
+     * Developer & Super Admin otomatis lolos semua pengecekan.
+     */
+    public function before(User $user, string $ability): ?bool
     {
-        // Developer selalu lolos dari semua pengecekan di bawah
-        if ($user->hasRole('developer')) {
+        if ($user->hasAnyRole(['developer', 'super_admin'])) {
             return true;
         }
+
         return null;
     }
 
-    public function view(User $user)
-    {
-        return $user->hasPermissionTo('product-view');
-    }
-
     /**
-     * Helper: Memeriksa apakah User berasal dari Kantor Pusat (Official Branch)
+     * 1. Akses Halaman Tabel Produk (index)
      */
-    private function isFromHeadquarters(User $user): bool
+    public function viewAny(User $user): Response
     {
-        // Pastikan user memiliki branch_id
-        if (!$user->id_branch) {
-            return false;
-        }
-
-        // Cek status cabang apakah bernilai 'official'
-        // Memerlukan relasi 'branch' di model User
-        return $user->branch && $user->branch->status === 'official';
-    }
-
-    /**
-     * 2. LOGIKA CREATE (Hanya Orang Pusat)
-     */
-    public function create(User $user)
-    {
-        // A. Wajib memiliki permission create
-        if (!$user->hasPermissionTo('product-create')) {
-            return Response::deny('Anda tidak memiliki wewenang untuk menambah atau membuat produk.');
-        }
-
-        // B. Wajib berasal dari Kantor Pusat
-        return $this->isFromHeadquarters($user)
+        return $user->can('product-view')
             ? Response::allow()
-            : Response::deny('Akses ditolak: Hanya pegawai Kantor Pusat yang berhak menambah produk.');
+            : Response::deny('Anda tidak memiliki izin untuk melihat daftar produk.');
+    }
+    /**
+     * 2. Akses Detail Produk (show)
+     */
+    public function view(User $user, ?ProductModel $product = null): Response
+    {
+        return $user->can('product-view')
+            ? Response::allow()
+            : Response::deny('Anda tidak memiliki izin untuk melihat detail produk.');
     }
 
-
     /**
-     * 3. LOGIKA EDIT (Hanya Orang Pusat)
+     * 3. Akses Tambah Produk (store)
+     * Bebas cabang, selama diberikan permission 'product-create'
      */
-    public function update(User $user, ProductModel $product)
+    public function create(User $user): Response
     {
-        // A. Wajib memiliki permission edit
-        if (!$user->hasPermissionTo('product-edit')) {
+        return $user->can('product-create')
+            ? Response::allow()
+            : Response::deny('Anda tidak memiliki wewenang untuk menambah atau membuat produk.');
+    }
+    /**
+     * 4. Akses Ubah Produk (update)
+     * Bebas cabang, selama diberikan permission 'product-edit'
+     */
+    public function update(User $user, ProductModel $product): Response
+    {
+        if (!$user->can('product-edit')) {
             return Response::deny('Anda tidak memiliki wewenang untuk mengubah produk.');
         }
 
-        // B. Wajib berasal dari Kantor Pusat
-        return $this->isFromHeadquarters($user)
-            ? Response::allow()
-            : Response::deny('Akses ditolak: Hanya pegawai Kantor Pusat yang berhak mengubah produk.');
+        return $this->authorizeModification($user, $product, 'mengubah');
     }
 
     /**
-     * 4. LOGIKA DELETE (Hanya Orang Pusat)
+     * 5. Akses Hapus Produk (destroy)
+     * Bebas cabang, selama diberikan permission 'product-delete'
      */
-    public function deleted(User $user, ProductModel $product)
+    public function delete(User $user, ProductModel $product): Response
     {
-        // A. Wajib memiliki permission delete
-        if (!$user->hasPermissionTo('product-delete')) {
+        if (!$user->can('product-delete')) {
             return Response::deny('Anda tidak memiliki wewenang untuk menghapus produk.');
         }
+        return $this->authorizeModification($user, $product, 'menghapus');
+    }
 
-        // B. Wajib berasal dari Kantor Pusat
-        return $this->isFromHeadquarters($user)
-            ? Response::allow()
-            : Response::deny('Akses ditolak: Hanya pegawai Kantor Pusat yang berhak menghapus produk.');
+    private function authorizeModification(User $user, ProductModel $product, string $actionText): Response
+    {
+        $creator = $product->creator;
+
+        // Supervisor boleh ubah/hapus produk, kecuali yang dibuat oleh Super Admin / Developer
+        if ($user->hasRole('supervisor')) {
+            if ($creator && $creator->hasAnyRole(['super_admin', 'developer'])) {
+                return Response::deny("Akses ditolak: Supervisor tidak dapat {$actionText} produk yang dibuat oleh Super Admin / Developer.");
+            }
+
+            return Response::allow();
+        }
+
+        // Role di bawah SPV tidak boleh ubah/hapus produk buatan atasan
+        if ($creator && $creator->hasAnyRole(['super_admin', 'developer', 'supervisor'])) {
+            return Response::deny("Akses ditolak: Anda tidak dapat {$actionText} produk yang dibuat oleh atasan.");
+        }
+
+        return Response::allow();
     }
 }

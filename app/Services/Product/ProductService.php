@@ -26,6 +26,7 @@ class ProductService
 
                 $product = ProductModel::create([
                     'created_by' => auth()->id(),
+                    'updated_by' => auth()->id(),
                     'source' => 'manual',
                     'name' => $validated['name'],
                     'slug' => Str::slug($validated['name']) . '-' . Str::random(5),
@@ -78,7 +79,7 @@ class ProductService
 
                 $product->update([
                     'name'           => $validated['name'],
-                    'created_by'     => auth()->id(),
+                    'updated_by'     => $product->created_by !== auth()->id() ? auth()->id() : $product->created_by,
                     'source'         => $hasNewImage ? 'manual' : $product->source,
                     'slug'           => Str::slug($validated['name']) . '-' . Str::random(5),
                     'category'       => $validated['category'],
@@ -90,7 +91,7 @@ class ProductService
 
                 $product->prices()->updateOrCreate(['id_product' => $product->id_product], [
                     'id_product'          => $product->id_product,
-                    'created_by'          => auth()->id(),
+                    'created_by'          => $product->created_by !== auth()->id() ? auth()->id() : $product->created_by,
                     'status'              => $validated['status'],
                     'valid_from'          => $validated['valid_from'] ?? Carbon::now()->toDateString(),
                     'valid_until'         => $validated['valid_until'] ?? null,
@@ -100,7 +101,7 @@ class ProductService
                     'price_type'          => ($validated['discount_price'] > 0) ? 'discount' : 'normal',
                 ]);
 
-                return $product->fresh();
+                return $product;
             });
             // Hapus gambar lama setelah transaksi berhasil.
             if (

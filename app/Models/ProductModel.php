@@ -16,6 +16,7 @@ class ProductModel extends Model
     protected $keyType = 'string';
     protected $fillable = [
         'created_by',
+        'updated_by',
         'product_code',
         'source',
         'name',
@@ -82,5 +83,10 @@ class ProductModel extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by', 'id');
+    }
+
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by', 'id');
     }
 }

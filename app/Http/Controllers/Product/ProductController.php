@@ -28,7 +28,7 @@ class ProductController extends Controller
     }
     public function index(Request $request)
     {
-        $this->authorize('view', ProductModel::class);
+        $this->authorize('viewAny', ProductModel::class);
 
         $validated = $request->validate([
             'keyword' => 'nullable|string|max:255',
@@ -38,8 +38,9 @@ class ProductController extends Controller
         ]);
 
         $filters = $request->only(array_keys($validated));
-        $filters = app(ScopeResolverService::class)->filters($filters);
-        $products = $this->repository->getCached($filters['scope'], $filters, $filters['page'] ?? 1);
+        // $filters = app(ScopeResolverService::class)->filters($filters);
+        $cleanFilters = Arr::except($filters, ['scope']);
+        $products = $this->repository->getCached(ScopeKey::GLOBAL, $cleanFilters, $filters['page'] ?? 1);
         $category = ProductModel::select('category')->distinct()->get();
         return inertia('Product/Index', [
             'products' => $products,
@@ -48,40 +49,28 @@ class ProductController extends Controller
         ]);
     }
 
+
     public function show(ProductModel $product)
     {
         $product->load(['prices', 'creator']);
+        $this->authorize('view', $product);
         return response()->json($product);
     }
 
     public function store(Request $request)
     {
-        $response = Gate::inspect('create', ProductModel::class);
-        if ($response->denied()) {
-            throw ValidationException::withMessages([
-                'unauthorized_action' => $response->message()
-            ]);
-        }
-        $validated = $this->validateProduct($request->all());
+        $this->authorize('create', ProductModel::class, 'unauthorized_action');
+
         $user = auth()->user();
+        $validated = $this->validateProduct($request->all());
         $product = $this->services->store($validated);
-        $this->invalidateCaches(
-            [
-                ProductRepository::class,
-            ],
-            [
-                ScopeKey::GLOBAL,
-                ScopeKey::GLOBAL_SUPER_ADMIN,
-                ScopeKey::branch($user->id_branch),
-                ScopeKey::user($user->id)
-            ]
-        );
+        $this->clearProductCaches($product, $user->id);
         return redirect()->back()->with('message', 'Produk baru ' . $product->name . ' berhasil ditambahkan!');
     }
 
     public function update(Request $request, string $id)
     {
-        $product = ProductModel::find($id);
+        $product = ProductModel::findOrFail($id);
 
         if (!$product) {
             throw ValidationException::withMessages([
@@ -89,30 +78,26 @@ class ProductController extends Controller
             ]);
         }
 
-        $response = Gate::inspect('update', $product);
-        if ($response->denied()) {
-            throw ValidationException::withMessages([
-                'unauthorized_action' => $response->message()
-            ]);
-        }
+        // policy update data
+        $this->authorize('update', $product, 'unauthorized_action');
 
         $user = auth()->user();
-        $this->validateProduct($request->all());
-        $this->services->update($product, $request->all());
-        $this->invalidateCaches([
-            ProductRepository::class
-        ], [
-            ScopeKey::GLOBAL,
-            ScopeKey::GLOBAL_SUPER_ADMIN,
-            ScopeKey::branch($user->id_branch),
-            ScopeKey::user($user->id)
-        ]);
+        $oldUpdatedBy  = $product->updated_by;
+        $validated = $this->validateProduct($request->all());
+        $this->services->update($product, $validated);
+        $this->clearProductCaches(
+            $product,
+            $user->id,
+            $oldUpdatedBy
+        );
+
         return redirect()->back()->with('message', 'Perubahan data dari produk ' . $product->name . ' berhasil diperbarui!');
     }
 
     public function destroy(string $id)
     {
-        $product = ProductModel::find($id);
+        $product = ProductModel::findOrFail($id);
+
         if (!$product) {
             throw ValidationException::withMessages([
                 'error' => 'Data produk tidak ditemukan atau sudah dihapus.'
@@ -120,12 +105,7 @@ class ProductController extends Controller
         }
 
         // policy penghapusan data
-        $response = Gate::inspect('deleted', $product);
-        if ($response->denied()) {
-            throw ValidationException::withMessages([
-                'error' => $response->message()
-            ]);
-        }
+        $this->authorize('delete', $product);
 
         $user = auth()->user();
         $this->services->delete($product);
@@ -135,14 +115,28 @@ class ProductController extends Controller
                 'error' => "Sistem gagal menghapus data {$product->name} secara aman."
             ]);
         }
+        $this->clearProductCaches(
+            $product,
+            $user->id,
+        );
+        return redirect()->back()->with('message', 'Data produk ' . $product->name . ' berhasil dihapus');
+    }
+    protected function clearProductCaches(
+        ProductModel $product,
+        ?string $actorUserId = null,
+        ?string $oldUpdatedBy = null
+    ) {
+        $user = auth()->user();
         $this->invalidateCaches([
-            ProductRepository::class
+            ProductRepository::class,
         ], [
+            $actorUserId ? ScopeKey::user($actorUserId) : null,
+            $oldUpdatedBy ? ScopeKey::user($oldUpdatedBy) : null,
+            !empty($product->created_by) ? ScopeKey::user($product->created_by) : null,
+            !empty($product->updated_by) ? ScopeKey::user($product->updated_by) : null,
+            !empty($user?->id_branch) ? ScopeKey::branch($user->id_branch) : null,
             ScopeKey::GLOBAL,
             ScopeKey::GLOBAL_SUPER_ADMIN,
-            ScopeKey::branch($user->id_branch),
-            ScopeKey::user($user->id)
         ]);
-        return redirect()->back()->with('message', 'Data produk ' . $product->name . ' berhasil dihapus');
     }
 }
