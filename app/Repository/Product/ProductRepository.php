@@ -16,8 +16,8 @@ class ProductRepository extends BaseCacheRepository
     public function buildBaseQuery()
     {
         $query = ProductModel::query()
+            ->joinUserRole()
             ->whereNull('products.deleted_at')
-            ->leftJoin('users', 'products.created_by', '=', 'users.id')
             ->leftJoin('product_price', function ($join) {
                 $join->on('products.id_product', '=', 'product_price.id_product')
                     ->whereNull('product_price.deleted_at')
@@ -36,7 +36,8 @@ class ProductRepository extends BaseCacheRepository
             ->select([
                 'products.id_product',
                 'products.name as product_name',
-                'products.created_by as id_user',
+                'products.created_by',
+                'products.updated_by',
                 'products.product_code as code',
                 'products.source',
                 'products.category',
@@ -47,7 +48,10 @@ class ProductRepository extends BaseCacheRepository
                 'products.image_link',
                 'products.created_at',
                 'products.updated_at',
-                'users.name as creator_name',
+                'creator.name as creator_name',
+                'creator_role.name as creator_role_name',
+                'updater.name as updater_name',
+                'updater_role.name as updater_role_name',
                 'product_price.status',
                 'product_price.valid_from',
                 'product_price.valid_until',

@@ -1,5 +1,5 @@
 <script setup>
-import { Head, router } from "@inertiajs/vue3";
+import { Head, router, usePage } from "@inertiajs/vue3";
 import { useFilter } from "@/Composables/useFilter";
 import { hasRole, hasPermission } from "@/Composables/useAuth";
 import { computed, ref } from "vue";
@@ -71,9 +71,6 @@ const header = [
   {
     label: "Aksi",
     key: "actions",
-    visible:
-      hasRole(["super_admin", "developer"]) ||
-      hasPermission(["product-edit", "product-delete"]),
     attrs: {
       class: "text-center",
     },
@@ -127,8 +124,64 @@ const formatCategory = (category) => {
     .map((part) => part.replace(/\b\w/g, (char) => char.toUpperCase()))
     .join(" - ");
 };
-const canAccess = (permission, role = []) => {
-  return hasRole(role) || hasPermission(permission);
+
+const page = usePage();
+const authUserId = computed(() => {
+  return page.props.auth?.user_id ?? page.props.auth?.user?.id ?? null;
+});
+
+const getCreatorRole = (item) => {
+  return (
+    item?.creator_role_name ??
+    item?.created_by?.role_name ??
+    item?.creator?.role_name ??
+    item?.creator?.roles?.[0]?.name ??
+    ""
+  ).toLowerCase();
+};
+const getCreatorId = (item) => {
+  return item?.created_by ?? item?.creator ?? null;
+};
+const canAccess = (permission, role = ["super_admin", "developer"], item = null) => {
+  // 1. Cek dulu apakah user punya role atau permission dasarnya
+  const hasBasicAccess =
+    (role.length > 0 && hasRole(role)) || (permission && hasPermission(permission));
+  if (!hasBasicAccess) {
+    return false;
+  }
+
+  // 2. Jika tidak mengirim parameter item (misal untuk tombol "Tambah Data" di atas tabel),
+  // cukup kembalikan hasil cek role/permission dasar
+  if (!item) {
+    return true;
+  }
+
+  // 3. Level Tertinggi: Developer & Super Admin bebas mengubah/menghapus data buatan siapa saja
+  if (hasRole(["developer", "super_admin"])) {
+    return true;
+  }
+
+  const creatorRole = getCreatorRole(item);
+
+  // 4. Level Menengah (Supervisor):
+  // Boleh ubah/hapus jika diberi akses, TAPI DILARANG menyentuh data buatan Super Admin & Developer
+  if (hasRole(["supervisor"])) {
+    return !["developer", "super_admin"].includes(creatorRole);
+  }
+
+  // 5. Level Bawah (Admin, Sales, Teknisi):
+  // DILARANG menyentuh data yang dibuat oleh Developer, Super Admin, maupun Supervisor!
+  if (["developer", "super_admin", "supervisor"].includes(creatorRole)) {
+    return false;
+  }
+
+  // (Opsional) Jika sesama level bawah hanya boleh mengedit data miliknya sendiri:
+  const creatorId = getCreatorId(item);
+  if (creatorId && authUserId.value) {
+    return String(creatorId) === String(authUserId.value);
+  }
+
+  return true;
 };
 </script>
 <template>
@@ -149,7 +202,7 @@ const canAccess = (permission, role = []) => {
                   <!-- <small class="text-muted">Semua produk yang terdaftar</small> -->
                 </div>
                 <button
-                  v-if="hasPermission(['product-create'])"
+                  v-if="canAccess('product-create', ['developer', 'super_admin'])"
                   @click.prevent="openCreateModal"
                   class="btn btn-c-primary px-4 py-2"
                 >
@@ -349,12 +402,18 @@ const canAccess = (permission, role = []) => {
                     </div>
                   </td>
 
-                  <td
-                    class="pe-4"
-                    v-if="hasPermission(['product-edit', 'product-delete'])"
-                  >
-                    <div class="d-flex gap-1">
+                  <td class="pe-4">
+                    <div
+                      class="d-flex gap-1"
+                      v-if="
+                        canAccess('product-edit', ['developer', 'super_admin'], item) ||
+                        canAccess('product-delete', ['developer', 'super_admin'], item)
+                      "
+                    >
                       <button
+                        v-if="
+                          canAccess('product-create', ['developer', 'super_admin'], item)
+                        "
                         @click.prevent="openEditModal(item)"
                         type="button"
                         class="btn btn-c-slate"
@@ -363,6 +422,9 @@ const canAccess = (permission, role = []) => {
                         <i class="bi bi-pencil-square"></i>
                       </button>
                       <button
+                        v-if="
+                          canAccess('product-delete', ['developer', 'super_admin'], item)
+                        "
                         @click.prevent="deleted('product.delete', item)"
                         type="button"
                         class="btn btn-c-danger"
@@ -370,6 +432,11 @@ const canAccess = (permission, role = []) => {
                       >
                         <i class="bi bi-trash"></i>
                       </button>
+                    </div>
+                    <div v-else class="d-flex justify-content-center">
+                      <span class="small fw-semibold badge badge-soft-info rounded-5">
+                        No Action
+                      </span>
                     </div>
                   </td>
                 </template>
