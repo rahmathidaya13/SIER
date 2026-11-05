@@ -43,6 +43,7 @@ const loadProduct = async () => {
     const { data } = await axios.get(`/product/show/${props.idProduct}`);
     product.value = data;
     fillForm(data);
+    console.log(data);
   } catch (error) {
     console.error("Gagal mengambil data:", error);
     alert("Terjadi kesalahan saat memuat data.");
@@ -232,6 +233,7 @@ const getImageUrl = (item) => {
                         loading="lazy"
                         decoding="async"
                       />
+
                       <div
                         class="position-absolute bottom-0 start-50 translate-middle-x mb-3"
                       >
@@ -311,7 +313,7 @@ const getImageUrl = (item) => {
                         v-model="form.name"
                         name="product_name"
                         :error="form.errors.name"
-                        placeholder="Cth:Mesin cetak mie mks-200"
+                        placeholder="Cth: Mesin cetak mie mks-200"
                       />
                       <input-error :message="form.errors.name" />
                     </div>
@@ -453,13 +455,12 @@ const getImageUrl = (item) => {
                     </div>
                   </div>
 
-                  <div class="row g-3 bg-light rounded-4 border mt-3 pb-4 px-2">
-                    <div class="col-md-6 col-12">
+                  <div class="row g-2 bg-light rounded-4 border mt-3 pb-4 px-2">
+                    <div class="col-12">
                       <input-label
                         for="status_select"
                         labelClass="fw-medium text-secondary small mb-2"
-                        value="Status
-                                            Publikasi"
+                        value="Status Publikasi"
                       />
                       <select-input
                         v-model="form.status"
@@ -491,7 +492,7 @@ const getImageUrl = (item) => {
                       />
                       <input-error :message="form.errors.valid_from" />
                     </div>
-                    <div class="col-12">
+                    <div class="col-12 col-md-6">
                       <input-label
                         for="valid_until_input"
                         labelClass="fw-medium text-secondary small mb-2"

@@ -113,7 +113,7 @@ const visibleHeaders = computed(() =>
 );
 </script>
 <template>
-  <div class="table-wrapper">
+  <div class="table-wrapper overflow-hidden rounded-4">
     <slot name="filter-action" />
     <div class="table-responsive custom-scroll">
       <table class="table table-hover align-middle">

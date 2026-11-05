@@ -48,10 +48,12 @@ class ProductRepository extends BaseCacheRepository
                 'products.image_link',
                 'products.created_at',
                 'products.updated_at',
+
                 'creator.name as creator_name',
-                'creator_role.name as creator_role_name',
                 'updater.name as updater_name',
+                'creator_role.name as creator_role_name',
                 'updater_role.name as updater_role_name',
+
                 'product_price.status',
                 'product_price.valid_from',
                 'product_price.valid_until',

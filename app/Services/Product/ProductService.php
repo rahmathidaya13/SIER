@@ -37,11 +37,12 @@ class ProductService
                     'link' => $validated['link'],
                 ]);
 
+                // Buat harga produk baru
                 ProductPriceModel::create([
                     'id_product'          => $product->id_product,
                     'created_by'          => auth()->id(),
                     'status'              => $validated['status'],
-                    'valid_from'          => $validated['valid_from'] ?? Carbon::now()->toDateString(),
+                    'valid_from'          => $validated['valid_from'] ?? null,
                     'valid_until'         => $validated['valid_until'] ?? null,
                     'base_price'          => $validated['base_price'],
                     'discount_percentage' => $validated['discount_percentage'] ?? 0,
@@ -89,11 +90,12 @@ class ProductService
                     'image_path'     => $hasNewImage ? $newImagePath : $product->image_path,
                 ]);
 
+                // Update atau buat harga produk baru
                 $product->prices()->updateOrCreate(['id_product' => $product->id_product], [
                     'id_product'          => $product->id_product,
                     'created_by'          => $product->created_by !== auth()->id() ? auth()->id() : $product->created_by,
                     'status'              => $validated['status'],
-                    'valid_from'          => $validated['valid_from'] ?? Carbon::now()->toDateString(),
+                    'valid_from'          => $validated['valid_from'] ?? null,
                     'valid_until'         => $validated['valid_until'] ?? null,
                     'base_price'          => $validated['base_price'],
                     'discount_percentage' => $validated['discount_percentage'] ?? 0,

@@ -106,7 +106,7 @@ class CustomerPolicy
         // Boleh ubah/hapus semua data di cabangnya, KECUALI data buatan super_admin / developer
         if ($user->hasRole('supervisor')) {
             if ($creator && $creator->hasRole(['super_admin', 'developer'])) {
-                return Response::deny("Akses ditolak: Supervisor tidak dapat {$actionText} data yang dibuat oleh Super Admin / Developer.");
+                return Response::deny("Akses ditolak:  Tidak dapat {$actionText} data yang dibuat oleh Akun Official");
             }
 
             return Response::allow();

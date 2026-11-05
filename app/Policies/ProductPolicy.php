@@ -52,6 +52,7 @@ class ProductPolicy
             ? Response::allow()
             : Response::deny('Anda tidak memiliki wewenang untuk menambah atau membuat produk.');
     }
+
     /**
      * 4. Akses Ubah Produk (update)
      * Bebas cabang, selama diberikan permission 'product-edit'
@@ -84,7 +85,7 @@ class ProductPolicy
         // Supervisor boleh ubah/hapus produk, kecuali yang dibuat oleh Super Admin / Developer
         if ($user->hasRole('supervisor')) {
             if ($creator && $creator->hasAnyRole(['super_admin', 'developer'])) {
-                return Response::deny("Akses ditolak: Supervisor tidak dapat {$actionText} produk yang dibuat oleh Super Admin / Developer.");
+                return Response::deny("Akses ditolak: Tidak dapat {$actionText} produk yang dibuat oleh Akun Official");
             }
 
             return Response::allow();

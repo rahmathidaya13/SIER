@@ -1,12 +1,12 @@
 <script setup>
 import { Head, router, usePage } from "@inertiajs/vue3";
-import { ref, computed, h } from "vue";
+import { ref, computed } from "vue";
 import { useFilter } from "@/Composables/useFilter";
 import { formatDate } from "@/Helpers/formatDate";
 import FormModal from "./FormModal.vue";
 import { useConfirm } from "@/Composables/useConfirm";
 import { highlight } from "@/Helpers/Highlight";
-import { hasRole } from "@/Composables/useAuth";
+import { hasRole, canAccess } from "@/Composables/useAuth";
 
 const confirm = useConfirm();
 const props = defineProps({
@@ -14,7 +14,6 @@ const props = defineProps({
   filters: Object,
   branches: Array,
 });
-
 const page = usePage();
 const canSelectBranch = computed(() => hasRole(["super_admin", "developer"]));
 const branchName = computed(() => {
@@ -247,34 +246,8 @@ const branchOptions = computed(() => {
       value: data.name,
     }));
 });
-const isOwner = (val) => {
 
-  if (!val) return false;
 
-  // 1. Super Admin, Developer bebas edit & hapus
-  if (hasRole(["super_admin", "developer"])) {
-    return true;
-  }
-
-  const creatorRole = val.creator_role_name;
-  if (hasRole("supervisor")) {
-    return !["super_admin", "developer"].includes(creatorRole);
-  }
-
-  if (["super_admin", "developer", "supervisor"].includes(creatorRole)) {
-    return false;
-  }
-
-  // 2. Ambil ID user yang sedang login
-  const currentUserId = page.props.auth?.user_id || page.props.auth?.user?.id;
-
-  // 3. Ambil ID pembuat data (mendukung format val.creator, val.created_by.id, atau val.created_by)
-  const creatorId = val.creator_id;
-  // 4. Role di bawah SPV HANYA boleh edit/hapus jika dia adalah pembuat datanya sendiri
-  return Boolean(
-    currentUserId && creatorId && String(creatorId) === String(currentUserId)
-  );
-};
 </script>
 <template>
   <Head title="Halaman Pelanggan" />
@@ -293,6 +266,7 @@ const isOwner = (val) => {
                   <h5 class="fw-bold mb-1">Manajemen Pelanggan</h5>
                 </div>
                 <button
+                  v-if="canAccess('customer-create')"
                   @click.prevent="openCreateModal"
                   class="btn btn-c-primary px-4 py-2"
                 >
@@ -603,15 +577,26 @@ const isOwner = (val) => {
                           :title="item.creator_name || item.creator?.name"
                           style="font-size: 12px"
                         >
-                          {{ `${shortNameRole(item.creator_role_name).label} - ${item.creator_name} - ${item.branch_name}` }}
+                          {{
+                            `${shortNameRole(item.creator_role_name).label} - ${
+                              item.creator_name
+                            } - ${item.branch_name}`
+                          }}
                         </span>
                       </div>
                     </div>
                   </td>
 
                   <td class="text-center">
-                    <div v-if="isOwner(item)" class="d-flex gap-1 justify-content-center">
+                    <div
+                      v-if="
+                        canAccess('customer-edit', item, { strictOwner: true }) ||
+                        canAccess('customer-delete', item, { strictOwner: true })
+                      "
+                      class="d-flex gap-1 justify-content-center"
+                    >
                       <button
+                        v-if="canAccess('customer-edit', item, { strictOwner: true })"
                         @click.prevent="openEditModal(item)"
                         type="button"
                         class="btn btn-c-slate"
@@ -620,6 +605,7 @@ const isOwner = (val) => {
                         <i class="bi bi-pencil-square"></i>
                       </button>
                       <button
+                        v-if="canAccess('customer-delete', item, { strictOwner: true })"
                         @click.prevent="deleted('customer.delete', item)"
                         type="button"
                         class="btn btn-c-danger"
@@ -630,14 +616,15 @@ const isOwner = (val) => {
                     </div>
                     <div v-else>
                       <span class="badge badge-soft-info rounded-3 py-1">
-                        <i class="bi bi-lock"></i>
-                        Tidak Ada Aksi
+                        <i class="bi bi-lock-fill"></i>
+                        No Action
                       </span>
                     </div>
                   </td>
                 </template>
                 <template #pagination>
-                  <div v-if="customers?.data?.length > 0"
+                  <div
+                    v-if="customers?.data?.length > 0"
                     class="border-top py-2 px-2 d-flex flex-column flex-md-row justify-content-between align-items-center"
                   >
                     <small class="text-muted mb-2 mb-md-0">

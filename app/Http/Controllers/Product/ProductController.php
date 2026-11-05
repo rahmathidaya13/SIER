@@ -39,8 +39,7 @@ class ProductController extends Controller
 
         $filters = $request->only(array_keys($validated));
         // $filters = app(ScopeResolverService::class)->filters($filters);
-        $cleanFilters = Arr::except($filters, ['scope']);
-        $products = $this->repository->getCached(ScopeKey::GLOBAL, $cleanFilters, $filters['page'] ?? 1);
+        $products = $this->repository->getCached(ScopeKey::GLOBAL, $filters, $filters['page'] ?? 1);
         $category = ProductModel::select('category')->distinct()->get();
         return inertia('Product/Index', [
             'products' => $products,
@@ -52,7 +51,9 @@ class ProductController extends Controller
 
     public function show(ProductModel $product)
     {
-        $product->load(['prices', 'creator']);
+        $product->load([
+            'prices:id_product,base_price,discount_percentage,discount_price,status,valid_from,valid_until,price_type',
+        ]);
         $this->authorize('view', $product);
         return response()->json($product);
     }
@@ -112,7 +113,7 @@ class ProductController extends Controller
 
         if (!$product->trashed()) {
             throw ValidationException::withMessages([
-                'error' => "Sistem gagal menghapus data {$product->name} secara aman."
+                'error' => "Gagal menghapus data {$product->name} secara aman."
             ]);
         }
         $this->clearProductCaches(

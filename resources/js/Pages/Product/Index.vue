@@ -1,7 +1,7 @@
 <script setup>
 import { Head, router, usePage } from "@inertiajs/vue3";
 import { useFilter } from "@/Composables/useFilter";
-import { hasRole, hasPermission } from "@/Composables/useAuth";
+import { hasRole, hasPermission, canAccess } from "@/Composables/useAuth";
 import { computed, ref } from "vue";
 import { formatDate } from "@/Helpers/formatDate";
 import { highlight } from "@/Helpers/Highlight";
@@ -35,26 +35,32 @@ const header = [
     },
   },
   {
-    label: "kode Produk",
+    label: "Kode & Sumber",
     key: "code_",
+    attrs: {
+      class: "text-center",
+    },
   },
   {
-    label: "IMAGE",
+    label: "Gambar",
     key: "images",
+    attrs: {
+      class: "text-center",
+    },
   },
   {
-    label: "INFO PRODUK",
+    label: "Info Produk",
     key: "product",
   },
   {
-    label: "HARGA SAAT INI (Official)",
+    label: "Harga Saat Ini (Official)",
     key: "price",
     attrs: {
       class: "text-center",
     },
   },
   {
-    label: "STATUS",
+    label: "Status",
     key: "status_",
     attrs: {
       class: "text-center",
@@ -64,10 +70,9 @@ const header = [
     label: "Dibuat Oleh",
     key: "creator",
     attrs: {
-      class: "text-center",
+      class: "text-start",
     },
   },
-
   {
     label: "Aksi",
     key: "actions",
@@ -94,8 +99,8 @@ const openImagePreview = (data) => {
 };
 const deleted = async (nameRoute, data) => {
   const setConfirm = await confirm.ask({
-    title: "Hapus",
-    message: `Yakin ingin menghapus produk ${data.product_name} ini ? Data yang sudah dihapus tidak dapat dikembalikan!`,
+    title: `Hapus Produk ${data.product_name} ?`,
+    message: "Data yang terhapus tidak dapat dikembalikan.",
     confirmText: "Ya, Hapus",
     variant: "danger",
   });
@@ -125,63 +130,32 @@ const formatCategory = (category) => {
     .join(" - ");
 };
 
-const page = usePage();
-const authUserId = computed(() => {
-  return page.props.auth?.user_id ?? page.props.auth?.user?.id ?? null;
-});
-
-const getCreatorRole = (item) => {
-  return (
-    item?.creator_role_name ??
-    item?.created_by?.role_name ??
-    item?.creator?.role_name ??
-    item?.creator?.roles?.[0]?.name ??
-    ""
-  ).toLowerCase();
+const formatRoleLabel = (roleName) => {
+  if (!roleName) return "";
+  if (typeof getRoleName === "function") {
+    return getRoleName(roleName)?.label ?? roleName;
+  }
+  return roleName.replace(/_/g, " ");
 };
-const getCreatorId = (item) => {
-  return item?.created_by ?? item?.creator ?? null;
-};
-const canAccess = (permission, role = ["super_admin", "developer"], item = null) => {
-  // 1. Cek dulu apakah user punya role atau permission dasarnya
-  const hasBasicAccess =
-    (role.length > 0 && hasRole(role)) || (permission && hasPermission(permission));
-  if (!hasBasicAccess) {
-    return false;
-  }
-
-  // 2. Jika tidak mengirim parameter item (misal untuk tombol "Tambah Data" di atas tabel),
-  // cukup kembalikan hasil cek role/permission dasar
-  if (!item) {
-    return true;
-  }
-
-  // 3. Level Tertinggi: Developer & Super Admin bebas mengubah/menghapus data buatan siapa saja
-  if (hasRole(["developer", "super_admin"])) {
-    return true;
-  }
-
-  const creatorRole = getCreatorRole(item);
-
-  // 4. Level Menengah (Supervisor):
-  // Boleh ubah/hapus jika diberi akses, TAPI DILARANG menyentuh data buatan Super Admin & Developer
-  if (hasRole(["supervisor"])) {
-    return !["developer", "super_admin"].includes(creatorRole);
-  }
-
-  // 5. Level Bawah (Admin, Sales, Teknisi):
-  // DILARANG menyentuh data yang dibuat oleh Developer, Super Admin, maupun Supervisor!
-  if (["developer", "super_admin", "supervisor"].includes(creatorRole)) {
-    return false;
-  }
-
-  // (Opsional) Jika sesama level bawah hanya boleh mengedit data miliknya sendiri:
-  const creatorId = getCreatorId(item);
-  if (creatorId && authUserId.value) {
-    return String(creatorId) === String(authUserId.value);
-  }
-
-  return true;
+const getRoleName = (role) => {
+  const map = {
+    super_admin: {
+      label: "VVIP",
+    },
+    supervisor: {
+      label: "SPV",
+    },
+    sales: {
+      label: "SLS",
+    },
+    admin: {
+      label: "ADM",
+    },
+    teknisi: {
+      label: "TKN",
+    },
+  };
+  return map[role] || map.supervisor;
 };
 </script>
 <template>
@@ -202,7 +176,7 @@ const canAccess = (permission, role = ["super_admin", "developer"], item = null)
                   <!-- <small class="text-muted">Semua produk yang terdaftar</small> -->
                 </div>
                 <button
-                  v-if="canAccess('product-create', ['developer', 'super_admin'])"
+                  v-if="canAccess('product-create')"
                   @click.prevent="openCreateModal"
                   class="btn btn-c-primary px-4 py-2"
                 >
@@ -275,145 +249,292 @@ const canAccess = (permission, role = ["super_admin", "developer"], item = null)
                   <td class="td-number">
                     {{ index + 1 + (products?.current_page - 1) * products?.per_page }}
                   </td>
-                  <td class="text-center">
-                    <div
-                      class="badge badge-soft-slate rounded-4"
-                      v-html="highlight(item.code, filters.keyword)"
-                    ></div>
-                  </td>
-                  <td class="ps-4">
-                    <img
-                      :src="getImageUrl(item)"
-                      class="product-thumbnail"
-                      width="100"
-                      height="100"
-                      loading="lazy"
-                      decoding="async"
-                      :alt="item.product_name"
-                      :title="item.product_name"
-                      @click.prevent="openImagePreview(item)"
-                    />
-                  </td>
 
-                  <td>
-                    <div
-                      class="fw-bold text-dark mb-1"
-                      v-html="highlight(item.product_name, filters.keyword)"
-                    ></div>
-                    <div class="d-block">
-                      <div class="gap-2 d-flex mb-1">
-                        <div
-                          class="badge bg-secondary bg-opacity-10 text-secondary border"
-                        >
-                          <i class="fas fa-tags me-1"></i>
-                          <span>
-                            {{ formatCategory(item.category) }}
-                          </span>
-                        </div>
+                  <td class="text-center align-middle py-2">
+                    <div class="d-flex flex-column align-items-center gap-2">
+                      <span
+                        class="badge bg-light text-dark border border-secondary border-opacity-25 font-monospace fw-semibold px-2 py-1 rounded-2"
+                        style="font-size: 14px"
+                      >
+                        <i class="bi bi-upc-scan text-primary me-1"></i>
                         <span
-                          class="badge bg-info bg-opacity-10 text-info border text-capitalize"
-                        >
-                          {{ item.condition }}
-                        </span>
-                      </div>
-                      <a v-if="item.link" :href="item.link" class="small" target="_blank">
-                        <i class="bi bi-arrow-up-right me-1"></i>
-                        Klik link untuk melihat detail produk</a
+                          v-html="highlight(item.code || '-', filters.keyword)"
+                        ></span>
+                      </span>
+
+                      <!-- Sumber Data (Scrape vs Manual) -->
+                      <span
+                        v-if="item.source"
+                        class="badge rounded-pill px-2 py-1 fw-medium text-capitalize"
+                        :class="
+                          item.source === 'scrape'
+                            ? 'bg-info-subtle text-info border border-info border-opacity-25'
+                            : 'bg-secondary-subtle text-secondary border border-secondary border-opacity-25'
+                        "
+                        style="font-size: 12px"
                       >
-                      <span v-else class="small text-muted fst-italic"
-                        >Link tidak tersedia</span
-                      >
+                        <i
+                          class="bi me-1"
+                          :class="
+                            item.source === 'scrape'
+                              ? 'bi-cloud-arrow-down-fill'
+                              : 'bi-pencil-fill'
+                          "
+                        ></i>
+                        {{ item.source === "scrape" ? "Web Scrape" : "Input Manual" }}
+                      </span>
                     </div>
                   </td>
 
-                  <td>
-                    <div v-if="item.base_price">
-                      <div v-if="item.discount_price > 0">
-                        <div class="fw-bold text-success">
-                          Rp {{ item.discount_price.toLocaleString("id-ID") }}
+                  <td class="text-center align-middle py-2">
+                    <div class="d-inline-block position-relative">
+                      <img
+                        v-if="item.image_link || item.image_path"
+                        :src="getImageUrl(item)"
+                        class="product-thumbnail shadow-sm border"
+                        width="80"
+                        height="80"
+                        loading="lazy"
+                        decoding="async"
+                        :alt="item.product_name"
+                        :title="`Klik untuk memperbesar: ${item.product_name}`"
+                        @click.prevent="openImagePreview(item)"
+                      />
+                      <div
+                        v-else
+                        class="product-thumbnail-empty bg-light border rounded-3 d-flex flex-column align-items-center justify-content-center text-muted mx-auto"
+                      >
+                        <i class="bi bi-image fs-1 opacity-50"></i>
+                        <span style="font-size: 10px">No Image</span>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td
+                    class="align-middle py-2"
+                    style="min-width: 260px; max-width: 460px"
+                  >
+                    <div
+                      class="fw-bold text-dark mb-2 lh-sm text-truncate"
+                      style="font-size: 14px"
+                      :title="item.product_name"
+                      v-html="highlight(item.product_name, filters.keyword)"
+                    ></div>
+
+                    <!-- Kategori & Kondisi -->
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                      <span
+                        class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill px-2 py-1 fw-medium"
+                        style="font-size: 12px"
+                      >
+                        <i class="bi bi-tag-fill me-1 opacity-75"></i>
+                        {{ formatCategory(item.category) }}
+                      </span>
+
+                      <span
+                        v-if="item.condition"
+                        class="badge rounded-pill px-2 py-1 fw-semibold text-capitalize"
+                        :class="
+                          item.condition === 'new'
+                            ? 'bg-primary-subtle text-primary border border-primary border-opacity-25'
+                            : 'bg-warning-subtle text-warning-emphasis border border-warning border-opacity-25'
+                        "
+                        style="font-size: 12px"
+                      >
+                        <i class="bi bi-stars me-1" v-if="item.condition === 'new'"></i>
+                        {{ item.condition === "new" ? "Baru (New)" : item.condition }}
+                      </span>
+                    </div>
+
+                    <!-- Link Produk Eksternal -->
+                    <div>
+                      <a
+                        v-if="item.link"
+                        :href="item.link"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="badge bg-white text-primary border border-primary border-opacity-25 rounded-pill px-2 py-1 text-decoration-none d-inline-flex align-items-center gap-1 shadow-sm hover-link"
+                        style="font-size: 12px"
+                      >
+                        <i class="bi bi-box-arrow-up-right"></i>
+                        <span>Lihat di Website</span>
+                      </a>
+                      <span
+                        v-else
+                        class="text-muted fst-italic d-inline-flex align-items-center"
+                        style="font-size: 12px"
+                      >
+                        <i class="bi bi-link-45deg me-1 opacity-50"></i> Link tidak
+                        tersedia
+                      </span>
+                    </div>
+                  </td>
+
+                  <!-- 5. Harga Saat Ini, Tipe Harga & Periode Promo -->
+                  <td class="text-center align-middle py-2" style="min-width: 190px">
+                    <div v-if="Number(item.base_price) > 0">
+                      <!-- Badge Tipe Harga (Promo / Normal) -->
+                      <div class="mb-1" v-if="item.price_type">
+                        <span
+                          class="badge rounded-pill px-2 py-1 text-uppercase"
+                          :class="
+                            item.price_type !== 'normal' ||
+                            Number(item.discount_price) > 0
+                              ? 'bg-danger-subtle text-danger border border-danger border-opacity-25'
+                              : 'bg-light text-secondary border'
+                          "
+                          style="font-size: 11px; letter-spacing: 0.4px"
+                        >
+                          {{ item.price_type }}
+                        </span>
+                      </div>
+
+                      <!-- Jika Ada Harga Diskon -->
+                      <div v-if="Number(item.discount_price) > 0">
+                        <div class="fw-bold text-success" style="font-size: 14px">
+                          Rp {{ Number(item.discount_price).toLocaleString("id-ID") }}
                         </div>
-                        <div class="d-flex align-items-center gap-2 mt-1">
-                          <small class="text-muted text-decoration-line-through">
-                            Rp {{ item.base_price.toLocaleString("id-ID") }}
+
+                        <div
+                          class="d-flex justify-content-center align-items-center gap-2 mt-1"
+                        >
+                          <small
+                            class="text-muted text-decoration-line-through"
+                            style="font-size: 12px"
+                          >
+                            Rp {{ Number(item.base_price).toLocaleString("id-ID") }}
                           </small>
                           <span
+                            v-if="Number(item.discount_percentage) > 0"
                             class="badge bg-danger rounded-pill px-2 py-1"
-                            style="font-size: 10px"
+                            style="font-size: 11px"
                           >
                             -{{ item.discount_percentage }}%
                           </span>
                         </div>
                       </div>
-                      <div v-else class="fw-bold text-dark">
-                        Rp {{ item.base_price.toLocaleString("id-ID") }}
+
+                      <!-- Jika Harga Normal Tanpa Diskon -->
+                      <div v-else class="fw-bold text-dark" style="font-size: 14px">
+                        Rp {{ Number(item.base_price).toLocaleString("id-ID") }}
+                      </div>
+
+                      <!-- Periode Berlaku (Jika ada valid_from / valid_until) -->
+                      <div
+                        v-if="item.valid_from || item.valid_until"
+                        class="text-muted mt-1"
+                        style="font-size: 12px"
+                      >
+                        <i class="bi bi-calendar-range me-1"></i>
+                        {{
+                          item.valid_until
+                            ? `s/d ${formatDate(item.valid_until)}`
+                            : formatDate(item.valid_from)
+                        }}
                       </div>
                     </div>
 
-                    <div v-else class="text-muted small fst-italic">
-                      <i class="bi bi-exclamation-circle text-warning me-1"></i> Harga
-                      belum diset/Expired
+                    <div
+                      v-else
+                      class="d-inline-flex align-items-center gap-1 px-2 py-1 bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-3"
+                      style="font-size: 12px"
+                    >
+                      <i class="bi bi-exclamation-triangle-fill"></i>
+                      <span>Harga belum diset</span>
                     </div>
                   </td>
 
-                  <td>
+                  <td class="text-center align-middle py-2">
                     <span
                       v-if="item.status === 'published'"
-                      class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-2 rounded-pill"
+                      class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill fw-semibold"
+                      style="font-size: 12px"
                     >
-                      <i class="bi bi-check-circle me-1"></i> Published
+                      <i class="bi bi-check-circle-fill me-1"></i> Published
                     </span>
                     <span
                       v-else
-                      class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle px-3 py-2 rounded-pill"
+                      class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-3 py-2 rounded-pill fw-semibold text-capitalize"
+                      style="font-size: 12px"
                     >
-                      <i class="bi bi-archive me-1"></i> Draft
+                      <i class="bi bi-archive-fill me-1"></i> {{ item.status || "Draft" }}
                     </span>
                   </td>
 
-                  <td class="align-middle text-start">
-                    <div class="d-flex align-items-center">
+                  <td class="align-middle text-start py-2" style="min-width: 200px">
+                    <div class="d-flex align-items-start">
                       <div
-                        class="client-avatar me-3 bg-gradient-light border text-primary fw-bold small d-flex align-items-center justify-content-center shadow-sm"
+                        class="client-avatar me-2 bg-gradient-light border text-primary fw-bold small d-flex align-items-center justify-content-center shadow-sm flex-shrink-0 mt-1"
                       >
                         {{
                           item.creator_name
                             ? item.creator_name.substring(0, 2).toUpperCase()
-                            : "N/A"
+                            : "NA"
                         }}
                       </div>
-                      <div class="d-flex flex-column small" style="line-height: 1.3">
-                        <span class="fw-bold text-dark mb-1 text-capitalize"
-                          >{{ item.creator_name || "N/A" }}
-                        </span>
-                        <div
-                          class="text-muted d-flex flex-column"
-                          style="font-size: 0.7rem"
-                        >
+
+                      <div class="d-flex flex-column small" style="line-height: 1.35">
+                        <!-- Nama Creator & Badge Role -->
+                        <div class="d-flex align-items-center flex-wrap gap-1 mb-1">
+                          <span class="fw-bold text-dark text-capitalize">
+                            {{ item.creator_name || "Sistem" }}
+                          </span>
                           <span
-                            ><i class="fas fa-plus-circle me-1 opacity-50"></i>
+                            v-if="item.creator_role_name"
+                            class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-10 rounded-pill px-2 py-0 fw-medium text-capitalize"
+                            style="font-size: 10px"
+                          >
+                            {{ formatRoleLabel(item.creator_role_name) }}
+                          </span>
+                        </div>
+
+                        <!-- Waktu Dibuat & Diubah -->
+                        <div
+                          class="text-muted d-flex flex-column gap-1"
+                          style="font-size: 11px"
+                        >
+                          <span>
+                            <i class="bi bi-plus-circle me-1 opacity-75"></i>
                             {{ formatDate(item.created_at) }}
                           </span>
-                          <span v-if="item.updated_at !== item.created_at">
-                            <i class="fas fa-pencil-alt me-1 opacity-50"></i>
+
+                          <span
+                            v-if="item.updated_at && item.updated_at !== item.created_at"
+                            class="text-muted"
+                          >
+                            <i class="bi bi-pencil-square me-1 text-warning"></i>
                             {{ formatDate(item.updated_at) }}
+                            <template
+                              v-if="
+                                item.updated_by &&
+                                item.updated_by !== item.created_by &&
+                                item.updater_name
+                              "
+                            >
+                              oleh
+                              <strong class="text-dark text-capitalize">{{
+                                item.updater_name
+                              }}</strong>
+                              <span v-if="item.updater_role_name" class="opacity-75">
+                                ({{ formatRoleLabel(item.updater_role_name) }})
+                              </span>
+                            </template>
                           </span>
                         </div>
                       </div>
                     </div>
                   </td>
 
-                  <td class="pe-4">
+                  <td class="text-center align-middle py-2">
                     <div
-                      class="d-flex gap-1"
+                      class="d-flex justify-content-center gap-1"
                       v-if="
-                        canAccess('product-edit', ['developer', 'super_admin'], item) ||
-                        canAccess('product-delete', ['developer', 'super_admin'], item)
+                        canAccess('product-edit', item) ||
+                        canAccess('product-delete', item)
                       "
                     >
                       <button
-                        v-if="
-                          canAccess('product-create', ['developer', 'super_admin'], item)
-                        "
+                        v-if="canAccess('product-edit', item)"
                         @click.prevent="openEditModal(item)"
                         type="button"
                         class="btn btn-c-slate"
@@ -422,9 +543,7 @@ const canAccess = (permission, role = ["super_admin", "developer"], item = null)
                         <i class="bi bi-pencil-square"></i>
                       </button>
                       <button
-                        v-if="
-                          canAccess('product-delete', ['developer', 'super_admin'], item)
-                        "
+                        v-if="canAccess('product-delete', item)"
                         @click.prevent="deleted('product.delete', item)"
                         type="button"
                         class="btn btn-c-danger"
@@ -434,7 +553,10 @@ const canAccess = (permission, role = ["super_admin", "developer"], item = null)
                       </button>
                     </div>
                     <div v-else class="d-flex justify-content-center">
-                      <span class="small fw-semibold badge badge-soft-info rounded-5">
+                      <span
+                        class="small fw-semibold badge badge-soft-info rounded-5 d-inline-flex align-items-center gap-1"
+                      >
+                        <i class="bi bi-lock-fill"></i>
                         No Action
                       </span>
                     </div>
@@ -486,16 +608,27 @@ const canAccess = (permission, role = ["super_admin", "developer"], item = null)
 </template>
 <style scoped>
 .product-thumbnail {
-  width: 100px;
-  height: 100px;
+  width: 80px;
+  height: 80px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .product-thumbnail:hover {
   transform: scale(1.08);
-  border: 1px solid #a0c0f1;
+  border-color: #87b4f7 !important;
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15) !important;
+}
+
+.product-thumbnail-empty {
+  width: 80px;
+  height: 80px;
+}
+
+.hover-link:hover {
+  background-color: #0d6efd !important;
+  color: #ffffff !important;
 }
 </style>

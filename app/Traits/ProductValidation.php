@@ -20,7 +20,7 @@ trait ProductValidation
                 'discount_percentage' => 'nullable|numeric|min:0|max:100',
                 'discount_price'      => 'nullable|numeric',
                 'status'              => 'required|in:draft,published',
-                'valid_from'          => 'nullable|date',
+                'valid_from'          => 'nullable|date|after_or_equal:today|before_or_equal:valid_until',
                 'valid_until'         => 'nullable|date|after_or_equal:valid_from',
                 'image'               => 'nullable|image|max:2048|mimetypes:image/jpeg,image/png',
             ],
@@ -55,9 +55,12 @@ trait ProductValidation
                 'status.in' => 'Status produk tidak valid',
 
                 'valid_from.date' => 'Tanggal mulai tidak valid',
+                'valid_from.after_or_equal' => 'Tanggal mulai harus setelah hari ini',
+                'valid_from.before_or_equal' => 'Tanggal mulai harus sebelum tanggal selesai',
 
                 'valid_until.date' => 'Tanggal selesai tidak valid',
                 'valid_until.after_or_equal' => 'Tanggal selesai harus setelah tanggal mulai',
+                'valid_until.before_or_equal' => 'Tanggal selesai harus sebelum tanggal mulai',
 
                 'image.image' => 'File harus berupa gambar',
                 'image.max' => 'Ukuran file maksimal 2MB',
