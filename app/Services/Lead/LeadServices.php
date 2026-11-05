@@ -47,7 +47,7 @@ class LeadServices
 
             // Jika SEMUA TAHAP di atas berhasil tanpa error, sahkan datanya (Commit)
             DB::commit();
-            return $leads->fresh(['leadProduct', 'activity']);
+            return $leads;
         } catch (\Exception $error) {
 
             DB::rollBack(); // JIKA ADA ERROR (Server mati, database putus, dll), BATALKAN SEMUA!
@@ -106,7 +106,7 @@ class LeadServices
             DB::commit();
         } catch (\Exception $error) {
             DB::rollBack();
-            Log::error("Gagal menghapus Lead: " . $error);
+            Log::error("Gagal menghapus Lead {$leads->customer->name}: " . $error);
             throw $error;
         }
     }

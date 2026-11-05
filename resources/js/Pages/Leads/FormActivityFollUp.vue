@@ -52,6 +52,7 @@ const loadActivity = async () => {
     const { data } = await axios.get(route("leads.activities", props.idLead));
     const cleanData = data.data;
     fillForm(cleanData);
+    console.log(cleanData)
   } catch (error) {
     console.error("Gagal mengambil data:", error);
     alert("Terjadi kesalahan saat memuat data.");
@@ -385,7 +386,7 @@ const getTimeOnly = (date) => {
                             >{{ act.creator?.name || "Sistem" }} -
                             {{ getRoleName(act).label }}</span
                           >
-                          <span v-if="act.user_update !== null" class="fst-italic ms-1">
+                          <span v-if="act.updated_by !== act.created_by" class="fst-italic ms-1">
                             ( Diubah: {{ act.user_update?.name }} -
                             {{ getRoleName(act, "edit").label }} ,
                             {{ getShortDate(act.updated_at) }} -

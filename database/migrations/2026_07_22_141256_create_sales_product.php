@@ -15,6 +15,7 @@ return new class extends Migration
             $table->uuid('id_sales_product')->primary();
             $table->foreignUuid('id_sales')->constrained('sales', 'id_sales')->cascadeOnDelete();
             $table->foreignUuid('id_product')->constrained('products', 'id_product')->cascadeOnDelete();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

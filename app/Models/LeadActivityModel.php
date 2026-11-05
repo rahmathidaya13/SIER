@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
+use Spatie\Permission\Models\Role;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Spatie\Permission\Models\Role;
 
 class LeadActivityModel extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
     protected $table = 'lead_activity';
     protected $primaryKey = 'id_lead_activity';
     public $incrementing = false; // Karena pakai UUID
@@ -22,6 +23,7 @@ class LeadActivityModel extends Model
         'updated_by',
         'description',
     ];
+    protected $dates = ['deleted_at'];
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by', 'id');

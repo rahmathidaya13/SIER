@@ -14,7 +14,6 @@ const props = defineProps({
   category: Array,
   filters: Object,
 });
-console.log(props.products.data);
 const { filters, isLoading } = useFilter({
   routeName: "product.index",
   initialFilters: {

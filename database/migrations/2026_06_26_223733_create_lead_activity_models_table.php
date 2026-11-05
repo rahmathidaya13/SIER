@@ -19,6 +19,7 @@ return new class extends Migration
             $table->enum('source', ['transaction', 'created', 'updated', 'deleted'])->default('created');
             $table->text('description')->nullable();
             $table->index(['id_lead', 'created_at']);
+            $table->softDeletes();
             $table->timestamps();
         });
     }

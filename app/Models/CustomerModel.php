@@ -80,8 +80,11 @@ class CustomerModel extends Model
         $prefix = 'CUST-' . now()->format('ym') . '-';
 
         do {
-            $code = $prefix . strtoupper(Str::random(4));
-        } while (CustomerModel::withTrashed()->where('customer_code', $code)->exists());
+            $code = $prefix . strtoupper(Str::random(6));
+        } while (
+             self::withTrashed()
+            ->where('customer_code', $code)
+            ->exists());
 
         return $code;
     }

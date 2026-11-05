@@ -79,12 +79,7 @@ class LeadController extends Controller
     public function store(Request $request)
     {
         // policy lead
-        $response = Gate::inspect('create', LeadModel::class);
-        if ($response->denied()) {
-            throw ValidationException::withMessages([
-                'unauthorized_action' => $response->message()
-            ]);
-        }
+        $this->authorize('create', LeadModel::class, 'unauthorized_action');
 
         $user = auth()->user();
         $validated = $this->validateLeads($request->all());
@@ -102,9 +97,10 @@ class LeadController extends Controller
             $leads = $this->leadServices->store($validated, $user);
 
             $recipients = $this->getLeadNotificationRecipients($leads, $user);
+
             Notification::send($recipients, new LeadCreateNotification($leads, $user));
 
-            $this->clearLeadCaches($leads, $user->id_user);
+            $this->clearLeadCaches($leads, $user->id);
 
             return redirect()->back()->with([
                 'message' => 'Lead dari ' . strtoupper($leads->customer->name) . ' berhasil ditambahkan',
@@ -131,12 +127,7 @@ class LeadController extends Controller
         }
 
         // cek policy
-        $response = Gate::inspect('update', $leads);
-        if ($response->denied()) {
-            throw ValidationException::withMessages([
-                'unauthorized_action' => $response->message()
-            ]);
-        }
+        $this->authorize('update', $leads, 'unauthorized_action');
 
         $oldCreatedBy = $leads->getOriginal('created_by');
         $oldUpdatedBy = $leads->getOriginal('updated_by');
@@ -160,7 +151,7 @@ class LeadController extends Controller
                 )
             );
 
-            $this->clearLeadCaches($leads, $user->id_user, $oldCreatedBy, $oldUpdatedBy, $oldBranchId);
+            $this->clearLeadCaches($leads, $user->id, $oldCreatedBy, $oldUpdatedBy, $oldBranchId);
 
             return redirect()->back()->with('message', 'Lead ' . ucwords($leads->customer->name) . ' berhasil diperbarui!');
         } catch (\Exception $error) {
@@ -245,36 +236,21 @@ class LeadController extends Controller
             ]);
         }
 
-        $response = Gate::inspect('delete', $leads);
-        if ($response->denied()) {
-            throw ValidationException::withMessages([
-                'error' => $response->message()
-            ]);
-        }
+        $this->authorize('delete', $leads);
 
         try {
             $leadId = $leads->id_lead;
-            $leadName = $leads->name;
+            $leadName = $leads->customer->name;
 
             $recipients = $this->getLeadNotificationRecipients($leads, $user);
             $this->leadServices->delete($leads, $user);
-            Notification::send($recipients, new LeadDeleteNotification($leadId, $leadName, $user));
 
-            $this->invalidateCaches(
-                [
-                    UserRepository::class,
-                    LeadsRepository::class,
-                    SaleRepository::class,
-                    ChannelRepository::class
-                ],
-                [
-                    'user_' . ScopeKey::user($leads->id_user),
-                    'branch_' . ScopeKey::branch($leads->id_branch),
-                    ScopeKey::GLOBAL,
-                    ScopeKey::GLOBAL_SUPER_ADMIN,
-                ]
-            );
-            return redirect()->back()->with('message', 'Lead ' . ucwords($leads->name) . ' berhasil dihapus');
+            // send notification via echo
+            Notification::send($recipients, new LeadDeleteNotification($leadId, $leadName, $user));
+            // cache optimization
+            $this->clearLeadCaches($leads, $user->id);
+
+            return redirect()->back()->with('message', 'Lead ' . ucwords($leads->customer->name) . ' berhasil dihapus');
         } catch (\Exception $error) {
             $errorMessage = config('app.debug')
                 ? $error->getMessage()

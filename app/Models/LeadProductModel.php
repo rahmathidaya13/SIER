@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
 class LeadProductModel extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
     protected $table = 'lead_product';
     protected $primaryKey = 'id_lead_product';
     public $incrementing = false; // Karena pakai UUID
@@ -20,6 +21,8 @@ class LeadProductModel extends Model
         'created_at',
         'updated_at'
     ];
+    protected $dates    = ["deleted_at"];
+
 
     public function lead()
     {

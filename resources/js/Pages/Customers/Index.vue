@@ -209,8 +209,8 @@ const openEditModal = (data) => {
 
 const deleted = async (nameRoute, data) => {
   const setConfirm = await confirm.ask({
-    title: "Hapus",
-    message: `Kamu ingin menghapus Data Pelanggan ${data.name} ?`,
+    title: `Hapus ${data.name} ?`,
+    message: `Data yang sudah dihapus tidak dapat dikembalikan!`,
     confirmText: "Ya, Hapus",
     variant: "danger",
   });

@@ -38,8 +38,8 @@ class LeadsRepository extends BaseCacheRepository
                 },
             ])->select([
                 'leads.id_lead',
-                'leads.created_by as creator_id',
-                'leads.updated_by as updater_id',
+                'leads.created_by',
+                'leads.updated_by',
                 'leads.id_branch',
                 'leads.id_customer',
                 'leads.temperature',
@@ -48,14 +48,17 @@ class LeadsRepository extends BaseCacheRepository
                 'leads.notes',
                 'leads.created_at',
                 'leads.updated_at',
-                'creator.name as creator_name',
-                'updater.name as updater_name',
-                'creator_role.name as creator_role_name',
-                'updater_role.name as updater_role_name',
+
                 'branches.name as branch_name',
                 'channels.name as channel_name',
                 'channels.icon',
                 'sales.invoice',
+
+                'creator.name as creator_name',
+                'updater.name as updater_name',
+                'creator_role.name as creator_role_name',
+                'updater_role.name as updater_role_name',
+
                 'customers.name as customer_name',
                 'customers.phone as customer_phone',
                 'customers.email as customer_email',
@@ -65,7 +68,6 @@ class LeadsRepository extends BaseCacheRepository
     protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator
     {
 
-        // $filters = array_intersect_key($filters, array_flip(self::ALLOWED_FILTERS));
         $query = $this->buildListQuery();
         $this->applyScope($query, $scopeKey);
         $this->applyFilters($query, $filters);

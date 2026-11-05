@@ -161,7 +161,7 @@ const allowedForSuperAdmin = [
     'customer-view', 'customer-create', 'customer-edit', 'customer-delete',
     'channel-view', 'channel-create', 'channel-edit', 'channel-delete',
     'product-view', 'product-create', 'product-edit', 'product-delete',
-    'lead-view', 'lead-create', 'lead-edit', 'lead-delete',
+    'lead-view', 'lead-create', 'lead-edit', 'lead-delete','lead-convert',
     'closing-view', 'closing-create', 'closing-edit', 'closing-delete','closing-remaining','closing-payment_cancel',
 ]
 
@@ -217,6 +217,7 @@ const permissionTranslations = {
     'lead-create': 'Diizinkan membuat prospek baru',
     'lead-edit': 'Diizinkan mengubah data prospek',
     'lead-delete': 'Diizinkan menghapus data prospek',
+    'lead-convert': 'Diizinkan mengonversi status prospek',
 
     // Rekap Closing
     'closing-view': 'Diizinkan melihat data Closing',

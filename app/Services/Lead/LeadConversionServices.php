@@ -31,7 +31,8 @@ class LeadConversionServices
 
             $sales = SalesModel::create([
                 'id_lead'        => $fresh->id_lead,
-                'id_user'        => $fresh->id_user,
+                'created_by'        => $fresh->created_by,
+                'updated_by'        => $fresh->updated_by,
                 'id_branch'      => $fresh->id_branch,
                 'id_customer'    => $fresh->id_customer,
                 'deal_price'     => $validated['deal_price'],
@@ -60,7 +61,8 @@ class LeadConversionServices
 
             $sales->paymentHistory()->create([
                 'id_sales' => $sales->id_sales,
-                'id_user' => $user->id,
+                'created_by' => $user->id,
+                'updated_by' => $user->id,
                 'id_lead' => $fresh->id_lead,
                 'id_customer' => $fresh->id_customer,
                 'payment_method' => $validated['payment_method'],
@@ -80,7 +82,8 @@ class LeadConversionServices
             ]);
 
             $fresh->activity()->create([
-                'id_user'     =>  $user->id,
+                'created_by'     =>  $user->id,
+                'updated_by'     =>  $user->id,
                 'id_lead'     =>  $fresh->id_lead,
                 'source'      => 'transaction',
                 'description' => '🎉 Pelanggan DEAL! Transaksi disahkan dengan nilai Rp ' . number_format($validated['deal_price'], 0, ',', '.') . ' (' . $validated['payment_status'] . ').'

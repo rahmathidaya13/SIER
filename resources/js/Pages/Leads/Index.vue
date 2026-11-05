@@ -5,7 +5,7 @@ import { useFilter } from "@/Composables/useFilter";
 import { useConfirm } from "@/Composables/useConfirm";
 import { highlight } from "@/Helpers/Highlight";
 import { formatDate } from "@/Helpers/formatDate";
-import { hasRole, hasPermission } from "@/Composables/useAuth";
+import { hasRole, hasPermission, canAccess } from "@/Composables/useAuth";
 import FormModal from "./FormModal.vue";
 import ConvertLeadModal from "./ConvertLeadModal.vue";
 import ActivityTimelineModal from "./ActivityTimelineModal.vue";
@@ -243,13 +243,34 @@ const getRoleName = (roleName) => {
   };
   return roles[roleName] || "bg-light text-dark border";
 };
-const canAccess = (permission, role = []) => {
-  return hasRole(role) || hasPermission(permission);
+
+const customerTagMeta = (tag) => {
+  const map = {
+    new: {
+      label: "Pelanggan Baru",
+      icon: "bi-sparkles",
+      class: "bg-info bg-opacity-10 text-dark border-info-subtle",
+    },
+    repeat: {
+      label: "Pelanggan Lama",
+      icon: "bi-arrow-repeat",
+      class: "bg-primary bg-opacity-10 text-primary border-primary-subtle",
+    },
+    has_cancelled: {
+      label: "Pernah Cancel",
+      icon: "bi-exclamation-triangle-fill",
+      class: "bg-warning bg-opacity-15 text-warning-emphasis border-warning-subtle",
+    },
+  };
+  return map[tag] || map.new;
 };
+// const canAccess = (permission, role = []) => {
+//   return hasRole(role) || hasPermission(permission);
+// };
 
 const page = usePage();
 const authUserId = computed(() => String(page.props.auth?.user_id ?? ""));
-const isOwner = (item) => String(item?.creator_id) === authUserId.value;
+const isOwner = (item) => String(item?.created_by) === authUserId.value;
 const isSupervisorOrAbove = computed(() =>
   hasRole(["supervisor", "super_admin", "developer"])
 );
@@ -285,7 +306,7 @@ const actionLabel = (item) => {
                   >
                 </div>
                 <button
-                  v-if="hasPermission('lead-create')"
+                  v-if="canAccess('lead-create')"
                   @click.prevent="openCreateModal"
                   class="btn btn-c-primary px-4 py-2"
                 >
@@ -386,35 +407,70 @@ const actionLabel = (item) => {
                     {{ index + 1 + (leads?.current_page - 1) * leads?.per_page }}
                   </td>
 
-                  <td>
-                    <div class="d-flex">
-                      <i class="bi bi-person-fill me-2 text-primary"></i>
+                  <!-- 2. Info Pelanggan & Tag -->
+                  <td class="align-middle py-2">
+                    <div class="d-flex align-items-center flex-wrap gap-1 mb-1">
                       <div
                         @click.prevent="openHistoryModal(item)"
-                        class="fw-bold text-primary mb-1 text-decoration-none cursor-pointer"
+                        class="fw-bold text-primary text-decoration-none cursor-pointer text-capitalize"
                         v-html="highlight(item.customer_name, filters.keyword)"
                       ></div>
+
+                      <!-- Badge Customer Tag (new, repeat, dll) -->
+                      <span
+                        v-if="item.customer_tag"
+                        class="badge bg-primary-subtle text-primary border border-primary border-opacity-25 rounded-pill px-2 py-1 fw-semibold text-capitalize"
+                        style="font-size: 12px"
+                      >
+                        {{
+                          typeof customerTagMeta === "function"
+                            ? customerTagMeta(item.customer_tag).label
+                            : item.customer_tag
+                        }}
+                      </span>
                     </div>
-                    <div v-if="item.customer_email" class="text-muted small mb-2">
+
+                    <!-- Email Pelanggan -->
+                    <div
+                      v-if="item.customer_email"
+                      class="text-muted mb-1 d-flex align-items-center"
+                      style="font-size: 12px"
+                    >
+                      <i class="bi bi-envelope me-1 opacity-75"></i>
                       <a
                         :href="getEmail(item.customer_email)"
-                        class="text-decoration-none"
-                        >{{ item.customer_email }}</a
+                        class="text-muted text-decoration-none text-truncate"
+                        style="max-width: 210px"
+                        :title="item.customer_email"
                       >
+                        {{ item.customer_email }}
+                      </a>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+
+                    <!-- Tombol WA & Indikator Catatan -->
+                    <div class="d-flex align-items-center flex-wrap gap-1">
                       <a
                         :href="getWaLink(item.customer_phone)"
                         target="_blank"
-                        class="badge badge-soft-success text-success rounded-pill d-flex align-items-center gap-1 py-1 px-2 text-decoration-none"
+                        class="badge badge-soft-success text-success rounded-pill d-inline-flex align-items-center gap-1 py-1 px-2 text-decoration-none"
                         title="Chat langsung via WhatsApp"
                       >
                         <i class="bi bi-whatsapp"></i> {{ item.customer_phone }}
                       </a>
+
+                      <!-- Indikator Catatan jika ada notes -->
+                      <span
+                        v-if="item.notes"
+                        class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill py-1 px-2"
+                        style="font-size: 10.5px"
+                        :title="item.notes"
+                      >
+                        <i class="bi bi-journal-text"></i> Catatan
+                      </span>
                     </div>
                   </td>
 
-                  <td class="align-middle">
+                  <td class="align-middle py-2">
                     <div class="d-flex flex-column gap-2 py-1">
                       <div class="d-inline-flex align-items-center">
                         <span
@@ -501,61 +557,91 @@ const actionLabel = (item) => {
                     </span>
                   </td>
 
-                  <td class="text-center">
-                    <span
-                      class="badge rounded-pill px-3 py-1 border-1"
-                      :title="getStatusBadge(item.status).label"
-                      :class="getStatusBadge(item.status).class"
-                    >
-                      {{ getStatusBadge(item.status).label }}
-                    </span>
+                  <td class="text-center align-middle">
+                    <div class="d-flex flex-column align-items-center gap-1">
+                      <span
+                        class="badge rounded-pill px-3 py-1 border-1"
+                        :title="getStatusBadge(item.status).label"
+                        :class="getStatusBadge(item.status).class"
+                      >
+                        {{ getStatusBadge(item.status).label }}
+                      </span>
+
+                      <!-- Jika sudah ada nomor invoice -->
+                      <span
+                        v-if="item.invoice"
+                        class="badge bg-light text-dark border font-monospace px-2 py-1 rounded-2"
+                        style="font-size: 11px"
+                      >
+                        <i class="bi bi-receipt text-primary me-1"></i>{{ item.invoice }}
+                      </span>
+                    </div>
                   </td>
 
-                  <td class="text-start align-middle">
-                    <div v-if="item.follow_up_date" class="d-flex flex-column gap-0 mb-2">
+                  <td class="text-start align-middle py-2" style="min-width: 185px">
+                    <div
+                      v-if="item.follow_up_date"
+                      class="p-2 bg-light rounded-3 border border-secondary border-opacity-10 mb-2"
+                    >
+                      <!-- Tanggal Mulai Follow-Up -->
                       <div
-                        class="d-flex align-items-center text-muted"
-                        style="font-size: 11.5px"
+                        class="d-flex align-items-center justify-content-between text-muted mb-1"
+                        style="font-size: 11px"
                       >
-                        <i class="bi bi-play-circle-fill text-primary me-1"></i>
-                        Mulai:
-                        <span class="ms-1 fw-medium">{{
+                        <span class="d-flex align-items-center">
+                          <i class="bi bi-play-circle-fill text-primary me-1"></i> Mulai:
+                        </span>
+                        <span class="fw-medium text-dark">{{
                           formatDate(item.follow_up_date)
                         }}</span>
                       </div>
 
+                      <!-- Aktivitas Terakhir & Counter Jumlah Log -->
                       <div
-                        class="d-flex align-items-center text-muted"
-                        style="font-size: 11.5px"
                         v-if="item.activity && item.activity.length > 0"
+                        class="d-flex align-items-center justify-content-between text-muted pt-1 border-top border-secondary border-opacity-10"
+                        style="font-size: 12px"
                       >
-                        <i class="bi bi-clock-history text-secondary me-1"></i>
-                        Terakhir:
-                        <span class="ms-1 fw-bold text-dark">{{
-                          formatDate(item.activity[0].created_at)
-                        }}</span>
+                        <span class="d-flex align-items-center me-1">
+                          <i class="bi bi-clock-history text-success me-1"></i> Terakhir:
+                        </span>
+                        <div class="d-flex align-items-center gap-1">
+                          <span class="fw-bold text-dark">{{
+                            formatDate(item.activity[0].created_at)
+                          }}</span>
+                          <span
+                            class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-1 py-0"
+                            style="font-size: 12px"
+                            :title="`Total ${item.activity.length} riwayat aktivitas`"
+                          >
+                            {{ item.activity.length }}x
+                          </span>
+                        </div>
                       </div>
                     </div>
 
                     <div
                       v-else
-                      class="text-center mb-2 px-2 py-1 bg-warning-subtle rounded-2 border border-warning-subtle"
+                      class="text-center mb-2 px-2 py-2 bg-warning-subtle rounded-2 border border-warning-subtle"
                     >
-                      <span class="text-warning-emphasis fw-bold" style="font-size: 11px">
+                      <span class="text-warning-emphasis fw-bold" style="font-size: 12px">
                         <i class="bi bi-exclamation-triangle-fill me-1"></i> Belum
                         direspon!
                       </span>
                     </div>
 
-                    <div class="d-grid mt-2">
+                    <div
+                      v-if="item.status === 'FOLLOW_UP' || item.status === 'NEW'"
+                      class="d-grid"
+                    >
                       <button
-                        v-if="item.status === 'FOLLOW_UP' || item.status === 'NEW'"
                         @click.prevent="openFollowUpModal(item)"
                         type="button"
-                        class="btn btn-sm shadow-sm fw-medium d-flex justify-content-center align-items-center gap-2"
+                        class="btn btn-sm shadow-sm fw-medium d-flex justify-content-center align-items-center gap-1 py-1"
                         :class="
                           item.status === 'NEW' ? 'btn-primary' : 'btn-outline-primary'
                         "
+                        style="font-size: 14px"
                       >
                         <i class="bi bi-chat-dots-fill"></i>
                         {{ actionLabel(item) }}
@@ -563,10 +649,11 @@ const actionLabel = (item) => {
                     </div>
                   </td>
 
-                  <td class="align-middle text-start">
-                    <div class="d-flex align-items-center">
+                  <td class="align-middle text-start py-2" style="min-width: 210px">
+                    <div class="d-flex align-items-start">
+                      <!-- Avatar Inisial -->
                       <div
-                        class="client-avatar me-3 bg-gradient-light border text-primary fw-bold small d-flex align-items-center justify-content-center shadow-sm"
+                        class="client-avatar me-2 bg-gradient-light border text-primary fw-bold small d-flex align-items-center justify-content-center shadow-sm flex-shrink-0 mt-1"
                       >
                         {{
                           item.creator_name
@@ -575,26 +662,59 @@ const actionLabel = (item) => {
                         }}
                       </div>
 
-                      <div class="d-flex flex-column small" style="line-height: 1.3">
-                        <span class="fw-bold text-dark mb-1 text-capitalize"
-                          >{{ item.creator_name || "Sistem" }} -
-                          {{ `${getRoleName(item.creator_role_name).label}` }}
-                        </span>
-                        <span class="small mb-1 fw-semibold">
-                          <i class="bi bi-geo-alt-fill text-danger"></i>
-                          {{ item.branch_name }}
-                        </span>
-                        <div
-                          class="text-muted d-flex flex-column"
-                          style="font-size: 0.7rem"
-                        >
+                      <div class="d-flex flex-column small" style="line-height: 1.35">
+                        <!-- Nama Creator & Role -->
+                        <div class="d-flex align-items-center flex-wrap gap-1 mb-1">
+                          <span class="fw-bold text-dark text-capitalize">
+                            {{ item.creator_name || "Sistem" }}
+                          </span>
                           <span
-                            ><i class="fas fa-plus-circle me-1 opacity-50"></i>
+                            v-if="item.creator_role_name"
+                            class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-10 rounded-pill px-2 py-1 fw-medium"
+                            style="font-size: 12px"
+                          >
+                            {{ getRoleName(item.creator_role_name).label }}
+                          </span>
+                        </div>
+
+                        <!-- Nama Cabang -->
+                        <span
+                          class="text-secondary fw-semibold mb-1"
+                          style="font-size: 12px"
+                        >
+                          <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+                          {{ item.branch_name || "-" }}
+                        </span>
+
+                        <!-- Waktu Dibuat & Diubah -->
+                        <div
+                          class="text-muted d-flex flex-column gap-1"
+                          style="font-size: 11px"
+                        >
+                          <span>
+                            <i class="bi bi-plus-circle me-1 opacity-75"></i>
                             {{ formatDate(item.created_at) }}
                           </span>
-                          <span v-if="item.updated_at !== item.created_at">
-                            <i class="fas fa-pencil-alt me-1 opacity-50"></i>
+
+                          <!-- Tampil jika pernah diupdate -->
+                          <span
+                            v-if="item.updated_at && item.updated_at !== item.created_at"
+                            class="text-muted"
+                          >
+                            <i class="bi bi-pencil-square me-1 text-warning"></i>
                             {{ formatDate(item.updated_at) }}
+                            <!-- Jika diedit oleh orang yang berbeda dari pembuat awal -->
+                            <template
+                              v-if="item.updated_by && item.updated_by !== item.created_by"
+                            >
+                              oleh
+                              <strong class="text-dark text-capitalize">{{
+                                item.updater_name
+                              }}</strong>
+                              <span v-if="item.updater_role_name" class="opacity-75">
+                                ({{ getRoleName(item.updater_role_name).label }})
+                              </span>
+                            </template>
                           </span>
                         </div>
                       </div>
@@ -603,22 +723,40 @@ const actionLabel = (item) => {
 
                   <td class="text-center">
                     <div
-                      v-if="item.status !== 'CLOSED_LOST'"
+                      v-if="
+                        (canAccess('lead-edit', item, { strictOwner: true }) ||
+                          canAccess('lead-convert', item, { strictOwner: true }) ||
+                          canAccess('lead-delete', item, { strictOwner: true })) &&
+                        item.status !== 'CLOSED_LOST'
+                      "
                       class="d-flex justify-content-center gap-1"
                     >
-                      <button
-                        v-if="hasPermission('lead-edit') && item.status !== 'CLOSED_WON'"
-                        @click="openEditModal(item)"
-                        :class="`btn btn-c-success ${
-                          item.status === 'CLOSED_WON' ? 'disabled' : ''
-                        }`"
-                        title="Edit Data"
+                      <template
+                        v-if="
+                          (canAccess('lead-edit', item, { strictOwner: true }) ||
+                            canAccess('lead-convert', item, { strictOwner: true })) &&
+                          item.status !== 'CLOSED_WON'
+                        "
                       >
-                        <i class="bi bi-pencil-square"></i>
-                      </button>
-
-                      <template v-if="item.status !== 'CLOSED_WON'">
                         <button
+                          v-if="
+                            canAccess('lead-edit', item, { strictOwner: true }) &&
+                            item.status !== 'CLOSED_WON'
+                          "
+                          @click="openEditModal(item)"
+                          :class="`btn btn-c-success ${
+                            item.status === 'CLOSED_WON' ? 'disabled' : ''
+                          }`"
+                          title="Edit Data"
+                        >
+                          <i class="bi bi-pencil-square"></i>
+                        </button>
+
+                        <button
+                          v-if="
+                            canAccess('lead-convert', item, { strictOwner: true }) &&
+                            item.status !== 'CLOSED_WON'
+                          "
                           @click="openConvertModal(item)"
                           class="btn btn-c-info"
                           title="Sahkan Closing"
@@ -639,7 +777,8 @@ const actionLabel = (item) => {
 
                       <button
                         v-if="
-                          hasPermission('lead-delete') && item.status !== 'CLOSED_WON'
+                          canAccess('lead-delete', item, { strictOwner: true }) &&
+                          item.status !== 'CLOSED_WON'
                         "
                         @click="deleted('leads.delete', item)"
                         class="btn btn-c-primary"
@@ -674,6 +813,7 @@ const actionLabel = (item) => {
                       :additionalQuery="{
                         keyword: filters.keyword,
                         status: filters.status,
+                        branch: filters.branch,
                         periode: filters.periode,
                         limit: filters.limit,
                         order_by: filters.order_by,

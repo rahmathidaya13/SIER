@@ -12,44 +12,28 @@ class LeadPolicy
     use HandlesAuthorization;
 
     /**
-     * God Mode: Developer selalu memiliki akses penuh
+     * Developer & Super Admin bebas akses semua cabang.
      */
-    public function before(User $user, $ability)
+    public function before(User $user, string $ability): ?bool
     {
-        if ($user->hasRole('developer')) {
+        if ($user->hasAnyRole(['developer', 'super_admin'])) {
             return true;
         }
+
         return null;
     }
 
-    /**
-     * Helper: Memeriksa apakah User dan Lead berada di cabang yang sama.
-     * Super Admin otomatis lolos pengecekan ini.
-     */
-    private function isSameBranch(User $user, LeadModel $lead): bool
+    public function viewAny(User $user): Response
     {
-        if ($user->hasRole(['super_admin', 'supervisor'])) {
-            return true;
-        }
-
-        return $user->id_branch === $lead->id_branch;
+        return $user->can('lead-view')
+            ? Response::allow()
+            : Response::deny('Anda tidak memiliki izin untuk melihat daftar lead.');
     }
 
-    /**
-     * 1. Akses Halaman Index Leads (View Any)
-     */
-    public function viewAny(User $user)
+    public function view(User $user, LeadModel $lead): Response
     {
-        return $user->hasPermissionTo('lead-view');
-    }
-
-    /**
-     * 2. Akses Detail Lead Tertentu (View)
-     */
-    public function view(User $user, LeadModel $lead)
-    {
-        if (!$user->hasPermissionTo('lead-view')) {
-            return Response::deny('Anda tidak memiliki izin untuk melihat lead.');
+        if (!$user->can('lead-view')) {
+            return Response::deny('Anda tidak memiliki izin untuk melihat detail lead.');
         }
 
         return $this->isSameBranch($user, $lead)
@@ -57,46 +41,69 @@ class LeadPolicy
             : Response::deny('Akses ditolak: Anda hanya bisa melihat lead dari cabang Anda sendiri.');
     }
 
-    /**
-     * 3. Akses Membuat Lead Baru (Create)
-     */
-    public function create(User $user)
+    public function create(User $user): Response
     {
-        // Pembuatan lead biasanya tidak butuh cek cabang,
-        // karena saat disimpan otomatis akan masuk ke cabang user yang login
-
-        if (!$user->hasPermissionTo('lead-create')) {
-            return Response::deny('Anda tidak memiliki wewenang untuk membuat lead.');
-        }
-
-        return Response::allow();
+        return $user->can('lead-create')
+            ? Response::allow()
+            : Response::deny('Anda tidak memiliki wewenang untuk membuat lead.');
     }
 
-    /**
-     * 4. Akses Mengubah Lead (Update)
-     */
-    public function update(User $user, LeadModel $lead)
+    public function update(User $user, LeadModel $lead): Response
     {
-        if (!$user->hasPermissionTo('lead-edit')) {
+        if (!$user->can('lead-edit')) {
             return Response::deny('Anda tidak memiliki wewenang untuk mengubah lead.');
         }
 
-        return $this->isSameBranch($user, $lead)
-            ? Response::allow()
-            : Response::deny('Akses ditolak: Anda hanya bisa mengubah lead dari cabang Anda sendiri.');
+        return $this->authorizeModification($user, $lead, 'mengubah');
     }
 
-    /**
-     * 5. Akses Menghapus Lead (Delete)
-     */
-    public function delete(User $user, LeadModel $lead)
+    public function delete(User $user, LeadModel $lead): Response
     {
-        if (!$user->hasPermissionTo('lead-delete')) {
+        if (!$user->can('lead-delete')) {
             return Response::deny('Anda tidak memiliki wewenang untuk menghapus lead.');
         }
 
-        return $this->isSameBranch($user, $lead)
-            ? Response::allow()
-            : Response::deny('Akses ditolak: Anda hanya bisa menghapus lead dari cabang Anda sendiri.');
+        return $this->authorizeModification($user, $lead, 'menghapus');
+    }
+
+    /**
+     * Cek kecocokan cabang (Berlaku untuk SPV maupun Sales).
+     */
+    private function isSameBranch(User $user, LeadModel $lead): bool
+    {
+        return !empty($user->id_branch)
+            && (string) $user->id_branch === (string) $lead->id_branch;
+    }
+
+    /**
+     * Validasi cabang & hierarki pembuat Lead (Sama seperti isOwner di Vue).
+     */
+    private function authorizeModification(User $user, LeadModel $lead, string $actionText): Response
+    {
+        if (!$this->isSameBranch($user, $lead)) {
+            return Response::deny("Akses ditolak: Anda hanya bisa {$actionText} lead dari cabang Anda sendiri.");
+        }
+
+        $creator = $lead->creator;
+
+        // Supervisor boleh ubah/hapus lead di cabangnya, kecuali buatan Super Admin / Developer
+        if ($user->hasRole('supervisor')) {
+            if ($creator && $creator->hasAnyRole(['super_admin', 'developer'])) {
+                return Response::deny("Akses ditolak: Tidak dapat {$actionText} lead yang dibuat oleh Akun Official");
+            }
+
+            return Response::allow();
+        }
+
+        // Role di bawah SPV (Sales/Admin) hanya boleh ubah/hapus miliknya sendiri
+        if ($creator && $creator->hasAnyRole(['super_admin', 'developer', 'supervisor'])) {
+            return Response::deny("Akses ditolak: Anda tidak dapat {$actionText} lead yang dibuat oleh atasan.");
+        }
+
+        if ((string) $lead->created_by !== (string) $user->id) {
+            return Response::deny("Akses ditolak: Anda hanya dapat {$actionText} lead yang Anda buat sendiri.");
+        }
+
+        return Response::allow();
     }
 }

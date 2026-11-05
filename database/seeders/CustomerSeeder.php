@@ -17,7 +17,7 @@ class CustomerSeeder extends Seeder
     public function run(): void
     {
         $faker = Faker::create("id_ID");
-        $user = User::where('email', 'santimedan12@gmail.com')->first();
+        $user = User::where('email', 'spv@cabang.com')->first();
 
         $customers = [];
         $businessTypes = ['retail', 'fnb', 'service', 'manufacture', 'other'];
@@ -25,7 +25,7 @@ class CustomerSeeder extends Seeder
         $customerTags = ['new', 'repeat', 'has_cancelled'];
         $status = ['active', 'inactive', 'blacklisted'];
 
-        for ($i = 0; $i < 50; $i++) {
+        for ($i = 0; $i < 1000; $i++) {
             $phoneNumber = '08' . $faker->unique()->numerify('##########');
             $customers[] = [
                 'id_customer' => Str::uuid(),

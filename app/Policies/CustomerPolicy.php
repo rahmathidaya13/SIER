@@ -10,6 +10,7 @@ use Illuminate\Auth\Access\Response;
 class CustomerPolicy
 {
     use HandlesAuthorization;
+
     public function before(User $user, $ability)
     {
         // Developer selalu lolos dari semua pengecekan di bawah
