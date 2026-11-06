@@ -13,11 +13,12 @@ class LeadCreateNotification extends BaseLeadNotification
         return 'Lead Baru';
     }
 
+
     protected function message(): string
     {
         return ucwords($this->actor->name)
             . " membuat lead baru atas nama pelanggan "
-            . ucwords($this->lead->name);
+            . ucwords($this->lead->customer->name);
     }
 
     protected function action(): ?array
@@ -25,7 +26,7 @@ class LeadCreateNotification extends BaseLeadNotification
         return [
             'label' => 'Lihat Lead',
             'icon' => 'bi bi-box-arrow-up-right',
-            'route' => route('leads.index', ['keyword' => $this->lead->name]),
+            'route' => route('leads.index', ['keyword' => $this->lead->customer->name]),
         ];
     }
 }

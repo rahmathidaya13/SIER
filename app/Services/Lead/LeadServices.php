@@ -36,7 +36,9 @@ class LeadServices
                 'status' => $validated['status'],
                 'temperature' => $validated['temperature'],
                 'notes' => $validated['notes'],
-                'closed_at' => $validated['status'] === 'CLOSED_WON' ? now()->toDateTimeString() : null
+                'closed_at' => $validated['status'] === 'CLOSED_WON' ? now()->toDateTimeString() : null,
+                'created_at' => now()->toDateTimeString(),
+                'updated_at' => now()->toDateTimeString()
             ]);
 
             // masukan banyak product kedalam database
@@ -81,7 +83,8 @@ class LeadServices
                 'status' => $validated['status'],
                 'temperature' => $validated['temperature'],
                 'notes' => $validated['notes'],
-                'closed_at' => $validated['status'] === 'CLOSED_WON' ? now()->toDateTimeString() : null
+                'closed_at' => $validated['status'] === 'CLOSED_WON' ? now()->toDateTimeString() : null,
+                'updated_at' => now()->toDateTimeString(),
             ]);
 
 
@@ -89,7 +92,7 @@ class LeadServices
                 $this->syncLeadProducts($leads, (array) $validated['id_product']);
             }
             DB::commit();
-            return $leads->fresh(['leadProduct', 'activity']);
+            return $leads;
         } catch (\Exception $error) {
             DB::rollBack();
             Log::error("Gagal memperbarui Lead: " . $error);
@@ -127,6 +130,7 @@ class LeadServices
 
         $sales->paymentHistory()->create([
             'id_sales'       => $sales->id_sales,
+            'id_customer'    => $sales->id_customer,
             'created_by'        => $user->id,
             'updated_by'        => $user->id,
             'id_lead'        => $leads->id_lead,
@@ -143,7 +147,6 @@ class LeadServices
             'description' => $this->msgClosingDeal($validated)
         ]);
     }
-
     private function syncLeadProducts(LeadModel $leads, array $productIds)
     {
         $leads->leadProduct()->delete();
@@ -162,6 +165,7 @@ class LeadServices
 
         $sales = SalesModel::create([
             'id_lead'        => $leads->id_lead,
+            'id_customer'    => $leads->id_customer,
             'created_by'        => $leads->created_by,
             'updated_by'        => $leads->updated_by,
             'id_branch'      => $leads->id_branch,
@@ -171,7 +175,7 @@ class LeadServices
             'payment_status' => $validated['payment_status'],
             'quantity'       => $validated['quantity'],
             'deal_at'        => now()->toDateTimeString(),
-            'notes'          => $validated['notes_sales']
+            'notes'          => $validated['notes_sales'],
         ]);
 
         // masukan banyak product kedalam database

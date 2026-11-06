@@ -461,8 +461,8 @@ const actionLabel = (item) => {
                       <!-- Indikator Catatan jika ada notes -->
                       <span
                         v-if="item.notes"
-                        class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill py-1 px-2"
-                        style="font-size: 10.5px"
+                        class="badge cursor-pointer bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill py-1 px-2"
+                        style="font-size: 11px"
                         :title="item.notes"
                       >
                         <i class="bi bi-journal-text"></i> Catatan
@@ -698,7 +698,7 @@ const actionLabel = (item) => {
 
                           <!-- Tampil jika pernah diupdate -->
                           <span
-                            v-if="item.updated_at && item.updated_at !== item.created_at"
+                            v-if="item.created_at !== item.updated_at"
                             class="text-muted"
                           >
                             <i class="bi bi-pencil-square me-1 text-warning"></i>
@@ -716,6 +716,7 @@ const actionLabel = (item) => {
                               </span>
                             </template>
                           </span>
+
                         </div>
                       </div>
                     </div>

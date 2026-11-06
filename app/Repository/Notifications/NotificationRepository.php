@@ -15,8 +15,7 @@ class NotificationRepository
         $this->resolveSorting($filters, $query);
         $this->resolveStatus($filters, $query);
         return $query
-            ->paginate($filters['limit'] ?? 10)
-            ->withQueryString();
+            ->paginate($filters['limit'] ?? 10);
     }
     protected function resolveStatus(array $filters, $query)
     {

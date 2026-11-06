@@ -103,7 +103,7 @@ class LeadController extends Controller
             $this->clearLeadCaches($leads, $user->id);
 
             return redirect()->back()->with([
-                'message' => 'Lead dari ' . strtoupper($leads->customer->name) . ' berhasil ditambahkan',
+                'message' => 'Lead dari ' . strtoupper($leads->customer->name) . ' berhasil dibuat',
             ]);
         } catch (\Exception $error) {
             $errorMessage = config('app.debug') ? $error->getMessage() : 'Terjadi kesalahan pada server. Silakan coba lagi.';

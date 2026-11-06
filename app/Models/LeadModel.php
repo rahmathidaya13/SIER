@@ -14,6 +14,7 @@ class LeadModel extends Model
     protected $table = 'leads';
     protected $primaryKey = 'id_lead';
     public $incrementing = false; // Karena pakai UUID
+    public $timestamps = true;
     protected $keyType = 'string';
     protected $fillable = [
         'created_by',
@@ -29,6 +30,9 @@ class LeadModel extends Model
 
         'archived_at',
         'archived_by',
+        'created_at',
+        'updated_at'
+
     ];
     protected $dates    = ["deleted_at"];
     protected $casts = [
@@ -38,7 +42,6 @@ class LeadModel extends Model
         'closed_at' => 'datetime',
         'archived_at' => 'datetime',
     ];
-
     public function scopeJoinUserRole(Builder $query): Builder
     {
         $table = $this->getTable();

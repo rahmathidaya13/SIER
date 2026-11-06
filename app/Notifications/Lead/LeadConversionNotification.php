@@ -46,11 +46,11 @@ class LeadConversionNotification extends Notification
             'deal_price' => $this->dealPrice,
 
             'paid_amount' => $this->paidAmount,
-            'lead_name' => $this->lead->name,
+            'lead_name' => $this->lead->customer->name,
             'action' => [
                 'label' => 'Lihat Selengkapnya',
                 'icon' => 'bi bi-box-arrow-up-right',
-                'route' => route('sales.index', ['keyword' => $this->lead->name]),
+                'route' => route('sales.index', ['keyword' => $this->lead->customer->name]),
             ],
             'actor' => [
                 'users_id' => $this->actor->id,
@@ -68,7 +68,7 @@ class LeadConversionNotification extends Notification
         return '💰 '
             . ucwords($this->actor->name)
             . ' berhasil mengkonversikan lead atas nama pelanggan '
-            . ucwords($this->lead->name)
+            . ucwords($this->lead->customer->name)
             . ' menjadi transaksi '
             . $paymentLabel
             . ' sebesar Rp '

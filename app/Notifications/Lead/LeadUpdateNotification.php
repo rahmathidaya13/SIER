@@ -16,14 +16,14 @@ class LeadUpdateNotification extends BaseLeadNotification
     {
         return ucwords($this->actor->name)
             . ' memperbarui data lead atas nama pelanggan '
-            . ucwords($this->lead->name);
+            . ucwords($this->lead->customer->name);
     }
     protected function action(): ?array
     {
         return [
             'label' => 'Lihat Lead',
             'icon' => 'bi bi-box-arrow-up-right',
-            'route' => route('leads.index', ['keyword' => $this->lead->name]),
+            'route' => route('leads.index', ['keyword' => $this->lead->customer->name]),
         ];
     }
 }

@@ -45,7 +45,7 @@ abstract class BaseLeadNotification extends Notification implements ShouldQueue,
             'title' => $this->title(),
             'message' => $this->message(),
             'lead_id' => $this->lead->id_lead,
-            'lead_name' => $this->lead->name,
+            'lead_name' => $this->lead->customer->name,
             'actor' => [
                 'id' => $this->actor->id,
                 'name' => $this->actor->name,
