@@ -7,7 +7,7 @@ use App\Models\LeadActivityModel;
 use App\Traits\InvalidatesCaches;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-use App\Traits\BranchMutationHelper;
+use App\Http\Requests\LeadActivityRequest;
 use App\Repository\Sale\SaleRepository;
 use App\Repository\User\UserRepository;
 use App\Repository\Lead\LeadsRepository;
@@ -17,29 +17,24 @@ use App\Support\ScopeKey;
 class LeadActivityController extends Controller
 {
     use InvalidatesCaches;
-    public function store(Request $request, string $id)
+    public function store(LeadActivityRequest $request, string $id)
     {
-        $request->validate(
-            [
-                'description' => 'required'
-            ],
-            [
-                'description.required' => 'Aktivitas Follow Up tidak boleh kosong'
-            ]
-        );
-        $user = auth()->user();
 
-        DB::beginTransaction();
-        try {
+        $validated = $request->validated(); // Ambil data dari request
+
+        $user = auth()->user(); // Ambil user yang sedang login
+
+        $leadActivity = DB::transaction(function () use ($id, $validated, $user) {
+
             $activity = LeadActivityModel::create([
                 'id_lead' => $id,
-                'created_by' => auth()->user()->id,
-                'updated_by' => auth()->user()->id,
-                'description' => $request['description']
+                'created_by' => $user->id,
+                'updated_by' => $user->id,
+                'description' => $validated['description']
             ]);
 
-            // Tarik Data Lead Utama (Induk)
-            $lead = $activity->lead;
+
+            $lead = $activity->lead; // Tarik Data Lead Utama (Induk)
             $leadUpdates = []; // Siapkan data untuk pembaruan (Array)
 
             if ($lead->status === 'NEW') {
@@ -54,51 +49,10 @@ class LeadActivityController extends Controller
                 $lead->update($leadUpdates);
             }
 
-            DB::commit();
-
-            $this->invalidateCaches(
-                [
-                    UserRepository::class,
-                    LeadsRepository::class,
-                    SaleRepository::class,
-                    ChannelRepository::class
-                ],
-                [
-                    ScopeKey::branch($user->id_branch),
-                    ScopeKey::user($user->id),
-                    ScopeKey::GLOBAL,
-                    ScopeKey::GLOBAL_SUPER_ADMIN,
-                ]
-            );
+            return $activity;
+        });
 
 
-            return redirect()->back()->with('modal_message', 'Aktivitas Follow Up berhasil ditambahkan!');
-        } catch (\Exception $error) {
-            return redirect()->back()
-                ->withInput()
-                ->withErrors(['error' => 'Terjadi kesalahan saat menyimpan data aktivitas follow up: ' . $error->getMessage()]);
-        }
-    }
-    public function update(Request $request, string $id)
-    {
-        $user = auth()->user();
-        $request->validate(
-            [
-                'description' => 'required'
-            ],
-            [
-                'description.required' => 'Aktivitas Follow Up tidak boleh kosong'
-            ]
-        );
-
-        $leadActivity = LeadActivityModel::findOrFail($id);
-
-        $leadActivity->update([
-            'updated_by' => $user->id !== $leadActivity->created_by ? $user->id : $leadActivity->created_by,
-            'description' => $request['description']
-        ]);
-
-        $user = auth()->user();
         $this->invalidateCaches(
             [
                 UserRepository::class,
@@ -107,8 +61,43 @@ class LeadActivityController extends Controller
                 ChannelRepository::class
             ],
             [
-                ScopeKey::branch($user->id_branch),
                 ScopeKey::user($user->id),
+                ScopeKey::user($leadActivity->created_by),
+                ScopeKey::branch($user->id_branch),
+                ScopeKey::GLOBAL,
+                ScopeKey::GLOBAL_SUPER_ADMIN,
+            ]
+        );
+
+        return redirect()->back()->with('modal_message', 'Aktivitas Follow Up berhasil ditambahkan!');
+    }
+    public function update(LeadActivityRequest $request, string $id)
+    {
+        $validated = $request->validated();
+        $user = auth()->user();
+
+        $leadActivity = DB::transaction(function () use ($id, $validated, $user) {
+            $leadActivity = LeadActivityModel::findOrFail($id);
+            $leadActivity->update([
+                'updated_by' => $user->id,
+                'description' => $validated['description']
+            ]);
+            return $leadActivity;
+        });
+
+
+        $this->invalidateCaches(
+            [
+                UserRepository::class,
+                LeadsRepository::class,
+                SaleRepository::class,
+                ChannelRepository::class
+            ],
+            [
+                ScopeKey::user($user->id),
+                ScopeKey::user($leadActivity->created_by),
+                ScopeKey::user($leadActivity->updated_by),
+                ScopeKey::branch($user->id_branch),
                 ScopeKey::GLOBAL,
                 ScopeKey::GLOBAL_SUPER_ADMIN,
             ]

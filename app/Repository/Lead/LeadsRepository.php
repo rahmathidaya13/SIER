@@ -3,10 +3,11 @@
 namespace App\Repository\Lead;
 
 use App\Models\LeadModel;
+use App\Support\ScopeKey;
+use App\Models\BranchModel;
 use App\Repository\BaseCacheRepository;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
-use App\Support\ScopeKey;
 
 class LeadsRepository extends BaseCacheRepository
 {
@@ -118,6 +119,7 @@ class LeadsRepository extends BaseCacheRepository
         $query = $this->resolveStatus($query, $filters);
         $query = $this->filterKeyword($query, $filters);
         $query = $this->filterPeriode($query, $filters);
+        $query = $this->filterBranch($query, $filters);
         return $query;
     }
     protected function resolveStatus(Builder $query, array $filters): Builder
@@ -161,5 +163,21 @@ class LeadsRepository extends BaseCacheRepository
                     ->whereYear('leads.created_at', $year);
             }
         });
+    }
+    protected function filterBranch(Builder $query, array $filters) // Filter berdasarkan branch
+    {
+        $user = auth()->user();
+        $isSuperAdmin = $user->hasRole(['super_admin', 'developer']);
+
+        $branchName = trim((string) ($filters['branch'] ?? 'all'));
+
+        return $query
+            // Jika bukan super_admin, wajib kunci ke id_branch milik user
+            ->when(!$isSuperAdmin, fn($q) => $q->where('leads.id_branch', $user->id_branch ?? '__not_found__'))
+
+            // Jika super admin dan memilih nama cabang tertentu, cari via subquery
+            ->when($isSuperAdmin && $branchName !== '' && $branchName !== 'all', function ($q) use ($branchName) {
+                $q->where('leads.id_branch', BranchModel::select(['id_branch', 'name'])->where('name', $branchName)->value('id_branch'));
+            });
     }
 }

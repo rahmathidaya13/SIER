@@ -2,18 +2,14 @@
 
 namespace App\Services\Branches;
 
-use App\Models\User;
 use App\Models\BranchModel;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
 
 class BranchServices
 {
     public function store(array $validated, $user): BranchModel
     {
-        DB::beginTransaction();
-        try {
+        return DB::transaction(function () use ($validated, $user) {
             $branch = BranchModel::create([
                 'name' => $validated['name'],
                 'branch_code' => BranchModel::generateUniqueCode(),
@@ -28,22 +24,13 @@ class BranchServices
                 $branch->branchPhone()->createMany($branchesMany);
             }
 
-            DB::commit();
             return $branch;
-        } catch (\Exception $error) {
-            DB::rollBack();
-            Log::error("Gagal menyimpan data branch: " . $error);
-            throw $error;
-        }
+        });
     }
 
     public function update(BranchModel $branch, array $validated, $user): BranchModel
     {
-        DB::beginTransaction();
-        try {
-
-
-
+        return DB::transaction(function () use ($branch, $validated, $user) {
             $branch->update([
                 'name' => $validated['name'],
                 'address' => $validated['address'],
@@ -59,12 +46,7 @@ class BranchServices
                 }
             }
 
-            DB::commit();
             return $branch;
-        } catch (\Exception $error) {
-            DB::rollBack();
-            Log::error("Gagal memperbarui data branch: " . $error);
-            throw $error;
-        }
+        });
     }
 }

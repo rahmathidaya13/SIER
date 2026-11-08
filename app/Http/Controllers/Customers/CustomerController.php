@@ -10,6 +10,7 @@ use App\Models\CustomerModel;
 use App\Traits\InvalidatesCaches;
 use App\Traits\CustomerValidation;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CustomerRequest;
 use Illuminate\Support\Facades\Gate;
 use App\Repository\Sale\SaleRepository;
 use App\Repository\User\UserRepository;
@@ -56,27 +57,21 @@ class CustomerController extends Controller
             ]
         );
     }
-    public function store(Request $request)
+    public function store(CustomerRequest $request)
     {
         $this->authorize('create', CustomerModel::class, 'unauthorized_action');
 
         // dd($request->all());
         $user = auth()->user();
-        $validated = $this->customerValidation($request->all());
-        try {
-            $customer = $this->services->store($validated, $user);
+        $validated = $request->validated();
 
-            $this->clearCustomerCaches($customer, $user->id);
+        $customer = $this->services->store($validated, $user);
 
-            return redirect()->back()->with([
-                'message' => 'Pelanggan baru ' . strtoupper($validated['name']) . ' berhasil ditambahkan',
-            ]);
-        } catch (\Exception $error) {
-            $errorMessage = config('app.debug') ? $error->getMessage() : 'Terjadi kesalahan pada server. Silakan coba lagi.';
-            return redirect()->back()
-                ->withInput()
-                ->withErrors(['error' => $errorMessage]);
-        }
+        $this->clearCustomerCaches($customer, $user->id);
+
+        return redirect()->back()->with([
+            'message' => 'Pelanggan baru ' . strtoupper($validated['name']) . ' berhasil ditambahkan',
+        ]);
     }
     public function show(string $id)
     {
@@ -107,7 +102,7 @@ class CustomerController extends Controller
 
         return CustomerResource::make($customer);
     }
-    public function update(Request $request, string $id)
+    public function update(CustomerRequest $request, string $id)
     {
         $user = auth()->user();
         $customer = CustomerModel::with([

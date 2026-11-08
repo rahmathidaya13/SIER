@@ -16,9 +16,12 @@ const props = defineProps({
   leads: Object,
   filters: Object,
   channels: Array,
-  role_name: String,
+  branches: Array,
 });
 console.log(props.leads.data);
+
+const page = usePage();
+
 const getCurrentMonth = () => {
   const today = new Date();
   const year = today.getFullYear();
@@ -26,6 +29,15 @@ const getCurrentMonth = () => {
   const month = String(today.getMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
 };
+const canSelectBranch = computed(() => hasRole(["super_admin", "developer"]));
+const branchName = computed(() => {
+  const user = page.props.auth?.user;
+  return (
+    user?.branch?.name ||
+    props.branches?.find((b) => b.id_branch === user?.id_branch)?.name ||
+    "Cabang Tidak Diketahui"
+  );
+});
 const { filters, isLoading } = useFilter({
   routeName: "leads.index",
   initialFilters: {
@@ -34,9 +46,11 @@ const { filters, isLoading } = useFilter({
     status: props.filters.status ?? "active",
     periode: props.filters.periode ?? getCurrentMonth(),
     order_by: props.filters.order_by ?? "latest",
+    branch: !canSelectBranch.value ? props.filters.branch ?? branchName.value : null,
+
     page: props.filters.page ?? 1,
   },
-  watchFields: ["keyword", "limit", "periode", "status", "order_by"],
+  watchFields: ["keyword", "limit", "periode", "status", "order_by", "branch"],
   only: ["leads", "filters", "channels"],
   debounceTime: 500,
 });
@@ -198,8 +212,8 @@ const rowClasses = (item) => ({
 
 const deleted = async (nameRoute, data) => {
   const setConfirm = await confirm.ask({
-    title: "Hapus",
-    message: `Kamu ingin menghapus Data Lead dari ${data.name} ? Data yang sudah dihapus tidak dapat dikembalikan!`,
+    title: `Hapus ${data.customer_name} ?`,
+    message: `Data yang sudah dihapus tidak dapat dikembalikan!`,
     confirmText: "Ya, Hapus",
     variant: "danger",
   });
@@ -268,7 +282,6 @@ const customerTagMeta = (tag) => {
 //   return hasRole(role) || hasPermission(permission);
 // };
 
-const page = usePage();
 const authUserId = computed(() => String(page.props.auth?.user_id ?? ""));
 const isOwner = (item) => String(item?.created_by) === authUserId.value;
 const isSupervisorOrAbove = computed(() =>
@@ -285,6 +298,32 @@ const actionLabel = (item) => {
   // Fallback (misal sales lain) — tampilkan base saja, tombol mungkin disembunyikan
   return base;
 };
+
+const branchOptions = computed(() => {
+  const branches = props.branches ?? [];
+  // Super Admin & Developer: tampilkan semua cabang
+  if (canSelectBranch.value) {
+    return [
+      {
+        label: "Semua Cabang",
+        value: "all",
+      },
+      ...branches.map((data) => ({
+        label: data.name,
+        value: data.name,
+      })),
+    ];
+  }
+
+  // User Cabang: tampilkan cabang user
+  const userBranchId = page.props.auth?.user?.id_branch;
+  return branches
+    .filter((data) => data.id_branch === userBranchId)
+    .map((data) => ({
+      label: data.name,
+      value: data.name,
+    }));
+});
 </script>
 <template>
   <Head title="Data Rekap Leads" />
@@ -316,7 +355,7 @@ const actionLabel = (item) => {
             </div>
 
             <div class="row p-3 g-2 align-items-center">
-              <div class="col-12 col-md-12 col-lg-12 col-xl-6">
+              <div class="col-12 col-md-8 col-lg-8 col-xl-8">
                 <div class="position-relative">
                   <i class="bi bi-search input-icon-left"></i>
                   <input-text
@@ -328,7 +367,46 @@ const actionLabel = (item) => {
                   />
                 </div>
               </div>
-              <div class="col-xl-2 col-3 col-md-3 col-lg-3">
+
+              <div class="col-xl-2 col-6 col-md-2 col-lg-2">
+                <select-input
+                  :isValid="false"
+                  name="limit"
+                  v-model="filters.limit"
+                  text="Pilih Batas Data"
+                  :options="[
+                    { label: '☰ 10 Data', value: 10 },
+                    { label: '☰ 25 Data', value: 25 },
+                    { label: '☰ 50 Data', value: 50 },
+                    { label: '☰ 100 Data', value: 100 },
+                  ]"
+                />
+              </div>
+              <div class="col-xl-2 col-6 col-md-2 col-lg-2">
+                <select-input
+                  :isValid="false"
+                  name="order_by"
+                  v-model="filters.order_by"
+                  text="Pilih Urutan"
+                  :options="[
+                    { label: '🔼 Terbaru', value: 'latest' },
+                    { label: '🔽 Terlama', value: 'oldest' },
+                  ]"
+                />
+              </div>
+
+              <div class="col-xl-4 col-6 col-md-4 col-lg-4">
+                <select-input
+                  :disabled="!canSelectBranch"
+                  :isValid="false"
+                  name="branch_selected"
+                  v-model="filters.branch"
+                  text="Pilih Lead Cabang
+                  "
+                  :options="branchOptions"
+                />
+              </div>
+              <div class="col-xl-4 col-6 col-md-4 col-lg-4">
                 <input-text
                   :isValid="false"
                   type="month"
@@ -336,7 +414,7 @@ const actionLabel = (item) => {
                   v-model="filters.periode"
                 />
               </div>
-              <div class="col-xl-2 col-3 col-md-3 col-lg-3">
+              <div class="col-xl-4 col-12 col-md-4 col-lg-4">
                 <select-input
                   :isValid="false"
                   name="status"
@@ -352,32 +430,6 @@ const actionLabel = (item) => {
                     { label: '📞 Hanya Follow Up', value: 'follow_up' },
                     { label: '🎉 Closing / Terjual', value: 'closed_won' },
                     { label: '❌ Tidak Jadi', value: 'closed_lost' },
-                  ]"
-                />
-              </div>
-              <div class="col-xl-1 col-3 col-md-3 col-lg-3">
-                <select-input
-                  :isValid="false"
-                  name="limit"
-                  v-model="filters.limit"
-                  text="Pilih Batas Data"
-                  :options="[
-                    { label: '☰ 10 Data', value: 10 },
-                    { label: '☰ 25 Data', value: 25 },
-                    { label: '☰ 50 Data', value: 50 },
-                    { label: '☰ 100 Data', value: 100 },
-                  ]"
-                />
-              </div>
-              <div class="col-xl-1 col-3 col-md-3 col-lg-3">
-                <select-input
-                  :isValid="false"
-                  name="order_by"
-                  v-model="filters.order_by"
-                  text="Pilih Urutan"
-                  :options="[
-                    { label: '🔼 Terbaru', value: 'latest' },
-                    { label: '🔽 Terlama', value: 'oldest' },
                   ]"
                 />
               </div>
@@ -455,7 +507,8 @@ const actionLabel = (item) => {
                         class="badge badge-soft-success text-success rounded-pill d-inline-flex align-items-center gap-1 py-1 px-2 text-decoration-none"
                         title="Chat langsung via WhatsApp"
                       >
-                        <i class="bi bi-whatsapp"></i> {{ item.customer_phone }}
+                        <i class="bi bi-whatsapp"></i>
+                        <span v-html="highlight(item.customer_phone, filters.keyword)"></span>
                       </a>
 
                       <!-- Indikator Catatan jika ada notes -->
@@ -705,7 +758,9 @@ const actionLabel = (item) => {
                             {{ formatDate(item.updated_at) }}
                             <!-- Jika diedit oleh orang yang berbeda dari pembuat awal -->
                             <template
-                              v-if="item.updated_by && item.updated_by !== item.created_by"
+                              v-if="
+                                item.updated_by && item.updated_by !== item.created_by
+                              "
                             >
                               oleh
                               <strong class="text-dark text-capitalize">{{
@@ -716,7 +771,6 @@ const actionLabel = (item) => {
                               </span>
                             </template>
                           </span>
-
                         </div>
                       </div>
                     </div>
@@ -818,6 +872,7 @@ const actionLabel = (item) => {
                         periode: filters.periode,
                         limit: filters.limit,
                         order_by: filters.order_by,
+                        branch: filters.branch,
                       }"
                       :only="['leads', 'filters', 'channels']"
                     />

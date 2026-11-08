@@ -10,7 +10,7 @@ import { currencyFormat } from "@/Helpers/currencyFormat";
 import PaymentModal from "./PaymentModal.vue";
 import PaymentCancelModal from "./PaymentCancelModal.vue";
 import ActivityTimelineModal from "./ActivityTimelineModal.vue";
-import { hasRole, hasPermission } from "@/Composables/useAuth";
+import { hasRole, hasPermission, canAccess } from "@/Composables/useAuth";
 
 const props = defineProps({
   sales: Object,

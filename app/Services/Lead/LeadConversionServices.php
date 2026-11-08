@@ -6,21 +6,17 @@ use App\Models\User;
 use App\Models\LeadModel;
 use App\Models\SalesModel;
 use Illuminate\Support\Facades\DB;
-use App\Traits\ImmutableFieldValidator;
 use Illuminate\Validation\ValidationException;
 
 class LeadConversionServices
 {
-    use ImmutableFieldValidator;
     public function convertLeadToSales(LeadModel $leads, array $validated, User $user): SalesModel
     {
-        $this->validatePayment($validated);
-
         return DB::transaction(function () use ($leads, $validated, $user) {
 
             $fresh = LeadModel::where('id_lead', $leads->id_lead)
                 ->lockForUpdate()
-                ->firstOrFail();
+                ->findOrFail($leads->id_lead);
 
             if ($fresh->status === 'CLOSED_WON' || $fresh->sales()->exists()) {
                 throw ValidationException::withMessages([
@@ -31,8 +27,8 @@ class LeadConversionServices
 
             $sales = SalesModel::create([
                 'id_lead'        => $fresh->id_lead,
-                'created_by'        => $fresh->created_by,
-                'updated_by'        => $fresh->updated_by,
+                'created_by'        => $user->id,
+                'updated_by'        => $user->id,
                 'id_branch'      => $fresh->id_branch,
                 'id_customer'    => $fresh->id_customer,
                 'deal_price'     => $validated['deal_price'],
@@ -44,6 +40,7 @@ class LeadConversionServices
                 'notes'          => $validated['notes'] ?? null
             ]);
 
+            // Menggunakan pluck terus ke pangkalan data meminimumkan penggunaan memori.
             $idProducts = $fresh->leadProduct()->pluck('id_product')->toArray();
             if (!empty($idProducts)) {
                 $rows = array_map(fn($idProduct) => ['id_product' => $idProduct],  $idProducts);
@@ -55,7 +52,7 @@ class LeadConversionServices
                 : 'Dana Awal (DP)';
 
             $message = "💰 Transaksi {$paymentLabel} dari pelanggan "
-                . ucwords($leads->name)
+                . ucwords($leads->customer->name ?? 'pelanggan')
                 . ' sebesar Rp ' . number_format($validated['paid_amount'], 0, ',', '.')
                 . " ({$validated['payment_status']}).";
 
@@ -74,41 +71,23 @@ class LeadConversionServices
 
 
             $fresh->update([
+                'updated_by' => $user->id,
                 'status' => 'CLOSED_WON',
                 'temperature' => 'HOT',
                 'closed_at' => now()->toDateTimeString(),
                 'updated_at' => now()->toDateTimeString(),
-                'updated_by' => $user->id,
             ]);
 
+            $dealAmountFormatted = number_format($validated['deal_price'], 0, ',', '.');
             $fresh->activity()->create([
                 'created_by'     =>  $user->id,
                 'updated_by'     =>  $user->id,
                 'id_lead'     =>  $fresh->id_lead,
                 'source'      => 'transaction',
-                'description' => '🎉 Pelanggan DEAL! Transaksi disahkan dengan nilai Rp ' . number_format($validated['deal_price'], 0, ',', '.') . ' (' . $validated['payment_status'] . ').'
+                'description' => "🎉 Pelanggan DEAL! Transaksi disahkan dengan nilai Rp {$dealAmountFormatted} ({$validated['payment_status']})."
             ]);
 
             return $sales;
         });
-    }
-
-    private function validatePayment(array $validated)
-    {
-        $dealPrice  = $validated['deal_price'] ?? 0;
-        $paidAmount = $validated['paid_amount'] ?? 0;
-
-        if (($validated['payment_status'] ?? null) !== 'DP') {
-            return;
-        }
-
-        $minimalDp = $dealPrice * 0.5;
-
-        if ($paidAmount < $minimalDp) {
-            throw ValidationException::withMessages([
-                'paid_amount' => 'Uang muka (DP) minimal harus 50% (Minimal: Rp '
-                    . number_format($minimalDp, 0, ',', '.') . ')',
-            ]);
-        }
     }
 }

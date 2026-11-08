@@ -4,23 +4,26 @@ namespace App\Http\Controllers\Leads;
 
 use App\Models\User;
 use App\Models\LeadModel;
+use App\Support\ScopeKey;
 use App\Traits\UserScope;
+use App\Models\BranchModel;
 use Illuminate\Support\Arr;
 use App\Models\ChannelModel;
 use App\Models\ProductModel;
 use Illuminate\Http\Request;
+use App\Models\CustomerModel;
 use App\Traits\LeadsValidation;
 use App\Models\LeadActivityModel;
+use App\Traits\InvalidatesCaches;
+use App\Http\Requests\LeadRequest;
 use App\Services\Lead\LeadServices;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\LeadResource;
-use Illuminate\Support\Facades\Gate;
 use App\Repository\Sale\SaleRepository;
 use App\Repository\User\UserRepository;
 use App\Repository\Lead\LeadsRepository;
 use App\Traits\ActivityMessageFormatter;
 use App\Http\Resources\LeadActivityResource;
-use App\Models\CustomerModel;
 use Illuminate\Support\Facades\Notification;
 use App\Repository\Channel\ChannelRepository;
 use App\Services\Lead\LeadConversionServices;
@@ -29,8 +32,6 @@ use App\Notifications\Lead\LeadCreateNotification;
 use App\Notifications\Lead\LeadDeleteNotification;
 use App\Notifications\Lead\LeadUpdateNotification;
 use App\Services\Authorization\ScopeResolverService;
-use App\Support\ScopeKey;
-use App\Traits\InvalidatesCaches;
 
 class LeadController extends Controller
 {
@@ -58,65 +59,56 @@ class LeadController extends Controller
             'periode' => 'nullable|date|date_format:Y-m',
             'status' => 'nullable|string|in:all,active,new,follow_up,closed_won,closed_lost',
             'order_by' => 'nullable|string|in:oldest,latest',
+            'branch' => 'nullable|string|in:all,' . implode(',', BranchModel::pluck('name')->toArray()),
             'page' => 'nullable|integer|min:1',
         ]);
 
         $filters = $request->only(array_keys($validated));
         $filters = app(ScopeResolverService::class)->filters($filters); // Gunakan ScopeResolverService untuk memproses filter berdasarkan scope yang diperlukan
         $cleanFilters = Arr::except($filters, ['scope']); // Hapus 'scope' dan 'page' dari $filters sebelumnya
+
         $leads = $this->repository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
+
         $channels = ChannelModel::select('id_channel', 'name', 'icon')->get();
+        $branch = BranchModel::select('id_branch', 'name')->get();
+
         return inertia(
             'Leads/Index',
             [
                 'leads' => $leads,
                 'filters' => $filters,
                 'channels' => $channels,
+                'branches' => $branch
             ]
         );
     }
 
-    public function store(Request $request)
+    public function store(LeadRequest $request)
     {
         // policy lead
         $this->authorize('create', LeadModel::class, 'unauthorized_action');
 
+        $validated = $request->validated();
+
         $user = auth()->user();
-        $validated = $this->validateLeads($request->all());
 
-        if ($request['status'] === 'CLOSED_WON' && $request['payment_status'] === 'DP') {
-            $minimalDp = $request['deal_price'] * 0.5;
-            if ($request['paid_amount'] < $minimalDp) {
-                throw ValidationException::withMessages([
-                    'paid_amount' => 'Uang muka (DP) minimal harus 50% (Minimal: Rp ' . number_format($minimalDp, 0, ',', '.') . ')'
-                ]);
-            }
-        }
+        // proses penyimpanan data ke DB
+        $leads = $this->leadServices->store($validated, $user);
 
-        try {
-            $leads = $this->leadServices->store($validated, $user);
+        // Eksekusi notifikasi & cache clearance hanya berjalan jika store() berhasil
+        $recipients = $this->getLeadNotificationRecipients($leads, $user);
+        Notification::send($recipients, new LeadCreateNotification($leads, $user));
+        $this->clearLeadCaches($leads, $user->id);
 
-            $recipients = $this->getLeadNotificationRecipients($leads, $user);
-
-            Notification::send($recipients, new LeadCreateNotification($leads, $user));
-
-            $this->clearLeadCaches($leads, $user->id);
-
-            return redirect()->back()->with([
-                'message' => 'Lead dari ' . strtoupper($leads->customer->name) . ' berhasil dibuat',
-            ]);
-        } catch (\Exception $error) {
-            $errorMessage = config('app.debug') ? $error->getMessage() : 'Terjadi kesalahan pada server. Silakan coba lagi.';
-            return redirect()->back()
-                ->withInput()
-                ->withErrors(['error' => $errorMessage]);
-        }
+        return redirect()->back()->with([
+            'message' => 'Lead dari ' . strtoupper($leads->customer->name) . ' berhasil dibuat',
+        ]);
     }
 
-    public function update(Request $request, string $id)
+    public function update(LeadRequest $request, string $id)
     {
+        $validated = $request->validated();
         $user = auth()->user();
-        $validated = $this->validateLeads($request->all(), $id);
 
         $leads = LeadModel::find($id);
 
@@ -129,39 +121,30 @@ class LeadController extends Controller
         // cek policy
         $this->authorize('update', $leads, 'unauthorized_action');
 
-        $oldCreatedBy = $leads->getOriginal('created_by');
-        $oldUpdatedBy = $leads->getOriginal('updated_by');
-        $oldBranchId  = $leads->getOriginal('id_branch');
+        // Simpan data lama untuk keperluan optimalisasi Cache
+        $oldData = [
+            'created_by' => $leads->getOriginal('created_by'),
+            'updated_by' => $leads->getOriginal('updated_by'),
+            'id_branch'  => $leads->getOriginal('id_branch')
+        ];
 
-        // Aturan updated_by: hanya ubah jika pengedit berbeda dengan pembuat awal
+        $leads = $this->leadServices->update($leads, $validated, $user);
 
-        try {
-            $leads = $this->leadServices->update($leads, $validated, $user);
-            $recipients = $this->getLeadNotificationRecipients(
+        $recipients = $this->getLeadNotificationRecipients(
+            $leads,
+            $user
+        );
+
+        // send notification via echo
+        Notification::send(
+            $recipients,
+            new LeadUpdateNotification(
                 $leads,
                 $user
-            );
-
-            // send notification via echo
-            Notification::send(
-                $recipients,
-                new LeadUpdateNotification(
-                    $leads,
-                    $user
-                )
-            );
-
-            $this->clearLeadCaches($leads, $user->id, $oldCreatedBy, $oldUpdatedBy, $oldBranchId);
-
-            return redirect()->back()->with('message', 'Lead ' . ucwords($leads->customer->name) . ' berhasil diperbarui!');
-        } catch (\Exception $error) {
-            $errorMessage = config('app.debug')
-                ? $error->getMessage()
-                : 'Terjadi kesalahan pada server. Silakan coba lagi.';
-            return redirect()->back()
-                ->withInput()
-                ->withErrors(['error' => 'Gagal memperbarui data: ' . $errorMessage]);
-        }
+            )
+        );
+        $this->clearLeadCaches($leads, $user->id, ...array_values($oldData));
+        return redirect()->back()->with('message', 'Lead ' . ucwords($leads->customer->name) . ' berhasil diperbarui!');
     }
 
     public function show(string $id)
@@ -238,30 +221,18 @@ class LeadController extends Controller
 
         $this->authorize('delete', $leads);
 
-        try {
-            $leadId = $leads->id_lead;
-            $leadName = $leads->customer->name;
+        $leadId = $leads->id_lead;
+        $leadName = $leads->customer->name;
 
-            $recipients = $this->getLeadNotificationRecipients($leads, $user);
-            $this->leadServices->delete($leads, $user);
+        $recipients = $this->getLeadNotificationRecipients($leads, $user);
+        $this->leadServices->delete($leads, $user);
 
-            // send notification via echo
-            Notification::send($recipients, new LeadDeleteNotification($leadId, $leadName, $user));
-            // cache optimization
-            $this->clearLeadCaches($leads, $user->id);
+        // send notification via echo
+        Notification::send($recipients, new LeadDeleteNotification($leadId, $leadName, $user));
+        // cache optimization
+        $this->clearLeadCaches($leads, $user->id);
 
-            return redirect()->back()->with('message', 'Lead ' . ucwords($leads->customer->name) . ' berhasil dihapus');
-        } catch (\Exception $error) {
-            $errorMessage = config('app.debug')
-                ? $error->getMessage()
-                : 'Terjadi kesalahan pada server. Silakan coba lagi.';
-
-            return redirect()
-                ->back()
-                ->withErrors([
-                    'error' => $errorMessage
-                ]);
-        }
+        return redirect()->back()->with('message', 'Lead ' . ucwords($leadName) . ' berhasil dihapus');
     }
 
     private function getLeadNotificationRecipients(LeadModel $lead, User $actor)

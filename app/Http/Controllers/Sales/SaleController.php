@@ -10,22 +10,20 @@ use Illuminate\Http\Request;
 use App\Models\PaymentHistory;
 use App\Traits\SalesValidation;
 use App\Models\LeadActivityModel;
-use App\Models\SalesProductModel;
 use App\Traits\InvalidatesCaches;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\UserResource;
-use App\Traits\BranchMutationHelper;
+use App\Http\Requests\SalesRequest;
 use App\Http\Resources\SalesResource;
 use App\Repository\Sale\SaleRepository;
 use App\Repository\Lead\LeadsRepository;
 use App\Services\Sales\PaymentCancelled;
 use App\Services\Sales\SalePaymentService;
 use App\Http\Resources\LeadActivityResource;
-use App\Http\Resources\SalesProductResource;
 use App\Repository\Channel\ChannelRepository;
 use App\Http\Resources\PaymentHistoriesResource;
 use App\Services\Sales\PaymentValidationService;
 use App\Services\Authorization\ScopeResolverService;
+use App\Support\ScopeKey;
 
 class SaleController extends Controller
 {
@@ -45,7 +43,9 @@ class SaleController extends Controller
 
     public function index(Request $request)
     {
-        $request->validate([
+        $this->authorize('viewAny', SalesModel::class);
+
+        $validated = $request->validate([
             'keyword'  => 'nullable|string|max:255',
             'limit'    => 'nullable|integer|min:1|max:100',
             'order_by' => 'nullable|string|in:oldest,latest',
@@ -54,14 +54,7 @@ class SaleController extends Controller
             'status'   => 'nullable|string|in:all,closing,cancelled',
         ]);
 
-        $filters = $request->only([
-            'keyword',
-            'limit',
-            'branch',
-            'order_by',
-            'page',
-            'status',
-        ]);
+        $filters = $request->only(array_keys($validated));
 
         // inject id_branch and id_user untuk unique cache
         $filters = app(ScopeResolverService::class)->filters($filters);
@@ -184,21 +177,34 @@ class SaleController extends Controller
             ->paginate(2);
         return PaymentHistoriesResource::collection($payHistory);
     }
-    public function payRemaining(Request $request, string $id)
+    public function payRemaining(SalesRequest $request, string $id)
     {
-        $this->validateSales($request->all());
-
-        $sales = SalesModel::find($id);
-
-        $this->paymentValidationService->validateFullPayment($sales, $request['paid_amount']);
-        $this->salePaymentService->payRemaining($sales, $request->all());
-
+        $validated = $request->validated();
         $user = auth()->user();
+
+        $sales = $request->resolveSalesModel();
+
+        $this->authorize('update', $sales, 'unauthorized_action');
+
+        // $this->paymentValidationService->validateFullPayment($sales, $validated['paid_amount']);
+        $this->salePaymentService->payRemaining($sales, $validated);
+
         $this->invalidateCaches(
-            [SaleRepository::class, LeadsRepository::class, ChannelRepository::class],
-            ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]
+            [
+                SaleRepository::class,
+                LeadsRepository::class,
+                ChannelRepository::class
+            ],
+            [
+                ScopeKey::user($user->id),
+                ScopeKey::user($sales->created_by),
+                ScopeKey::branch($sales->id_branch),
+                ScopeKey::branch($user->id_branch),
+                ScopeKey::GLOBAL,
+                ScopeKey::GLOBAL_SUPER_ADMIN,
+            ]
         );
-        return redirect()->back()->with('message', 'Pelunasan berhasil dilakukan');
+        return redirect()->back()->with('message', 'Pelunasan dari pelanggan ' . ucwords($sales->customer->name) . ' berhasil dilakukan');
     }
 
     public function payCancel(Request $request, string $id)
@@ -207,6 +213,9 @@ class SaleController extends Controller
         $validated = $this->validateSales($request->all(), 'payment_cancel');
 
         $sales = SalesModel::find($id);
+
+        $this->authorize('update', $sales, 'unauthorized_action');
+
         $this->paymentCancelledService->__invoke($sales, $validated);
         $this->invalidateCaches(
             [

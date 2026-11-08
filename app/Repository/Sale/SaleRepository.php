@@ -65,8 +65,8 @@ class SaleRepository extends BaseCacheRepository
     protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator
     {
         $query = $this->buildListQuery();
-        $this->applyFilters($query, $filters);
         $this->applyScope($query, $scopeKey);
+        $this->applyFilters($query, $filters);
         [$column, $direction] = $this->resolveSorting($filters);
         $limit = min((int) ($filters['limit'] ?? 10), 100);
         return $query

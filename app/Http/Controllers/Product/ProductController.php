@@ -4,17 +4,15 @@ namespace App\Http\Controllers\Product;
 
 use App\Support\ScopeKey;
 use App\Traits\UserScope;
-use Illuminate\Support\Arr;
 use App\Models\ProductModel;
 use Illuminate\Http\Request;
 use App\Traits\InvalidatesCaches;
 use App\Traits\ProductValidation;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Gate;
+use App\Http\Requests\ProductRequest;
 use App\Services\Product\ProductService;
 use App\Repository\Product\ProductRepository;
 use Illuminate\Validation\ValidationException;
-use App\Services\Authorization\ScopeResolverService;
 
 class ProductController extends Controller
 {
@@ -38,7 +36,6 @@ class ProductController extends Controller
         ]);
 
         $filters = $request->only(array_keys($validated));
-        // $filters = app(ScopeResolverService::class)->filters($filters);
         $products = $this->repository->getCached(ScopeKey::GLOBAL, $filters, $filters['page'] ?? 1);
         $category = ProductModel::select('category')->distinct()->get();
         return inertia('Product/Index', [
@@ -58,18 +55,18 @@ class ProductController extends Controller
         return response()->json($product);
     }
 
-    public function store(Request $request)
+    public function store(ProductRequest $request)
     {
         $this->authorize('create', ProductModel::class, 'unauthorized_action');
 
+        $validated = $request->validated();
         $user = auth()->user();
-        $validated = $this->validateProduct($request->all());
         $product = $this->services->store($validated);
         $this->clearProductCaches($product, $user->id);
-        return redirect()->back()->with('message', 'Produk baru ' . $product->name . ' berhasil ditambahkan!');
+        return redirect()->back()->with('message', 'Produk baru ' . ucwords($product->name) . ' berhasil ditambahkan!');
     }
 
-    public function update(Request $request, string $id)
+    public function update(ProductRequest $request, string $id)
     {
         $product = ProductModel::findOrFail($id);
 
@@ -81,10 +78,10 @@ class ProductController extends Controller
 
         // policy update data
         $this->authorize('update', $product, 'unauthorized_action');
+        $validated = $request->validated();
 
         $user = auth()->user();
         $oldUpdatedBy  = $product->updated_by;
-        $validated = $this->validateProduct($request->all());
         $this->services->update($product, $validated);
         $this->clearProductCaches(
             $product,
@@ -92,7 +89,7 @@ class ProductController extends Controller
             $oldUpdatedBy
         );
 
-        return redirect()->back()->with('message', 'Perubahan data dari produk ' . $product->name . ' berhasil diperbarui!');
+        return redirect()->back()->with('message', 'Perubahan data dari produk ' . ucwords($product->name) . ' berhasil diperbarui!');
     }
 
     public function destroy(string $id)
@@ -120,7 +117,7 @@ class ProductController extends Controller
             $product,
             $user->id,
         );
-        return redirect()->back()->with('message', 'Data produk ' . $product->name . ' berhasil dihapus');
+        return redirect()->back()->with('message', 'Data produk ' . ucwords($product->name) . ' berhasil dihapus');
     }
     protected function clearProductCaches(
         ProductModel $product,

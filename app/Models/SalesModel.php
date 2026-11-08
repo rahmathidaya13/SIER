@@ -125,11 +125,11 @@ class SalesModel extends Model
     }
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by', 'id');
+        return $this->belongsTo(User::class, 'created_by', 'id')->withTrashed();
     }
     public function updater()
     {
-        return $this->belongsTo(User::class, 'updated_by', 'id');
+        return $this->belongsTo(User::class, 'updated_by', 'id')->withTrashed();
     }
     public function salesProduct()
     {

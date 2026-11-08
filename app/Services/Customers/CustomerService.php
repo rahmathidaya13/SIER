@@ -13,8 +13,7 @@ class CustomerService
 {
     public function store(array $validated, User $user)
     {
-        DB::beginTransaction();
-        try {
+        return DB::transaction(function () use ($validated, $user) {
             $branchId = $this->resolveBranchId($validated, $user);
             $customer = CustomerModel::create([
                 'created_by' => $user->id,
@@ -34,19 +33,13 @@ class CustomerService
                 'city'              => $this->nullIfEmpty($validated['city'] ?? null),
             ]);
 
-            DB::commit();
             return $customer;
-        } catch (\Exception $error) {
-            DB::rollBack(); // JIKA ADA ERROR (Server mati, database putus, dll), BATALKAN SEMUA!
-            Log::error("Gagal menyimpan pelaggan baru: " . $error);
-            throw $error;
-        }
+        });
     }
 
     public function update(CustomerModel $customer, array $validated, User $user)
     {
-        DB::beginTransaction();
-        try {
+        return DB::transaction(function () use ($customer, $validated, $user) {
             // Hanya super_admin/dev yang boleh mengubah cabang pelanggan saat edit.
             // Jika user biasa yang edit, pertahankan cabang asli pelanggan tersebut.
             $branchId = $this->canManageAllBranches($user)
@@ -54,7 +47,7 @@ class CustomerService
                 : $customer->created_of_branch;
 
             $customer->update([
-                'updated_by' =>  $user->id !== $customer->created_by ? $user->id : $customer->created_by,
+                'updated_by' =>  $user->id,
                 'created_of_branch' => $branchId,
                 'name' => $validated['name'],
                 'pic_name'          => $this->nullIfEmpty($validated['pic_name'] ?? null),
@@ -69,13 +62,7 @@ class CustomerService
                 'is_member'         => (bool) ($validated['is_member'] ?? false),
                 'city'              => $this->nullIfEmpty($validated['city'] ?? null),
             ]);
-            DB::commit();
-            return $customer;
-        } catch (\Exception $error) {
-            DB::rollBack();
-            Log::error("Gagal memperbarui pelanggan [{$customer->id_customer}]: " . $error->getMessage());
-            throw $error;
-        }
+        });
     }
 
     public function delete(CustomerModel $customer, User $user): bool
@@ -94,22 +81,16 @@ class CustomerService
             ]);
         }
 
-        DB::beginTransaction();
-        try {
-            // Catat siapa yang melakukan penghapusan sebelum soft-delete
+        DB::transaction(function () use ($customer, $user) {
             $customer->update([
                 'updated_by' => $user->id,
             ]);
 
             $customer->delete();
-
-            DB::commit();
             return true;
-        } catch (\Exception $error) {
-            DB::rollBack();
-            Log::error("Gagal menghapus pelanggan [{$customer->id_customer}]: " . $error->getMessage());
-            throw $error;
-        }
+        });
+
+        return false;
     }
 
 
