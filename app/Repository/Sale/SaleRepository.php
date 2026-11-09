@@ -2,11 +2,12 @@
 
 namespace App\Repository\Sale;
 
-use App\Models\SalesModel;
-use App\Repository\BaseCacheRepository;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
 use App\Support\ScopeKey;
+use App\Models\SalesModel;
+use App\Models\BranchModel;
+use App\Repository\BaseCacheRepository;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class SaleRepository extends BaseCacheRepository
 {
@@ -92,6 +93,8 @@ class SaleRepository extends BaseCacheRepository
 
         throw new \InvalidArgumentException("Scope key tidak dikenal: {$scopeKey}");
     }
+
+
     protected function applyFilters(Builder $query, array $filters): Builder
     {
         $query = $this->resolveStatus($query, $filters);
@@ -140,6 +143,7 @@ class SaleRepository extends BaseCacheRepository
             $q->where(function ($subQuery) use ($cleanSearch) {
                 $subQuery->where('customers.name', 'like', "%{$cleanSearch}%")
                     ->orWhere('customers.phone', 'like', "%{$cleanSearch}%")
+                    ->orWhere('customers.email', 'like', "%{$cleanSearch}%")
                     ->orWhere('sales.invoice', 'like', "%{$cleanSearch}%");
             });
         });
@@ -147,10 +151,17 @@ class SaleRepository extends BaseCacheRepository
     protected function filterBranch(Builder $query, array $filters): Builder // Filter berdasarkan branch
     {
         $user = auth()->user();
-        if (!$user->hasRole(['super_admin', 'developer'])) return $query;
-        $branchFilter = $filters['branch'] ?? 'all';
-        return $query->when($branchFilter !== 'all', function (Builder $query) use ($branchFilter) {
-            $query->where('branches.name', $branchFilter);
-        });
+        $isSuperAdmin = $user->hasRole(['super_admin', 'developer']);
+
+        $branchName = trim((string) ($filters['branch'] ?? 'all'));
+
+        return $query
+            // Jika bukan admin, wajib kunci ke id_branch milik user
+            ->when(!$isSuperAdmin, fn($q) => $q->where('sales.id_branch', $user->id_branch ?? '__not_found__'))
+
+            // Jika super admin dan memilih nama cabang tertentu, cari via subquery
+            ->when($isSuperAdmin && $branchName !== '' && $branchName !== 'all', function ($q) use ($branchName) {
+                $q->where('sales.id_branch', BranchModel::select(['id_branch', 'name'])->where('name', $branchName)->value('id_branch'));
+            });
     }
 }

@@ -127,7 +127,7 @@ class LeadServices
         $sales = SalesModel::create([
             'id_lead'        => $leads->id_lead,
             'created_by'        => $leads->created_by,
-            'updated_by'        => auth()->id() ?? $leads->updated_by,
+            'updated_by'        => $leads->updated_by,
             'id_customer'    => $leads->id_customer,
             'id_branch'      => $leads->id_branch,
             'deal_price'     => $validated['deal_price'],

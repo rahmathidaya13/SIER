@@ -4,28 +4,20 @@ namespace App\Services\Sales;
 
 use App\Models\SalesModel;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
 
 class PaymentCancelled
 {
-    public function __invoke(SalesModel $sales, $validated): SalesModel
+    public function payCancelled(SalesModel $sales, $validated): SalesModel
     {
-        DB::beginTransaction();
-        try {
-            if ($sales->status === 'CANCELLED') {
-                throw ValidationException::withMessages([
-                    'error' => 'Transaksi ini sudah dibatalkan sebelumnya.',
-                ]);
-            }
+        return DB::transaction(function () use ($sales, $validated) {
             $sales->update([
                 'status' => 'CANCELLED',
+                'updated_by' => auth()->id(),
                 'cancelled_at' => now(),
                 'cancelled_by' => auth()->id(),
                 'cancelled_reason' => $validated['cancelled_reason'],
                 'cancelled_notes' => $validated['cancelled_notes'] ?? null,
             ]);
-
             $sales->lead->update([
                 'status' => 'CLOSED_LOST',
             ]);
@@ -33,19 +25,17 @@ class PaymentCancelled
             $sales->lead->activity()->create([
                 'id_user' => auth()->id(),
                 'source' => 'updated',
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id(),
                 'description' => 'Transaksi dengan invoice '
                     . $sales->invoice . ' dibatalkan. Alasan: '
                     . $this->cancelReasonToString($validated['cancelled_reason'])
                     . '. Catatan: '
                     . $validated['cancelled_notes'],
             ]);
-            DB::commit();
-            return $sales->fresh();
-        } catch (\Exception $error) {
-            DB::rollBack();
-            Log::error("Gagal membatalkan transaksi: " . $error);
-            throw $error;
-        }
+
+            return $sales;
+        });
     }
     private function cancelReasonToString($reason): string
     {

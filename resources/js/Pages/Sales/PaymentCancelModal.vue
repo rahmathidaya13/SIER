@@ -63,8 +63,8 @@ const loadSales = async () => {
 const submit = async () => {
 
     const setConfirm = await confirm.ask({
-        title: 'Pembatalan Transaksi',
-        message: `Berhati-hati, kamu akan membatalkan transaksi ini. Apakah kamu yakin?`,
+        title: `Batalkan Transaksi ${dataSales.value.customer?.name} ?`,
+        message: 'BERHATI-HATI. Transaksi yang sudah dibatalkan tidak dapat diubah dan dikembalikan!',
         confirmText: 'Ya, Batalkan',
         variant: 'danger'
     });
@@ -172,16 +172,16 @@ const reasonOptions = computed(() => {
                                                 </span>
                                             </div>
                                             <h6 class="mb-0 fw-bold text-dark mt-1 text-capitalize text-truncate"
-                                                style="font-size: 18px;" :title="dataSales?.lead?.name">
-                                                {{ dataSales?.lead?.name || 'Nama Pelanggan' }}
+                                                style="font-size: 18px;" :title="dataSales?.customer?.name">
+                                                {{ dataSales?.customer?.name || 'Nama Pelanggan' }}
                                             </h6>
                                             <div class="d-inline-flex align-items-center gap-2">
                                                 <span class="small text-muted fw-semibold" style="font-size: 12px;">
                                                     <i class="bi bi-telephone-fill me-1"></i>
-                                                    {{ dataSales?.lead?.phone }}
+                                                    {{ dataSales?.customer?.phone }}
                                                 </span>
                                                 <span class="small text-muted fw-semibold" style="font-size: 12px;">
-                                                    <i class="bi bi-envelope-fill me-1"></i>{{ dataSales?.lead?.email ||
+                                                    <i class="bi bi-envelope-fill me-1"></i>{{ dataSales?.customer?.email ||
                                                         'Tidak ada email' }}</span>
                                             </div>
                                         </div>

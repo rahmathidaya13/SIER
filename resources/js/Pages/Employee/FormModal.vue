@@ -163,6 +163,7 @@ const allowedForSuperAdmin = [
     'product-view', 'product-create', 'product-edit', 'product-delete',
     'lead-view', 'lead-create', 'lead-edit', 'lead-delete','lead-convert',
     'closing-view', 'closing-create', 'closing-edit', 'closing-delete','closing-remaining','closing-payment_cancel',
+    'data-export',
 ]
 
 
@@ -185,7 +186,7 @@ const categoryTranslations = {
     'lead': 'Data Prospek (Leads)',
     'closing': 'Rekap Closing',
     'users': 'Manajemen Pengguna',
-    'data': 'Ekspor Data',
+    'data': 'Unduh / Ekspor Data',
 };
 const permissionTranslations = {
 
@@ -227,7 +228,7 @@ const permissionTranslations = {
     'closing-remaining': 'Diizinkan melakukan pembayaran Pelunasan',
     'closing-payment_cancel': 'Diizinkan membatalkan pembayaran',
 
-    'data-export': 'Diizinkan ekspor data',
+    'data-export': 'Diizinkan unduh / ekspor data',
 
     'users-view': 'Diizinkan melihat daftar pengguna',
     'users-create': 'Diizinkan menambah pengguna baru',

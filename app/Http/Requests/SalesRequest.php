@@ -115,7 +115,7 @@ class SalesRequest extends FormRequest
             // 3. Bandingkan nominal bayar dengan sisa tagihan (remaining_bill)
             $paidAmount = (int) $this->input('paid_amount');
             $remaining  = (int) $sales->remaining_bill;
-
+            $status     = $sales->status;
             if ($paidAmount !== $remaining) {
                 $operator = $paidAmount > $remaining
                     ? 'melebihi dari'
@@ -127,6 +127,22 @@ class SalesRequest extends FormRequest
                         . $operator
                         . ' jumlah tagihan sebesar Rp '
                         . number_format($remaining, 0, ',', '.')
+                );
+            }
+
+            // 4. Bandingkan nominal bayar dengan total tagihan (deal_price)
+            if ($paidAmount > $sales->deal_price) {
+                $validator->errors()->add(
+                    'paid_amount',
+                    'Nominal pembayaran tidak boleh melebihi dari jumlah tagihan sebesar Rp '
+                        . number_format($sales->deal_price, 0, ',', '.')
+                );
+            }
+
+            if ($status === 'CANCELLED') {
+                $validator->errors()->add(
+                    'error',
+                    'Transaksi ini sudah dibatalkan sebelumnya.',
                 );
             }
         });

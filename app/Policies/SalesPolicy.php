@@ -84,6 +84,20 @@ class SalesPolicy
         return $this->authorizeModification($user, $sales, 'menghapus');
     }
 
+    public function payment(User $user, SalesModel $sales): Response
+    {
+        return $user->can('closing-remaining')
+            ? Response::allow()
+            : Response::deny('Anda tidak memiliki wewenang untuk melakukan pembayaran.');
+    }
+
+    public function paymentCancel(User $user, SalesModel $sales): Response
+    {
+        return $user->can('closing-payment_cancel')
+            ? Response::allow()
+            : Response::deny('Anda tidak memiliki wewenang untuk melakukan pembatalan.');
+    }
+
     /**
      * Cek apakah user berasal dari Kantor Pusat (official)
      */

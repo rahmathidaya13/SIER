@@ -18,6 +18,7 @@ class SalePaymentService
             $newStatus  = $remaining == 0 ? 'LUNAS' : 'DP';
 
             $sales->update([
+                'updated_by'       => auth()->user()->id,
                 'paid_amount'      => $sales->paid_amount + $paidAmount,
                 'remaining_bill'   => $remaining,
                 'payment_status'   => $remaining == 0 ? 'LUNAS' : 'DP',
@@ -33,7 +34,9 @@ class SalePaymentService
 
             $sales->paymentHistory()->create([
                 'id_sales' => $sales->id_sales,
-                'id_user' => $sales->id_user,
+                'created_by' => $sales->created_by,
+                'updated_by' => $sales->updated_by,
+                'id_customer' => $sales->id_customer,
                 'id_lead' => $sales->id_lead,
                 'payment_method' => $validated['payment_method'],
                 'bank_name' => $validated['bank_name'] ?? null,
@@ -44,7 +47,7 @@ class SalePaymentService
 
             $sales->lead->activity()->create([
                 'id_lead'     => $sales->lead->id_lead,
-                'id_user'     => $sales->id_user,
+                'created_by'     => $sales->created_by,
                 'description' => $this->msgPaymentActivity(
                     $paidAmount,
                     $validated['payment_method'],
@@ -53,7 +56,50 @@ class SalePaymentService
                 )
             ]);
 
-            return $sales->fresh();
+            return $sales;
         });
+    }
+
+    public function payCancelled(SalesModel $sales, $validated): SalesModel
+    {
+        return DB::transaction(function () use ($sales, $validated) {
+            $sales->update([
+                'status' => 'CANCELLED',
+                'updated_by' => auth()->id(),
+                'cancelled_at' => now(),
+                'cancelled_by' => auth()->id(),
+                'cancelled_reason' => $validated['cancelled_reason'],
+                'cancelled_notes' => $validated['cancelled_notes'] ?? null,
+            ]);
+            $sales->lead->update([
+                'status' => 'CLOSED_LOST',
+            ]);
+
+            $sales->lead->activity()->create([
+                'id_user' => auth()->id(),
+                'source' => 'updated',
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id(),
+                'description' => 'Transaksi dengan invoice '
+                    . $sales->invoice . ' dibatalkan. Alasan: '
+                    . $this->cancelReasonToString($validated['cancelled_reason'])
+                    . '. Catatan: '
+                    . $validated['cancelled_notes'],
+            ]);
+
+            return $sales;
+        });
+    }
+    private function cancelReasonToString($reason): string
+    {
+        return match ($reason) {
+            'CUSTOMER_CANCELLED' => 'Pelanggan membatalkan pesanan',
+            'PAYMENT_FAILED' => 'Pembayaran tidak diselesaikan',
+            'ORDER_UNFULFILLABLE' => 'Pesanan tidak dapat dipenuhi',
+            'DATA_ERROR' => 'Kesalahan input transaksi',
+            'DUPLICATE' => 'Duplikasi transaksi',
+            'OTHER' => 'Lainnya',
+            default => 'Alasan tidak diketahui',
+        };
     }
 }

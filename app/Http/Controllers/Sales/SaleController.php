@@ -16,7 +16,6 @@ use App\Http\Requests\SalesRequest;
 use App\Http\Resources\SalesResource;
 use App\Repository\Sale\SaleRepository;
 use App\Repository\Lead\LeadsRepository;
-use App\Services\Sales\PaymentCancelled;
 use App\Services\Sales\SalePaymentService;
 use App\Http\Resources\LeadActivityResource;
 use App\Repository\Channel\ChannelRepository;
@@ -38,7 +37,6 @@ class SaleController extends Controller
         $this->saleRepository           = $saleRepository;
         $this->paymentValidationService = new PaymentValidationService();
         $this->salePaymentService       = new SalePaymentService();
-        $this->paymentCancelledService  = new PaymentCancelled();
     }
 
     public function index(Request $request)
@@ -81,8 +79,10 @@ class SaleController extends Controller
                 'id_sales',
                 'invoice',
                 'id_lead',
-                'id_user',
+                'id_customer',
                 'id_branch',
+                'created_by',
+                'updated_by',
                 'deal_price',
                 'paid_amount',
                 'remaining_bill',
@@ -101,9 +101,12 @@ class SaleController extends Controller
                 'updated_at',
             ])
             ->with([
-                'lead:id_lead,name,phone',
-                'user:id,name',
-                'user.roles:id,name',
+                'creator:id,name',
+                'updater:id,name',
+                'creator.roles:id,name',
+                'updater.roles:id,name',
+                'customer:id_customer,name,phone,email',
+
                 'salesProduct:id_sales,id_product',
                 'salesProduct.product:id_product,name',
                 'cancelledBy:id,name',
@@ -129,7 +132,7 @@ class SaleController extends Controller
             ->select([
                 'id_lead_activity',
                 'id_lead',
-                'id_user',
+                'created_by',
                 'updated_by',
                 'description',
                 'source',
@@ -137,8 +140,8 @@ class SaleController extends Controller
                 'updated_at',
             ])
             ->with([
-                'user:id,name',
-                'user.roles:id,name',
+                'creator:id,name',
+                'creator.roles:id,name',
                 'userUpdate:id,name',
                 'userUpdate.roles:id,name',
             ])
@@ -159,7 +162,8 @@ class SaleController extends Controller
             ->where('id_lead', $sales->id_lead)
             ->select([
                 'id_sales',
-                'id_user',
+                'created_by',
+                'updated_by',
                 'id_lead',
                 'payment_method',
                 'bank_name',
@@ -170,8 +174,10 @@ class SaleController extends Controller
                 'updated_at',
             ])
             ->with([
-                'user:id,name',
-                'user.roles:id,name',
+                'creator:id,name',
+                'creator.roles:id,name',
+                'updater:id,name',
+                'updater.roles:id,name',
             ])
             ->latest('created_at')
             ->paginate(2);
@@ -184,9 +190,8 @@ class SaleController extends Controller
 
         $sales = $request->resolveSalesModel();
 
-        $this->authorize('update', $sales, 'unauthorized_action');
+        $this->authorize('payment', $sales, 'unauthorized_action');
 
-        // $this->paymentValidationService->validateFullPayment($sales, $validated['paid_amount']);
         $this->salePaymentService->payRemaining($sales, $validated);
 
         $this->invalidateCaches(
@@ -207,16 +212,17 @@ class SaleController extends Controller
         return redirect()->back()->with('message', 'Pelunasan dari pelanggan ' . ucwords($sales->customer->name) . ' berhasil dilakukan');
     }
 
-    public function payCancel(Request $request, string $id)
+    public function payCancel(SalesRequest $request, string $id)
     {
+        $validated = $request->validated();
         $user      = auth()->user();
-        $validated = $this->validateSales($request->all(), 'payment_cancel');
 
-        $sales = SalesModel::find($id);
+        $sales = $request->resolveSalesModel();
 
-        $this->authorize('update', $sales, 'unauthorized_action');
+        $this->authorize('paymentCancel', $sales, 'unauthorized_action');
 
-        $this->paymentCancelledService->__invoke($sales, $validated);
+        $this->salePaymentService->payCancelled($sales, $validated);
+
         $this->invalidateCaches(
             [
                 SaleRepository::class,
@@ -224,12 +230,14 @@ class SaleController extends Controller
                 ChannelRepository::class,
             ],
             [
-                'global',
-                'global_super_admin',
-                'branch_' . $user->id_branch,
-                'user_' . $user->id,
+                ScopeKey::user($user->id),
+                ScopeKey::user($sales->created_by),
+                ScopeKey::branch($sales->id_branch),
+                ScopeKey::branch($user->id_branch),
+                ScopeKey::GLOBAL,
+                ScopeKey::GLOBAL_SUPER_ADMIN,
             ]
         );
-        return redirect()->back()->with('message', 'Pembatalan Transaksi berhasil dilakukan');
+        return redirect()->back()->with('message', 'Pembatalan Transaksi dari pelanggan ' . ucwords($sales->customer->name) . '  berhasil dilakukan');
     }
 }

@@ -18,7 +18,9 @@ class SalesResource extends JsonResource
             'id_sales' => $this->id_sales,
             'invoice' => $this->invoice,
             'id_lead' => $this->id_lead,
-            'id_user' => $this->id_user,
+            'id_customer' => $this->id_customer,
+            'created_by' => $this->created_by,
+            'updated_by' => $this->updated_by,
             'id_branch' => $this->id_branch,
             'deal_price' => $this->deal_price,
             'paid_amount' => $this->paid_amount,
@@ -35,18 +37,20 @@ class SalesResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
 
-            'lead' => $this->whenLoaded('lead', function () {
+            'customer' => $this->whenLoaded('customer', function () {
                 return [
-                    'id_lead' => $this->lead->id_lead,
-                    'name' => $this->lead->name,
-                    'phone' => $this->lead->phone,
+                    'id_customer' => $this->customer->id_customer,
+                    'name' => $this->customer->name,
+                    'phone' => $this->customer->phone,
+                    'email' => $this->customer->email,
                 ];
             }),
             'products' => $this->whenLoaded('salesProduct', function () {
                 return SalesProductResource::collection($this->salesProduct);
             }),
             'product_count' => $this->sales_product_count,
-            'user' => UserResource::make($this->whenLoaded('user')),
+            'creator' => UserResource::make($this->whenLoaded('creator')),
+            'updater' => UserResource::make($this->whenLoaded('updater')),
             'cancelledBy' => UserResource::make($this->whenLoaded('cancelledBy')),
         ];
     }

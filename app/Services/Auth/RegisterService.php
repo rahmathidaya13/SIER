@@ -102,7 +102,7 @@ class RegisterService
 
                 'closing-view',
                 'closing-remaining',
-                'closing-payment_cancel',
+                // 'closing-payment_cancel',
                 'closing-create',
 
 
@@ -124,7 +124,7 @@ class RegisterService
 
                 'closing-view',
                 'closing-remaining',
-                'closing-payment_cancel',
+                // 'closing-payment_cancel',
                 'closing-create',
 
 
@@ -146,7 +146,7 @@ class RegisterService
 
                 'closing-view',
                 'closing-remaining',
-                'closing-payment_cancel',
+                // 'closing-payment_cancel',
                 'closing-create',
 
 

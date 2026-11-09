@@ -18,17 +18,13 @@ class LeadConversionServices
                 ->lockForUpdate()
                 ->findOrFail($leads->id_lead);
 
-            if ($fresh->status === 'CLOSED_WON' || $fresh->sales()->exists()) {
-                throw ValidationException::withMessages([
-                    'error' => 'Lead ini sudah pernah dikonversi.'
-                ]);
-            }
+
             $remaining = max(0,  $validated['deal_price'] - $validated['paid_amount']);
 
             $sales = SalesModel::create([
                 'id_lead'        => $fresh->id_lead,
-                'created_by'        => $user->id,
-                'updated_by'        => $user->id,
+                'created_by'        => $fresh->created_by,
+                'updated_by'        => $fresh->updated_by,
                 'id_branch'      => $fresh->id_branch,
                 'id_customer'    => $fresh->id_customer,
                 'deal_price'     => $validated['deal_price'],
@@ -58,8 +54,8 @@ class LeadConversionServices
 
             $sales->paymentHistory()->create([
                 'id_sales' => $sales->id_sales,
-                'created_by' => $user->id,
-                'updated_by' => $user->id,
+                'created_by' => $fresh->created_by,
+                'updated_by' => $fresh->updated_by,
                 'id_lead' => $fresh->id_lead,
                 'id_customer' => $fresh->id_customer,
                 'payment_method' => $validated['payment_method'],
