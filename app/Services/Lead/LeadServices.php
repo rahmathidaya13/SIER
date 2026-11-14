@@ -51,7 +51,7 @@ class LeadServices
             if (array_key_exists('id_product', $validated)) {
                 $this->syncLeadProducts($leads, (array) $validated['id_product']);
             }
-            $this->handleClosingTransition($leads, $validated, $user);
+            // $this->handleClosingTransition($leads, $validated, $user);
             return $leads;
         });
     }

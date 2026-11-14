@@ -61,8 +61,8 @@ class CustomerController extends Controller
     {
         $this->authorize('create', CustomerModel::class, 'unauthorized_action');
 
-        // dd($request->all());
         $user = auth()->user();
+
         $validated = $request->validated();
 
         $customer = $this->services->store($validated, $user);
@@ -95,7 +95,6 @@ class CustomerController extends Controller
                 'city',
                 'address',
             ])
-            ->with(['branch', 'creator', 'updater'])
             ->findOrFail($id);
 
         $this->authorize('view', $customer); // Memeriksa izin menggunakan CustomerPolicy
@@ -115,34 +114,22 @@ class CustomerController extends Controller
         // Memeriksa izin menggunakan CustomerPolicy
         $this->authorize('update', $customer, 'unauthorized_action');
 
-        if (!$user->hasRole(['super_admin', 'developer']) && $customer->created_of_branch !== $user->id_branch) {
-            return redirect()->back()->with([
-                'error' => 'Anda tidak memiliki izin untuk mengubah data pelanggan ini'
-            ]);
-        }
-
-        $validated = $this->customerValidation($request->all(), $id);
+        $validated = $request->validated();
 
         $oldBranchId  = $customer->getOriginal('created_of_branch');
         $oldUpdatedBy = $customer->getOriginal('updated_by');
-        try {
-            $this->services->update($customer, $validated, $user);
 
-            $this->clearCustomerCaches(
-                $customer,
-                $user->id,
-                $oldBranchId,
-                $oldUpdatedBy
-            );
-            return redirect()->back()->with([
-                'message' => 'Pelanggan ' . strtoupper($validated['name']) . ' berhasil diperbarui',
-            ]);
-        } catch (\Exception $error) {
-            $errorMessage = config('app.debug') ? $error->getMessage() : 'Terjadi kesalahan pada server. Silakan coba lagi.';
-            return redirect()->back()
-                ->withInput()
-                ->withErrors(['error' => $errorMessage]);
-        }
+        $this->services->update($customer, $validated, $user);
+
+        $this->clearCustomerCaches(
+            $customer,
+            $user->id,
+            $oldBranchId,
+            $oldUpdatedBy
+        );
+        return redirect()->back()->with([
+            'message' => 'Pelanggan ' . strtoupper($validated['name']) . ' berhasil diperbarui',
+        ]);
     }
 
     public function destroy(string $id)
@@ -158,33 +145,15 @@ class CustomerController extends Controller
         // Memeriksa izin menggunakan CustomerPolicy
         $this->authorize('delete', $customer);
 
-        if ($customer->leads()->exists() || $customer->sales()->exists()) {
-            throw ValidationException::withMessages([
-                'error' => 'Pelanggan ' . ucwords($customer->name) . ' tidak dapat dihapus karena sudah memiliki riwayat lead atau transaksi.'
-            ]);
-        }
-
         // Simpan data untuk keperluan hapus cache sebelum datanya di-delete
         $CustomerName = $customer->name;
-        try {
-            // Eksekusi service delete
-            $this->services->delete($customer, $user);
+        $this->services->delete($customer, $user);
 
-            $this->clearCustomerCaches($customer, $user->id);
+        $this->clearCustomerCaches($customer, $user->id);
 
-            return redirect()->back()->with([
-                'message' => 'Pelanggan ' . strtoupper($CustomerName) . ' berhasil dihapus.',
-            ]);
-        } catch (ValidationException $error) {
-            // Biarkan pesan larangan hapus (karena sudah ada di Lead/Sales) tampil ke user
-            throw $error;
-        } catch (\Exception $error) {
-            $errorMessage = config('app.debug')
-                ? $error->getMessage()
-                : 'Terjadi kesalahan pada server. Silakan coba lagi.';
-
-            return redirect()->back()->withErrors(['error' => $errorMessage]);
-        }
+        return redirect()->back()->with([
+            'message' => 'Pelanggan ' . strtoupper($CustomerName) . ' berhasil dihapus.',
+        ]);
     }
 
     protected function clearCustomerCaches(

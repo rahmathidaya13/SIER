@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class BranchPhoneModel extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids,SoftDeletes;
     protected $table = 'branch_phone';
     protected $primaryKey = 'branch_phone_id';
     public $incrementing = false;
@@ -17,6 +18,9 @@ class BranchPhoneModel extends Model
         'id_branch',
         'phone',
     ];
+
+    protected $dates    = ["deleted_at"];
+
     public function branch()
     {
         return $this->belongsTo(BranchModel::class, 'id_branch', 'id_branch');

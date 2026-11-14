@@ -25,7 +25,7 @@ class CustomerSeeder extends Seeder
         $customerTags = ['new', 'repeat', 'has_cancelled'];
         $status = ['active', 'inactive', 'blacklisted'];
 
-        for ($i = 0; $i < 1000; $i++) {
+        for ($i = 0; $i < 10; $i++) {
             $phoneNumber = '08' . $faker->unique()->numerify('##########');
             $customers[] = [
                 'id_customer' => Str::uuid(),

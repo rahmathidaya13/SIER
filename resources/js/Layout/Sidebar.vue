@@ -61,7 +61,6 @@ const menuItems = [
     icon: "bi bi-broadcast",
     route: "channel.index",
     prefixUrl: "channel*",
-    roles: ["developer", "super_admin"],
     permissions: ["channel-view"],
   },
   {
@@ -69,7 +68,7 @@ const menuItems = [
     icon: "bi bi-building",
     route: "branch.index",
     prefixUrl: "branch*",
-    roles: ["developer", "super_admin"],
+    permissions: ["branch-view"],
   },
   {
     title: "Data Pegawai",

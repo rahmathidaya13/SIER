@@ -14,6 +14,7 @@ class BranchServices
                 'name' => $validated['name'],
                 'branch_code' => BranchModel::generateUniqueCode(),
                 'created_by' => $user->id,
+                'updated_by' => $user->id,
                 'address' => $validated['address'],
                 'is_active' => $validated['isActive'],
                 'status' => $validated['status']
@@ -33,6 +34,7 @@ class BranchServices
         return DB::transaction(function () use ($branch, $validated, $user) {
             $branch->update([
                 'name' => $validated['name'],
+                'updated_by' => $user->id,
                 'address' => $validated['address'],
                 'is_active' => $validated['isActive'],
                 'status' => $validated['status']

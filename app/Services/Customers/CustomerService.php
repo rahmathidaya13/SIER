@@ -3,10 +3,8 @@
 namespace App\Services\Customers;
 
 use App\Models\User;
-use Illuminate\Support\Str;
 use App\Models\CustomerModel;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class CustomerService

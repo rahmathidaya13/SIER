@@ -75,6 +75,7 @@ class CustomerPolicy
             return Response::deny('Anda tidak memiliki wewenang untuk menghapus data pelanggan.');
         }
 
+
         return $this->authorizeModification($user, $customer, 'menghapus');
     }
 

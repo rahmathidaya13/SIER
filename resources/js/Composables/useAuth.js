@@ -66,7 +66,6 @@ export const getCreatorId = (item) => {
 export const canAccess = (permission, item = null, options = {}) => {
     const { roles = ["developer", "super_admin"], strictOwner = false } =
         Array.isArray(options) ? { roles: options } : options;
-
     // 1. Cek apakah user punya role bypass atau permission dasarnya
     const hasBasicAccess =
         (roles.length > 0 && hasRole(roles)) ||

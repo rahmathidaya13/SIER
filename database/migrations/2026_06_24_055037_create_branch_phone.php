@@ -17,6 +17,7 @@ return new class extends Migration
                 ->constrained('branches', 'id_branch')
                 ->cascadeOnDelete();
             $table->string('phone', 13)->index();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

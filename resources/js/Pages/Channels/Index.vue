@@ -1,12 +1,12 @@
 <script setup>
-import { Form, Head, usePage, router, Link } from "@inertiajs/vue3";
+import { Head, usePage, router, Link } from "@inertiajs/vue3";
 import { computed, onMounted, reactive, ref } from "vue";
 import { useFilter } from "@/Composables/useFilter";
 import { useConfirm } from "@/Composables/useConfirm";
 import { highlight } from "@/Helpers/Highlight";
 import { formatDate } from "@/Helpers/formatDate";
 import { currencyFormat } from "@/Helpers/currencyFormat";
-import { hasRole } from "@/Composables/useAuth";
+import { hasRole, canAccess } from "@/Composables/useAuth";
 import FormModal from "./FormModal.vue";
 const confirm = useConfirm();
 
@@ -15,16 +15,14 @@ const props = defineProps({
   filters: Object,
 });
 const showModal = ref(false);
-const selectedById = ref(null);
-
+const selectedChannel = ref(null);
 const openCreateModal = () => {
   showModal.value = true;
-  selectedById.value = null;
+  selectedChannel.value = null;
 };
 const openEditModal = async (data) => {
-  console.log(data);
   showModal.value = true;
-  selectedById.value = data.id_channel;
+  selectedChannel.value = data;
 };
 const { filters, isLoading } = useFilter({
   routeName: "channel.index",
@@ -80,7 +78,6 @@ const header = [
   {
     label: "Aksi",
     key: "actions",
-    visible: hasRole("super_admin"),
     attrs: {
       class: "text-center",
     },
@@ -159,8 +156,8 @@ const channelChartData = computed(() => {
 
 const deleted = async (nameRoute, data) => {
   const setConfirm = await confirm.ask({
-    title: "Hapus",
-    message: `Kamu ingin menghapus Channel ${data.name} ? Data yang sudah dihapus tidak dapat dikembalikan!`,
+    title: `Hapus ${data.name} ?`,
+    message: `Data yang sudah dihapus tidak dapat dikembalikan!`,
     confirmText: "Ya, Hapus",
     variant: "danger",
   });
@@ -237,7 +234,7 @@ const deleted = async (nameRoute, data) => {
                   >
                 </div>
                 <button
-                  v-if="hasRole('super_admin')"
+                  v-if="canAccess('channel-create')"
                   @click.prevent="openCreateModal"
                   class="btn btn-c-primary px-4 py-2"
                 >
@@ -316,9 +313,16 @@ const deleted = async (nameRoute, data) => {
                     </div>
                   </td>
 
-                  <td v-if="hasRole('super_admin')" class="text-center pe-4 py-3">
-                    <div class="d-flex gap-1 justify-content-center">
+                  <td class="text-center pe-4 py-3">
+                    <div
+                      v-if="
+                        canAccess('channel-edit', item, { strictOwner: true }) ||
+                        canAccess('channel-delete', item, { strictOwner: true })
+                      "
+                      class="d-flex gap-1 justify-content-center"
+                    >
                       <button
+                        v-if="canAccess('channel-edit', item, { strictOwner: true })"
                         @click.prevent="openEditModal(item)"
                         type="button"
                         class="btn btn-c-slate"
@@ -327,6 +331,7 @@ const deleted = async (nameRoute, data) => {
                         <i class="bi bi-pencil-square"></i>
                       </button>
                       <button
+                        v-if="canAccess('channel-delete', item, { strictOwner: true })"
                         @click.prevent="deleted('channel.delete', item)"
                         type="button"
                         class="btn btn-c-danger"
@@ -334,6 +339,12 @@ const deleted = async (nameRoute, data) => {
                       >
                         <i class="bi bi-trash"></i>
                       </button>
+                    </div>
+                    <div v-else>
+                      <span class="badge badge-soft-info rounded-3 py-1">
+                        <i class="bi bi-lock-fill"></i>
+                        No Action
+                      </span>
                     </div>
                   </td>
                 </template>
@@ -366,9 +377,9 @@ const deleted = async (nameRoute, data) => {
         </div>
       </div>
       <FormModal
-        :idChannel="selectedById"
+        :channel="selectedChannel"
         :show="showModal"
-        @update:show="showModal = $event"
+        @update:show="(val) => (showModal = val)"
       />
     </template>
   </app-layout>

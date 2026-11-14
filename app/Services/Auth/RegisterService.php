@@ -3,23 +3,18 @@
 namespace App\Services\Auth;
 
 use App\Models\User;
-use App\Models\BranchModel;
 
 use App\Models\ProfileModel;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Validation\ValidationException;
-use App\Services\Otp\OtpService;
 
 class RegisterService
 {
     public function store($validated)
     {
-        DB::beginTransaction();
-        try {
+        return DB::transaction(function () use ($validated) {
             $user = User::create([
                 'name'      => $validated['name'],
                 'email'     => $validated['email'],
@@ -35,13 +30,9 @@ class RegisterService
 
             $user->assignRole($validated['role']);
             $this->assignUserPermission($user, $validated['role']);
-            DB::commit();
             return $user;
-        } catch (\Exception $error) {
-            DB::rollBack();
-            Log::error("Gagal membuat user: " . $error);
-            throw $error;
-        }
+        });
+
     }
     public function uniqueRolePerBranch(User $user, string $role, ?string $branchId = null)
     {

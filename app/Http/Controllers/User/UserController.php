@@ -12,6 +12,7 @@ use App\Traits\InvalidatesCaches;
 use App\Services\User\UserService;
 use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UserRequest;
 use Illuminate\Support\Facades\Gate;
 use App\Repository\User\UserRepository;
 use Spatie\Permission\Models\Permission;
@@ -77,36 +78,25 @@ class UserController extends Controller
             ->findOrFail($id);
         return response()->json($user);
     }
-    public function update(Request $request, string $id)
+    public function update(UserRequest $request, string $id)
     {
-        $currentUser = auth()->user();
-
         $targetUser = User::findOrFail($id);
-        $oldBranchId = $targetUser->id_branch;
-
-        if (!$targetUser) {
-            throw ValidationException::withMessages([
-                'unauthorized_action' => 'Data pegawai tidak ditemukan.'
-            ]);
-        }
-
-        // 1. Pengecekan Policy untuk user yang sedang login dan user target yang akan diubah
         $this->authorize('update', $targetUser, 'unauthorized_action');
 
-        // 2. Ambil daftar role yang boleh dimanipulasi oleh user yang sedang login
-        $allowedRoles = $this->allowedRoles($currentUser);
-
-        $validated = $this->validationText($request->all(), $allowedRoles, $currentUser, $targetUser);
-
-        // Aturan Bisnis Khusus Supervisor
-        $this->bussinessRule->ensureUniqueRolePerBranch($targetUser, $validated['role'], $validated['id_branch']);
+        $validated = $request->validated();
+        $currentUser = auth()->user();
 
         // Eksekusi Perubahan di Database Berikan akses ganti cabang untuk Developer dan Super Admin
         $canChangeBranch = $currentUser->hasAnyRole(['developer', 'super_admin']);
 
         $this->service->update($targetUser, $validated, $canChangeBranch);
 
-        $this->clearUserCaches($targetUser, $currentUser->id, $oldBranchId, $validated['id_branch'] ?? null);
+        $this->clearUserCaches(
+            $targetUser,
+            $currentUser->id,
+            $targetUser->id_branch,
+            $validated['id_branch'] ?? null
+        );
 
         return redirect()->back()->with('message', "Data {$targetUser->name} berhasil diperbarui!");
     }

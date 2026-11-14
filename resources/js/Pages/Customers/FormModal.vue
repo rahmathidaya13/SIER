@@ -237,7 +237,7 @@ const submitTextButton = computed(() => {
   <div class="row" v-if="props.show">
     <div class="col-12">
       <modal
-        width="750px"
+        width="850px"
         size="modal-lg"
         :icon="[
           'text-coffee-main',

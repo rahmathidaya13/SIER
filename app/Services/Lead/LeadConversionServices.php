@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\LeadModel;
 use App\Models\SalesModel;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class LeadConversionServices
 {
@@ -24,7 +23,6 @@ class LeadConversionServices
             $sales = SalesModel::create([
                 'id_lead'        => $fresh->id_lead,
                 'created_by'        => $fresh->created_by,
-                'updated_by'        => $fresh->updated_by,
                 'id_branch'      => $fresh->id_branch,
                 'id_customer'    => $fresh->id_customer,
                 'deal_price'     => $validated['deal_price'],
@@ -55,7 +53,6 @@ class LeadConversionServices
             $sales->paymentHistory()->create([
                 'id_sales' => $sales->id_sales,
                 'created_by' => $fresh->created_by,
-                'updated_by' => $fresh->updated_by,
                 'id_lead' => $fresh->id_lead,
                 'id_customer' => $fresh->id_customer,
                 'payment_method' => $validated['payment_method'],
@@ -76,8 +73,7 @@ class LeadConversionServices
 
             $dealAmountFormatted = number_format($validated['deal_price'], 0, ',', '.');
             $fresh->activity()->create([
-                'created_by'     =>  $user->id,
-                'updated_by'     =>  $user->id,
+                'created_by'     =>  $fresh->created_by,
                 'id_lead'     =>  $fresh->id_lead,
                 'source'      => 'transaction',
                 'description' => "🎉 Pelanggan DEAL! Transaksi disahkan dengan nilai Rp {$dealAmountFormatted} ({$validated['payment_status']})."

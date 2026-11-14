@@ -48,8 +48,14 @@ class ChannelPolicy
 
     public function delete(User $user, ChannelModel $channel): Response
     {
-        return $user->can('channel-delete')
-            ? Response::allow()
-            : Response::deny('Anda tidak memiliki wewenang untuk menghapus sumber trafik (channel).');
+        if(!$user->can('channel-delete')) {
+            return Response::deny('Anda tidak memiliki wewenang untuk menghapus sumber trafik (channel).');
+        }
+
+        if($channel->leads()->exists()) {
+            return Response::deny('Sumber trafik /Channel ini masih memiliki leads!');
+        }
+
+        return Response::allow();
     }
 }

@@ -51,9 +51,6 @@ trait UserValidation
                 'email.email'        => 'Email tidak valid.',
                 'email.unique'       => 'Email sudah terdaftar.',
 
-                'password.required'  => 'Password tidak boleh kosong.',
-                'password.min'       => 'Password minimal 8 karakter.',
-
                 'role.required'      => 'Role tidak boleh kosong.',
                 'role.in'            => 'Role tidak valid.',
 

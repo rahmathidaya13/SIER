@@ -18,14 +18,14 @@ class SalePaymentService
             $newStatus  = $remaining == 0 ? 'LUNAS' : 'DP';
 
             $sales->update([
-                'updated_by'       => auth()->user()->id,
+                'updated_by'       => auth()->id(),
                 'paid_amount'      => $sales->paid_amount + $paidAmount,
                 'remaining_bill'   => $remaining,
                 'payment_status'   => $remaining == 0 ? 'LUNAS' : 'DP',
             ]);
 
             $notesPayment = $validated['notes_payment'] ?? $this->msgPaymentNotes(
-                $sales->lead->name ?? 'Unknown',
+                $sales->customer->name ?? 'Unknown',
                 $paidAmount,
                 $validated['payment_method'],
                 $validated['bank_name'] ?? null,
@@ -35,7 +35,7 @@ class SalePaymentService
             $sales->paymentHistory()->create([
                 'id_sales' => $sales->id_sales,
                 'created_by' => $sales->created_by,
-                'updated_by' => $sales->updated_by,
+                'updated_by' => auth()->id(),
                 'id_customer' => $sales->id_customer,
                 'id_lead' => $sales->id_lead,
                 'payment_method' => $validated['payment_method'],
@@ -46,8 +46,9 @@ class SalePaymentService
             ]);
 
             $sales->lead->activity()->create([
-                'id_lead'     => $sales->lead->id_lead,
+                'id_lead'     => $sales->id_lead,
                 'created_by'     => $sales->created_by,
+                'updated_by'     => auth()->id(),
                 'description' => $this->msgPaymentActivity(
                     $paidAmount,
                     $validated['payment_method'],
@@ -76,10 +77,9 @@ class SalePaymentService
             ]);
 
             $sales->lead->activity()->create([
-                'id_user' => auth()->id(),
-                'source' => 'updated',
-                'created_by' => auth()->id(),
+                'created_by' => $sales->created_by,
                 'updated_by' => auth()->id(),
+                'source' => 'updated',
                 'description' => 'Transaksi dengan invoice '
                     . $sales->invoice . ' dibatalkan. Alasan: '
                     . $this->cancelReasonToString($validated['cancelled_reason'])

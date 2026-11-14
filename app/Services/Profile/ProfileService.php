@@ -13,9 +13,7 @@ class ProfileService
 {
     public function updateProfile(User $user, array $validated)
     {
-        DB::beginTransaction();
-        try {
-
+        return DB::transaction(function () use ($user, $validated) {
             $profile = $user->profile;
 
             $imageProfile = $profile->photo;
@@ -48,13 +46,7 @@ class ProfileService
             $user->update([
                 'name' => $validated['name'] ?? $user->name,
             ]);
-
-            DB::commit();
             return $user->fresh('profile');
-        } catch (\Exception $error) {
-            DB::rollBack();
-            Log::error("Gagal memperbarui Lead: " . $error->getMessage());
-            throw $error;
-        }
+        });
     }
 }

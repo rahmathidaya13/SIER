@@ -117,7 +117,7 @@ class UserSeeder extends Seeder
                 'customer-delete',
 
                 'closing-view',
-                'closing-create',
+                // 'closing-create',
                 'closing-remaining',
                 'closing-payment_cancel',
 
@@ -138,9 +138,8 @@ class UserSeeder extends Seeder
                 'customer-delete',
 
                 'closing-view',
-                'closing-create',
-
                 'closing-remaining',
+                // 'closing-create',
                 // 'closing-payment_cancel',
 
 
@@ -163,7 +162,7 @@ class UserSeeder extends Seeder
                 'closing-view',
                 'closing-remaining',
                 // 'closing-payment_cancel',
-                'closing-create',
+                // 'closing-create',
 
 
                 'data-export'
@@ -185,7 +184,7 @@ class UserSeeder extends Seeder
                 'closing-view',
                 'closing-remaining',
                 // 'closing-payment_cancel',
-                'closing-create',
+                // 'closing-create',
 
 
                 'data-export'

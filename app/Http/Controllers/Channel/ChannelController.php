@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers\Channel;
 
+use App\Support\ScopeKey;
 use App\Traits\UserScope;
 use App\Models\ChannelModel;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Gate;
-use App\Repository\Channel\ChannelRepository;
-use App\Repository\Lead\LeadsRepository;
-use Illuminate\Validation\ValidationException;
-use App\Services\Authorization\ScopeResolverService;
 use App\Traits\InvalidatesCaches;
-use App\Support\ScopeKey;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\ChannelRequest;
+use App\Repository\Lead\LeadsRepository;
+use App\Repository\Channel\ChannelRepository;
+use App\Services\Authorization\ScopeResolverService;
 
 class ChannelController extends Controller
 {
@@ -22,25 +21,19 @@ class ChannelController extends Controller
     public function __construct(ChannelRepository $channelRepository)
     {
         $this->repository = $channelRepository;
-        $this->middleware('role:developer|super_admin');
     }
     public function index(Request $request)
     {
-        $this->authorize('view', ChannelModel::class);
+        $this->authorize('viewAny', ChannelModel::class);
 
-        $request->validate([
+        $validated = $request->validate([
             'keyword' => 'nullable|string|max:255',
             'limit' => 'nullable|integer|min:1|max:100',
             'order_by' => 'nullable|string|in:oldest,latest',
             'page' => 'nullable|integer|min:1',
         ]);
 
-        $filters = $request->only([
-            'keyword',
-            'limit',
-            'order_by',
-            'page',
-        ]);
+        $filters = $request->only(array_keys($validated));
 
         $filters = app(ScopeResolverService::class)->filters($filters);
         $channels = $this->repository->getCached($filters['scope'], $filters, $filters['page'] ?? 1);
@@ -50,35 +43,32 @@ class ChannelController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(ChannelRequest $request)
     {
+        $this->authorize('create', ChannelModel::class);
+
         $user = auth()->user();
-        $request->validate([
-            'name' => 'required|unique:channels,name',
-            'code' => 'required|unique:channels,code',
-            'icon' => 'required',
-        ], [
-            'name.required' => 'Nama channel tidak boleh kosong',
-            'name.unique' => 'Nama channel sudah ada',
-            'code.required' => 'Kode channel tidak boleh kosong',
-            'code.unique' => 'Kode channel sudah ada',
-            'icon.required' => 'Icon channel harus dipilih',
-        ]);
+        $validated = $request->validated();
 
-        $response = Gate::inspect('create', ChannelModel::class);
-        if ($response->denied()) {
-            throw ValidationException::withMessages([
-                'unauthorized_action' => $response->message()
+        $channel = DB::transaction(function () use ($validated) {
+            ChannelModel::create([
+                'name' => ucwords($validated['name']),
+                'code' => strtoupper($validated['code']),
+                'icon' => $validated['icon'],
             ]);
-        }
+        });
 
-        ChannelModel::create([
-            'name' => ucwords($request['name']),
-            'code' => strtoupper($request['code']),
-            'icon' => $request['icon'],
+        $this->invalidateCaches([
+            LeadsRepository::class,
+            ChannelRepository::class,
+        ], [
+            ScopeKey::user($user->id),
+            ScopeKey::user($channel->created_by),
+            ScopeKey::branch($user->id_branch),
+            ScopeKey::GLOBAL,
+            ScopeKey::GLOBAL_SUPER_ADMIN,
         ]);
-        $this->invalidateCaches([ChannelRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
-        return redirect()->back()->with('message', 'Channel ' . $request['name'] . ' berhasil ditambahkan!');
+        return redirect()->back()->with('message', 'Channel ' . ucwords($channel->name) . ' berhasil ditambahkan!');
     }
 
     /**
@@ -86,75 +76,67 @@ class ChannelController extends Controller
      */
     public function show(string $id)
     {
-        $channel = ChannelModel::with(['user', 'leads'])
+        $channel = ChannelModel::query()
+            ->select([
+                'id_channel',
+                'name',
+                'code',
+                'icon',
+            ])
             ->findOrFail($id);
         return response()->json($channel);
     }
 
-    public function update(Request $request, ChannelModel $channel)
+    public function update(ChannelRequest $request, ChannelModel $channel)
     {
+        $validated = $request->validated();
         $user = auth()->user();
-        $request->validate([
-            'name' => ['required', Rule::unique('channels', 'name')->ignore($channel, 'id_channel')],
-            'code' => ['required', Rule::unique('channels', 'code')->ignore($channel, 'id_channel')],
-            'icon' => 'required',
-        ], [
-            'name.required' => 'Nama channel tidak boleh kosong',
-            'name.unique' => 'Nama channel sudah ada',
-            'code.required' => 'Kode channel tidak boleh kosong',
-            'code.unique' => 'Kode channel sudah ada',
-            'icon.required' => 'Icon channel harus dipilih',
-        ]);
 
-        $response = Gate::inspect('update', $channel);
-        if ($response->denied()) {
-            throw ValidationException::withMessages([
-                'unauthorized_action' => $response->message()
+        $channels = $request->resolveChannelModel();
+
+        $this->authorize('update', $channels, 'unauthorized_action');
+
+        DB::transaction(function () use ($channels, $validated) {
+            $channels->update([
+                'name' => ucwords($validated['name']),
+                'code' => strtoupper($validated['code']),
+                'icon' => $validated['icon'],
             ]);
-        }
+        });
 
-        $channel->update([
-            'name' => ucwords($request['name']),
-            'code' => strtoupper($request['code']),
-            'icon' => $request['icon'],
+        $this->invalidateCaches([
+            LeadsRepository::class,
+            ChannelRepository::class,
+        ], [
+            ScopeKey::user($user->id),
+            ScopeKey::user($channels->created_by),
+            ScopeKey::user($channels->updated_by),
+            ScopeKey::branch($user->id_branch),
+            ScopeKey::GLOBAL,
+            ScopeKey::GLOBAL_SUPER_ADMIN,
         ]);
-        $this->invalidateCaches([ChannelRepository::class], ['global', 'global_super_admin', 'branch_' . $user->id_branch, 'user_' . $user->id]);
-        return redirect()->back()->with('message', 'Channel ' . $channel->name . ' berhasil diperbarui!');
+        return redirect()->back()->with('message', 'Channel ' . $channels->name . ' berhasil diperbarui!');
     }
 
 
     public function destroy(ChannelModel $channel)
     {
-        $response = Gate::inspect('delete', $channel);
-        if ($response->denied()) {
-            throw ValidationException::withMessages([
-                'unauthorized_action' => $response->message()
-            ]);
-        }
-
+        $this->authorize('delete', $channel, 'unauthorized_action');
         $user = auth()->user();
+        DB::transaction(function () use ($channel) {
+            $channel->delete();
+        });
 
-        if (!$user->hasRole('super_admin')) {
-            throw ValidationException::withMessages([
-                'error' => 'Anda tidak memiliki akses untuk menghapus channel!'
-            ]);
-        }
-        if($channel->leads()->exists()) {
-            throw ValidationException::withMessages([
-                'error' => 'Sumber trafik ini masih memiliki leads!'
-            ]);
-        }
-
-        $channel->delete();
         $this->invalidateCaches([
             ChannelRepository::class,
             LeadsRepository::class,
         ], [
+            ScopeKey::user($user->id),
+            ScopeKey::user($channel->created_by),
+            ScopeKey::branch($user->id_branch),
             ScopeKey::GLOBAL,
             ScopeKey::GLOBAL_SUPER_ADMIN,
-            ScopeKey::branch($user->id_branch),
-            ScopeKey::user($user->id)
         ]);
-        return redirect()->back()->with('message', 'Channel ' . $channel->name . ' berhasil dihapus!');
+        return redirect()->back()->with('message', 'Channel ' . ucwords($channel->name) . ' berhasil dihapus!');
     }
 }

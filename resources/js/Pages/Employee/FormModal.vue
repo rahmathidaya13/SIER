@@ -160,6 +160,7 @@ const submitTextButton = computed(() => {
 const allowedForSuperAdmin = [
     'customer-view', 'customer-create', 'customer-edit', 'customer-delete',
     'channel-view', 'channel-create', 'channel-edit', 'channel-delete',
+    'branch-view', 'branch-create', 'branch-edit', 'branch-delete',
     'product-view', 'product-create', 'product-edit', 'product-delete',
     'lead-view', 'lead-create', 'lead-edit', 'lead-delete','lead-convert',
     'closing-view', 'closing-create', 'closing-edit', 'closing-delete','closing-remaining','closing-payment_cancel',

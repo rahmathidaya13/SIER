@@ -6,7 +6,7 @@ import { useConfirm } from "@/Composables/useConfirm";
 import { highlight } from "@/Helpers/Highlight";
 import { formatDate } from "@/Helpers/formatDate";
 import { currencyFormat } from "@/Helpers/currencyFormat";
-import { hasRole } from "@/Composables/useAuth";
+import { hasRole, canAccess } from "@/Composables/useAuth";
 import FormModal from "./FormModal.vue";
 const confirm = useConfirm();
 
@@ -22,9 +22,9 @@ const openCreateModal = () => {
   showModal.value = true;
   selectedData.value = null;
 };
-const openEditModal = async (data) => {
+const openEditModal = (data) => {
   showModal.value = true;
-  selectedData.value = data.id_branch;
+  selectedData.value = data;
 };
 const { filters, isLoading } = useFilter({
   routeName: "branch.index",
@@ -42,57 +42,38 @@ const header = [
   {
     label: "No",
     key: "__index",
-    attrs: {
-      class: "text-center td-number",
-    },
+    attrs: { class: "text-center td-number", style: "width: 5%;" },
   },
   {
     label: "INFORMASI CABANG",
     key: "branch",
-    attrs: {
-      style: { width: "20%" },
-    },
+    attrs: { style: "width: 25%;" },
   },
   {
-    label: "KONTAK",
-    key: "contact",
-    attrs: {
-      style: { width: "20%" },
-    },
-  },
-  {
-    label: "LOKASI",
-    key: "location",
-    attrs: {
-      style: "25%",
-    },
+    label: "KONTAK & LOKASI",
+    key: "contact_location",
+    attrs: { style: "width: 25%;" },
   },
   {
     label: "PEGAWAI",
     key: "employee",
-    attrs: {
-      class: "text-center",
-    },
+    attrs: { class: "text-center", style: "width: 15%;" },
   },
   {
-    label: "STATUS",
+    label: "STATUS & INFO",
     key: "status",
-    attrs: {
-      class: "text-center",
-    },
+    attrs: { class: "text-center", style: "width: 15%;" },
   },
   {
-    label: "Aksi",
+    label: "AKSI",
     key: "actions",
-    attrs: {
-      class: "text-center",
-    },
+    attrs: { class: "text-center", style: "width: 15%;" },
   },
 ];
 const deleted = async (nameRoute, data) => {
   const setConfirm = await confirm.ask({
-    title: "Hapus",
-    message: `Kamu ingin menghapus Cabang ${data.name} ini ? Data yang sudah dihapus tidak dapat dikembalikan!`,
+    title: `Hapus Cabang ${data.name}`,
+    message: `Data yang sudah dihapus tidak dapat dikembalikan!`,
     confirmText: "Ya, Hapus",
     variant: "danger",
   });
@@ -130,6 +111,7 @@ onMounted(() => {
                   <small class="text-muted">Manajemen cabang internal</small>
                 </div>
                 <button
+                  v-if="canAccess('branch-create')"
                   @click.prevent="openCreateModal"
                   class="btn btn-c-primary px-4 py-2"
                 >
@@ -206,120 +188,172 @@ onMounted(() => {
                 </template>
 
                 <template #row="{ item, index }">
-                  <td class="td-number">
+                  <td class="td-number align-middle">
                     {{ index + 1 + (branches?.current_page - 1) * branches?.per_page }}
                   </td>
 
-                  <td class="text-start">
+                  <td class="text-start align-middle">
                     <div class="d-flex flex-column">
                       <span
                         class="fw-bold text-dark mb-1"
                         style="font-size: 14px"
                         v-html="highlight(item.name, filters.keyword)"
                       ></span>
-                      <div class="d-flex align-items-center gap-2">
+
+                      <div class="d-flex align-items-center gap-1 flex-wrap mt-1">
                         <span
                           class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"
-                          style="font-size: 10px; letter-spacing: 0.5px"
+                          style="font-size: 11px; letter-spacing: 0.5px"
                         >
                           <i class="bi bi-hash"></i>{{ item.branch_code }}
+                        </span>
+
+                        <span
+                          v-if="item.status === 'official'"
+                          class="badge bg-primary-subtle text-primary border border-primary-subtle"
+                          style="font-size: 11px"
+                          title="Kantor Pusat Resmi"
+                        >
+                          <i class="bi bi-building-check me-1"></i>Official
+                        </span>
+                        <span
+                          v-else
+                          class="badge bg-dark-subtle text-dark border border-dark-subtle"
+                          style="font-size: 11px"
+                        >
+                          <i class="bi bi-shop me-1"></i>Cabang
                         </span>
                       </div>
                     </div>
                   </td>
 
-                  <td class="text-start">
-                    <div
-                      v-if="item.branch_phone && item.branch_phone.length > 0"
-                      class="d-flex flex-column gap-1"
-                    >
+                  <td class="text-start align-middle">
+                    <div class="d-flex flex-column gap-2">
                       <div
-                        v-for="(phone, pIndex) in item.branch_phone.slice(0, 2)"
-                        :key="pIndex"
-                        class="d-flex align-items-center text-muted fw-medium"
-                        style="font-size: 12px"
+                        class="text-muted d-flex align-items-start"
+                        style="font-size: 14px; width: 350px"
+                        :title="item.address"
                       >
-                        <i
-                          class="bi bi-telephone-fill me-2 text-primary"
+                        <i class="bi bi-geo-alt-fill text-danger me-2 mt-1"></i>
+                        <span
+                          class="text-truncate"
+                          style="
+                            white-space: normal;
+                            display: -webkit-box;
+                            -webkit-box-orient: vertical;
+                          "
+                        >
+                          {{ item.address || "Alamat tidak tersedia" }}
+                        </span>
+                      </div>
+
+                      <div
+                        v-if="item.branch_phone && item.branch_phone.length > 0"
+                        class="d-flex flex-wrap gap-2"
+                      >
+                        <div
+                          v-for="(phone, pIndex) in item.branch_phone.slice(0, 1)"
+                          :key="pIndex"
+                          class="badge badge-soft-info d-flex align-items-center text-muted fw-medium rounded-3"
+                          style="font-size: 13px"
+                        >
+                          <i class="bi bi-telephone-fill me-2 text-success"></i>
+                          <span class="fw-bold" v-html="highlight(phone.phone, filters.keyword)"></span>
+                        </div>
+
+                        <div
+                          @click="openEditModal(item)"
+                          v-if="item.branch_phone.length > 1"
+                          class="badge bg-light text-dark border cursor-pointer"
                           style="font-size: 12px"
-                        ></i>
-                        <span v-html="highlight(phone.phone, filters.keyword)"></span>
+                          :title="'Ada ' + (item.branch_phone.length - 1) + ' nomor lain'"
+                        >
+                          +{{ item.branch_phone.length - 1 }} nomor
+                        </div>
                       </div>
+                    </div>
+                  </td>
 
+                  <td class="text-center align-middle">
+                    <div class="d-flex flex-column align-items-center">
                       <div
-                        @click="openEditModal(item)"
-                        v-if="item.branch_phone.length > 2"
-                        class="text-primary fw-bold ms-3 cursor-pointer"
-                        style="font-size: 12px"
-                        :title="'Ada ' + (item.branch_phone.length - 2) + ' nomor lain'"
+                        class="d-inline-flex align-items-center justify-content-center bg-info-subtle text-info-emphasis rounded-circle mb-1"
+                        style="width: 35px; height: 35px"
                       >
-                        +{{ item.branch_phone.length - 2 }} nomor lainnya
+                        <span class="fw-bold" style="font-size: 14px">{{
+                          item.users_count || 0
+                        }}</span>
                       </div>
-                    </div>
-                    <div v-else>
-                      <span class="text-muted" style="font-size: 12px; font-style: italic"
-                        >Belum ada kontak</span
+                      <small class="text-muted" style="font-size: 11px; font-weight: 500"
+                        >Karyawan</small
                       >
                     </div>
                   </td>
 
-                  <td class="text-start">
-                    <div
-                      class="text-muted"
-                      style="font-size: 14px; overflow: hidden"
-                      :title="item.address"
-                    >
-                      <i class="bi bi-geo-alt me-1"></i> {{ item.address || "-" }}
-                    </div>
-                  </td>
-
-                  <td class="text-center">
-                    <div
-                      class="d-inline-flex align-items-center px-2 py-1 bg-info-subtle text-info-emphasis rounded-2 border border-info-subtle"
-                      style="font-size: 11.5px; font-weight: 600"
-                    >
-                      <i class="bi bi-people-fill me-1"></i>
-                      {{ item.users_count || 0 }} Karyawan
-                    </div>
-                  </td>
-
-                  <td class="text-center">
-                    <span
-                      class="badge py-1 px-2 border"
-                      :class="
-                        item.is_active === 'active'
-                          ? 'bg-success-subtle text-success border-success-subtle'
-                          : 'bg-danger-subtle text-danger border-danger-subtle'
-                      "
-                      style="font-size: 11px"
-                    >
-                      <i
-                        class="bi me-1"
+                  <td class="text-center align-middle">
+                    <div class="d-flex flex-column align-items-center gap-2">
+                      <span
+                        class="badge py-1 px-3 border rounded-pill"
                         :class="
                           item.is_active === 'active'
-                            ? 'bi-check-circle-fill'
-                            : 'bi-x-circle-fill'
+                            ? 'bg-success-subtle text-success border-success-subtle'
+                            : 'bg-danger-subtle text-danger border-danger-subtle'
                         "
-                      ></i>
-                      {{ item.is_active === "active" ? "Aktif" : "Non-Aktif" }}
-                    </span>
+                        style="font-size: 11px"
+                      >
+                        <i
+                          class="bi me-1"
+                          :class="
+                            item.is_active === 'active'
+                              ? 'bi-check-circle-fill'
+                              : 'bi-x-circle-fill'
+                          "
+                        ></i>
+                        {{ item.is_active === "active" ? "Aktif" : "Non-Aktif" }}
+                      </span>
+
+                      <div 
+                      v-if="$page.props.auth?.user_id === item.created_by"
+                        class="text-muted"
+                        style="font-size: 11px"
+                      >
+                        Dibuat oleh: 
+                        <strong class="text-dark text-capitalize">{{ item.creator_name }}</strong>
+                      </div>
+                    </div>
                   </td>
-                  <td>
-                    <div class="d-flex justify-content-center gap-1">
+                  
+                  <td class="align-middle">
+                    <div
+                      v-if="
+                        canAccess('branch-edit', item, { strictOwner: true }) ||
+                        canAccess('branch-delete', item, { strictOwner: true })
+                      "
+                      class="d-flex justify-content-center gap-1"
+                    >
                       <button
+                        v-if="canAccess('branch-edit', item, { strictOwner: true })"
                         @click="openEditModal(item)"
                         class="btn btn-c-slate"
                         title="Edit Data"
                       >
                         <i class="bi bi-pencil-square"></i>
                       </button>
+
                       <button
+                        v-if="canAccess('branch-delete', item, { strictOwner: true })"
                         @click="deleted('branch.delete', item)"
                         class="btn btn-c-danger"
                         title="Edit Data"
                       >
                         <i class="bi bi-trash"></i>
                       </button>
+                    </div>
+                    <div v-else>
+                      <span class="badge badge-soft-info rounded-3 py-1">
+                        <i class="bi bi-lock-fill"></i>
+                        No Action
+                      </span>
                     </div>
                   </td>
                 </template>
@@ -350,7 +384,7 @@ onMounted(() => {
           </div>
         </div>
         <FormModal
-          :idBranch="selectedData"
+          :branch="selectedData"
           :show="showModal"
           @update:show="showModal = $event"
         />

@@ -19,7 +19,6 @@ class LeadsRepository extends BaseCacheRepository
     {
         $query = LeadModel::query()
             ->joinUserRole()
-            ->whereNull('leads.archived_at')
             ->leftJoin('channels', 'channels.id_channel', '=', 'leads.id_channel')
             ->leftJoin('sales', 'sales.id_lead', '=', 'leads.id_lead')
             ->leftJoin('customers', 'customers.id_customer', '=', 'leads.id_customer')

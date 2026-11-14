@@ -91,4 +91,5 @@ class CustomerRequest extends FormRequest
             'created_of_branch.exists' => 'Cabang tidak ditemukan',
         ];
     }
+
 }

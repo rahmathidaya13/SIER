@@ -14,6 +14,7 @@ class ChannelRepository extends BaseCacheRepository
     {
         $user = auth()->user();
         $query = ChannelModel::query()
+            ->joinUserRole()
             ->withCount([
                 'leads as total_leads' => function ($q) use ($user) {
                     if (!$user->hasRole('super_admin')) {

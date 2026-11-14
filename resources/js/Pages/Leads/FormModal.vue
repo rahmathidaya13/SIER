@@ -382,7 +382,7 @@ const customerTagMeta = (tag) => {
   <div class="row" v-if="props.show">
     <div class="col-12">
       <modal
-        width="750px"
+        width="850px"
         size="modal-lg"
         :icon="[
           'text-coffee-main',
@@ -594,9 +594,6 @@ const customerTagMeta = (tag) => {
                           class="alert alert-info d-flex align-items-center gap-2 py-2 px-3 rounded-3 border-info-subtle small mb-3"
                           role="alert"
                         >
-                          <i
-                            class="bi bi-info-circle-fill text-info-emphasis fs-6 flex-shrink-0"
-                          ></i>
                           <div>
                             <span class="fw-bold">Catatan:</span> Pastikan data pelanggan
                             sudah terdaftar. Jika belum ditemukan, klik
@@ -609,6 +606,7 @@ const customerTagMeta = (tag) => {
                             adalah pelanggan yang memiliki status <b class="fst-italic">ACTIVE</b>.
                           </div>
                         </div>
+
                       </div>
                     </div>
                   </div>
@@ -758,6 +756,20 @@ const customerTagMeta = (tag) => {
                         />
                         <input-error :message="form.errors.status" />
                       </div>
+
+                        <!-- info grafis -->
+                        <div v-if="isEdit" class="alert border alert-warning d-flex align-items-start gap-2 mb-4">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+
+                            <div class="small">
+                                <strong>Informasi Transaksi</strong>
+                                <div class="mt-1">
+                                   Konversi menjadi transaksi tidak dapat dilakukan selama data prospek dalam mode <strong>Edit</strong>. Untuk memproses kesepakatan, silakan gunakan tombol <strong>Sahkan Closing</strong>.
+                                </div>
+
+                            </div>
+                        </div>
+
                       <div class="col-12 mt-2">
                         <label class="form-label small fw-bold text-muted"
                           >CATATAN

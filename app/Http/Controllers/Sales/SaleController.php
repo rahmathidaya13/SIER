@@ -20,7 +20,6 @@ use App\Services\Sales\SalePaymentService;
 use App\Http\Resources\LeadActivityResource;
 use App\Repository\Channel\ChannelRepository;
 use App\Http\Resources\PaymentHistoriesResource;
-use App\Services\Sales\PaymentValidationService;
 use App\Services\Authorization\ScopeResolverService;
 use App\Support\ScopeKey;
 
@@ -28,15 +27,12 @@ class SaleController extends Controller
 {
     use UserScope, SalesValidation, InvalidatesCaches;
     protected $saleRepository;
-    protected $paymentValidationService;
-    protected $salePaymentService;
-    protected $paymentCancelledService;
+    protected $paymentServices;
 
     public function __construct(SaleRepository $saleRepository)
     {
         $this->saleRepository           = $saleRepository;
-        $this->paymentValidationService = new PaymentValidationService();
-        $this->salePaymentService       = new SalePaymentService();
+        $this->paymentServices      = new SalePaymentService();
     }
 
     public function index(Request $request)
@@ -164,6 +160,7 @@ class SaleController extends Controller
                 'id_sales',
                 'created_by',
                 'updated_by',
+                'id_customer',
                 'id_lead',
                 'payment_method',
                 'bank_name',
@@ -192,7 +189,7 @@ class SaleController extends Controller
 
         $this->authorize('payment', $sales, 'unauthorized_action');
 
-        $this->salePaymentService->payRemaining($sales, $validated);
+        $this->paymentServices->payRemaining($sales, $validated);
 
         $this->invalidateCaches(
             [
@@ -202,9 +199,9 @@ class SaleController extends Controller
             ],
             [
                 ScopeKey::user($user->id),
+                ScopeKey::branch($user->id_branch),
                 ScopeKey::user($sales->created_by),
                 ScopeKey::branch($sales->id_branch),
-                ScopeKey::branch($user->id_branch),
                 ScopeKey::GLOBAL,
                 ScopeKey::GLOBAL_SUPER_ADMIN,
             ]
@@ -221,7 +218,7 @@ class SaleController extends Controller
 
         $this->authorize('paymentCancel', $sales, 'unauthorized_action');
 
-        $this->salePaymentService->payCancelled($sales, $validated);
+        $this->paymentServices->payCancelled($sales, $validated);
 
         $this->invalidateCaches(
             [
