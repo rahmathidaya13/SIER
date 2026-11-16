@@ -10,7 +10,7 @@ import { currencyFormat } from "@/Helpers/currencyFormat";
 import PaymentModal from "./PaymentModal.vue";
 import PaymentCancelModal from "./PaymentCancelModal.vue";
 import ActivityTimelineModal from "./ActivityTimelineModal.vue";
-import { hasRole, hasPermission, canAccess } from "@/Composables/useAuth";
+import { hasRole, canAccess } from "@/Composables/useAuth";
 
 const props = defineProps({
   sales: Object,
@@ -18,6 +18,7 @@ const props = defineProps({
   stats: Object,
   branch: Array,
 });
+console.log(props.stats);
 const page = usePage();
 const canSelectBranch = computed(() => hasRole(["super_admin", "developer"]));
 const branchName = computed(() => {
@@ -770,6 +771,9 @@ const cancelTagMeta = (tag) => {
                       </button>
 
                       <button
+                        v-if="
+                          canAccess('closing-payment_cancel', item, { strictOwner: true })
+                        "
                         @click="cancelClosing(item)"
                         class="btn btn-c-danger"
                         title="Batalkan Transaksi Closing"

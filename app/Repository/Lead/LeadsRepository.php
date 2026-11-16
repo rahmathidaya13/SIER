@@ -67,7 +67,6 @@ class LeadsRepository extends BaseCacheRepository
     }
     protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator
     {
-
         $query = $this->buildListQuery();
         $this->applyScope($query, $scopeKey);
         $this->applyFilters($query, $filters);
@@ -176,7 +175,9 @@ class LeadsRepository extends BaseCacheRepository
 
             // Jika super admin dan memilih nama cabang tertentu, cari via subquery
             ->when($isSuperAdmin && $branchName !== '' && $branchName !== 'all', function ($q) use ($branchName) {
-                $q->where('leads.id_branch', BranchModel::select(['id_branch', 'name'])->where('name', $branchName)->value('id_branch'));
+                $q->where('leads.id_branch', BranchModel::select(['id_branch', 'name'])
+                    ->where('name', $branchName)
+                    ->value('id_branch'));
             });
     }
 }

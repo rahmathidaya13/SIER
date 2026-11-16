@@ -51,4 +51,12 @@ class BranchServices
             return $branch;
         });
     }
+
+    public function delete(BranchModel $branch)
+    {
+        return DB::transaction(function () use ($branch) {
+            $branch->branchPhone()->delete();
+            $branch->delete();
+        });
+    }
 }

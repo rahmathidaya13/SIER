@@ -17,7 +17,6 @@ class BranchModel extends Model
     protected $keyType = 'string';
     protected $fillable = [
         'created_by',
-        'updated_by',
         'branch_code',
         'name',
         'address',
@@ -25,22 +24,6 @@ class BranchModel extends Model
         'status',
     ];
     protected $dates    = ["deleted_at"];
-    public static function boot()
-    {
-        parent::boot();
-        static::creating(function ($branch) {
-            $branch->branch_code    = self::generateUniqueCode();
-        });
-    }
-    public static function generateUniqueCode()
-    {
-        do {
-            $randomNumber = str_pad(mt_rand(0, 99999999), 8, '0', STR_PAD_LEFT);
-            $code = $randomNumber;
-        } while (self::where('branch_code', $code)->exists());
-        // Kembalikan kode yang sudah dipastikan unik
-        return $code;
-    }
     public function scopeJoinUserRole(Builder $query): Builder
     {
         $table = $this->getTable();
@@ -61,15 +44,33 @@ class BranchModel extends Model
             })
             ->leftJoin('roles as updater_role', 'updater_role.id', '=', 'updater_mhr.role_id');
     }
+    public static function boot()
+    {
+        parent::boot();
+        static::creating(function ($branch) {
+            $branch->branch_code    = self::generateUniqueCode();
+        });
+    }
+    public static function generateUniqueCode()
+    {
+        do {
+            $randomNumber = str_pad(mt_rand(0, 99999999), 8, '0', STR_PAD_LEFT);
+            $code = $randomNumber;
+        } while (self::where('branch_code', $code)->exists());
+        // Kembalikan kode yang sudah dipastikan unik
+        return $code;
+    }
+
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by', 'id');
+        return $this->belongsTo(User::class, 'created_by', 'id')->withTrashed();
     }
 
     public function updater()
     {
-        return $this->belongsTo(User::class, 'updated_by', 'id');
+        return $this->belongsTo(User::class, 'updated_by', 'id')->withTrashed();
     }
+
     public function users()
     {
         return $this->hasMany(User::class, 'id_branch', 'id_branch');

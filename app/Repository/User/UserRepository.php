@@ -4,7 +4,6 @@ namespace App\Repository\User;
 
 use App\Models\User;
 use App\Support\ScopeKey;
-use App\Models\BranchModel;
 use App\Repository\BaseCacheRepository;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -12,6 +11,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class UserRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'user_cache';
+    protected int $cacheMinutes = 30;
 
     public function buildBaseQuery(): Builder
     {

@@ -2,15 +2,17 @@
 
 namespace App\Repository\Branches;
 
+use App\Support\ScopeKey;
 use App\Models\BranchModel;
 use App\Repository\BaseCacheRepository;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class BranchRepository extends BaseCacheRepository
 {
     protected string $cachePrefix = 'branch_cache_';
-    public function buildBaseQuery(array $filters = [])
+    protected int $cacheMinutes = 30;
+    public function buildBaseQuery()
     {
         $query = BranchModel::query()
             ->joinUserRole();
@@ -43,6 +45,7 @@ class BranchRepository extends BaseCacheRepository
     protected function getData(string|int|null $scopeKey, array $filters = []): LengthAwarePaginator
     {
         $query = $this->buildListQuery();
+        $this->applyScope($query, $scopeKey);
         $this->filterKeyword($query, $filters);
         [$column, $direction] = $this->resolveSorting($filters);
         $limit = min((int) ($filters['limit'] ?? 10), 100);
@@ -59,17 +62,35 @@ class BranchRepository extends BaseCacheRepository
         };
     }
 
-    protected function filterKeyword(Builder $query, array $filters): Builder
+    protected function filterKeyword(Builder $query, array $filters)
     {
-        return $query->when(!empty($filters['keyword']), function ($q) use ($filters) {
+        if (!empty($filters['keyword'])) {
             $search = $filters['keyword'];
             $cleanSearch = addcslashes($search, '%_');
-            $q->where(function ($subQuery) use ($cleanSearch) {
+            $query->where(function ($subQuery) use ($cleanSearch) {
                 $subQuery->where('branches.name', 'like', "%{$cleanSearch}%")
                     ->orWhereHas('branchPhone', function ($q) use ($cleanSearch) {
                         $q->where('phone', 'like', "%{$cleanSearch}%");
                     });
             });
-        });
+        }
+    }
+
+
+    protected function applyScope(Builder $query, string|int|null $scopeKey): void
+    {
+        // Semua user yang memiliki permission boleh melihat seluruh daftar cabang,
+        // sehingga tidak ada filter WHERE id_branch yang diterapkan.
+        if (
+            $scopeKey === null ||
+            $scopeKey === '' ||
+            in_array($scopeKey, [ScopeKey::GLOBAL, ScopeKey::GLOBAL_SUPER_ADMIN], true) ||
+            str_starts_with((string) $scopeKey, 'branch_') ||
+            str_starts_with((string) $scopeKey, 'user_')
+        ) {
+            return;
+        }
+
+        throw new \InvalidArgumentException("Scope key tidak dikenal: {$scopeKey}");
     }
 }

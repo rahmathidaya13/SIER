@@ -1,9 +1,8 @@
 <script setup>
-import { Head } from "@inertiajs/vue3";
+import { Head, usePage } from "@inertiajs/vue3";
 import { useFilter } from "@/Composables/useFilter";
 import { hasRole } from "@/Composables/useAuth";
 import { computed, ref } from "vue";
-import { plugins } from "chart.js";
 const props = defineProps({
   stats: Object,
   branches: {
@@ -12,31 +11,54 @@ const props = defineProps({
   },
   filters: Object,
 });
-const { filters } = useFilter({
+console.log(props.stats);
+const page = usePage();
+const { isLoading, filters } = useFilter({
   routeName: "home",
   initialFilters: {
-    month: props.filters.month || new Date().getMonth() + 1,
-    year: props.filters.year || new Date().getFullYear(),
-    branch: props.filters.branch || null,
+    month: props.filters?.month || new Date().getMonth() + 1,
+    year: props.filters?.year || new Date().getFullYear(),
+    branch: props.filters?.branch || "",
   },
   watchFields: ["month", "year", "branch"],
   only: ["stats", "filters", "branches"],
-  debounceTime: 500,
+  debounceTime: 400,
 });
-// Fungsi untuk menyingkat angka besar (Misal: 48500000 -> 48.5M)
+
+// Format angka ringkas untuk tampilan utama kartu (Misal: 48500000 -> Rp 48,5 Jt)
 const formatShortCurrency = (value) => {
-  if (!value) return "Rp 0";
-  if (value >= 1000000000) {
-    return "Rp " + (value / 1000000000).toFixed(1) + "M"; // Miliar
+  const num = Number(value) || 0;
+  if (num === 0) return "Rp 0";
+
+  if (num >= 1000000000) {
+    return "Rp " + (num / 1000000000).toFixed(1).replace(".", ",") + " M"; // Miliar
   }
-  if (value >= 1000000) {
-    return "Rp " + (value / 1000000).toFixed(1) + "Jt"; // Juta
+
+  if (num >= 1000000) {
+    return "Rp " + (num / 1000000).toFixed(1).replace(".", ",") + " Jt"; // Juta
   }
   // Jika di bawah 1 Juta, tampilkan normal
-  return "Rp " + new Intl.NumberFormat("id-ID").format(value);
+  return "Rp " + new Intl.NumberFormat("id-ID").format(num);
 };
 
-// ... (helper format mata uang yang sebelumnya biarkan saja)
+// Format angka penuh untuk tooltip / rincian detail
+const formatFullCurrency = (value) => {
+  return "Rp " + new Intl.NumberFormat("id-ID").format(Number(value) || 0);
+};
+
+// Label konteks cakupan data sesuai role user
+const scopeContextLabel = computed(() => {
+  if (hasRole(["developer", "super_admin"])) {
+    return filters.branch && filters.branch !== "all"
+      ? `Cabang ${filters.branch}`
+      : "Semua Cabang (Nasional)";
+  }
+  if (hasRole("supervisor")) {
+    const branchName = page.props.auth?.user?.branch?.name;
+    return branchName ? `Cabang ${branchName}` : "Performa Cabang Anda";
+  }
+  return "Performa Pribadi Anda";
+});
 
 const funnelLabels = computed(() => {
   return props.stats?.monthly_trend?.map((item) => item.label) || [];
@@ -53,31 +75,25 @@ const funnelChartOptions = {
     tooltip: {
       callbacks: {
         afterBody: (context) => {
-          if (!context.length) {
-            return "";
-          }
-
+          if (!context.length) return "";
           const index = context[0].dataIndex;
           const item = props.stats?.monthly_trend?.[index];
-
-          if (!item) {
-            return "";
-          }
+          if (!item) return "";
 
           const total = Number(item.total) || 0;
           const closed = Number(item.closed) || 0;
 
           const conversion = total > 0 ? ((closed / total) * 100).toFixed(1) : 0;
-          return `Conversion Rate: ${conversion}%`;
+          return `Rasio Konversi: ${conversion}%`;
         },
       },
     },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          precision: 0,
-        },
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: {
+        precision: 0,
       },
     },
   },
@@ -92,9 +108,9 @@ const funnelChartData = computed(() => {
       backgroundColor: "rgba(59, 130, 246, 0.75)",
       hoverBackgroundColor: "rgba(37, 99, 235, 1)",
       borderColor: "rgba(59, 130, 246, 1)",
-      borderRadius: 1,
-      barPercentage: 1,
-      categoryPercentage: 1.2,
+      borderRadius: 4,
+      barPercentage: 0.9,
+      categoryPercentage: 1,
     },
 
     {
@@ -103,9 +119,9 @@ const funnelChartData = computed(() => {
       backgroundColor: "rgba(16, 185, 129, 0.75)",
       hoverBackgroundColor: "rgba(5, 150, 105, 1)",
       borderColor: "rgba(16, 185, 129, 1)",
-      borderRadius: 1,
-      barPercentage: 1,
-      categoryPercentage: 1.2,
+      borderRadius: 4,
+      barPercentage: 0.85,
+      categoryPercentage: 0.8,
     },
   ];
 });
@@ -126,67 +142,85 @@ const months = [
 ];
 // List tahun (5 tahun terakhir)
 const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
-
-const branchOptions = computed(() => [
-  {
-    label: "Semua Cabang",
-    value: "all",
-  },
-  ...props.branches.map((data) => ({
-    label: data.name,
+const selectedMonthName = computed(() => {
+  return months.find((m) => m.value === Number(filters.month))?.label || "";
+});
+const branchOptions = computed(() =>
+  props.branches.map((data) => ({
+    label: data.status === "official" ? `${data.name} (Official)` : data.name,
     value: data.name,
-  })),
-]);
+  }))
+);
 </script>
 <template>
   <Head title="Dashboard" />
   <app-layout>
     <template #content>
       <div class="row g-3 view-section">
-
         <toast :duration="10" />
 
         <div class="col-12">
-          <div class="card p-2 d-flex border overflow-hidden">
-            <div class="d-flex justify-content-between align-items-center">
-              <span class="d-grid px-3">
-                <h5 class="fw-bold mb-1">
-                  <i class="bi bi-funnel-fill"></i>
-                  Saring Prospek
-                </h5>
-                <small class="px-4 text-muted">Filter berdasarkan Bulan dan Tahun</small>
-              </span>
+          <div class="card p-3 border rounded-4 shadow-sm">
+            <div
+              class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3"
+            >
+              <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <h5 class="fw-bold mb-0">
+                    <i class="bi bi-speedometer2 me-1 text-primary"></i>
+                    Ringkasan Performa
+                  </h5>
+                  <span
+                    class="badge bg-primary-subtle text-primary border border-primary-subtle"
+                  >
+                    {{ scopeContextLabel }}
+                  </span>
+                  <span
+                    v-if="isLoading"
+                    class="spinner-border spinner-border-sm text-primary"
+                    role="status"
+                  ></span>
+                </div>
+                <small class="text-muted">
+                  Menampilkan statistik periode
+                  <strong>{{ selectedMonthName }} {{ filters.year }}</strong>
+                </small>
+              </div>
+
               <div
-                class="d-flex gap-2 bg-white p-2 rounded-3 border text-dark align-items-center ms-auto"
+                class="d-flex flex-wrap gap-2 bg-light p-2 rounded-3 border text-dark align-items-center"
               >
-                <select-input
+                <template
                   v-if="branches.length > 0 && hasRole(['super_admin', 'developer'])"
-                  :isValid="false"
-                  text="Pilih Cabang"
-                  name="branch"
-                  :options="branchOptions"
-                  v-model="filters.branch"
-                />
-                <div
-                  v-if="branches.length > 0 && hasRole(['super_admin', 'developer'])"
-                  class="vr my-1"
-                ></div>
-                <select
-                  name="month"
-                  id="month"
-                  v-model="filters.month"
-                  class="form-select form-select-sm focus-none fw-semibold"
                 >
-                  <option v-for="month in months" :key="month.value" :value="month.value">
-                    {{ month.label }}
-                  </option>
-                </select>
+                  <select-input
+                    :isValid="false"
+                    text="Pilih Cabang"
+                    name="branch"
+                    :options="branchOptions"
+                    v-model="filters.branch"
+                    selectClass="fw-semibold w-auto"
+                  />
+
+                  <div class="vr my-1 d-none d-sm-block"></div>
+                </template>
+
+                <select-input
+                  :isValid="false"
+                  text="Pilih Bulan"
+                  name="month"
+                  v-model="filters.month"
+                  :options="months"
+                  selectClass="fw-semibold w-auto"
+                />
+
                 <div class="vr my-1"></div>
+
                 <select
                   name="year"
                   id="year"
                   v-model="filters.year"
-                  class="form-select form-select-sm focus-none fw-semibold"
+                  class="form-select form-select-sm focus-none fw-semibold w-auto"
                 >
                   <option v-for="year in years" :key="year" :value="year">
                     {{ year }}
@@ -197,8 +231,9 @@ const branchOptions = computed(() => [
           </div>
         </div>
 
+        <!-- KPI 1: Total Prospek -->
         <div class="col-sm-6 col-xl-3">
-          <div class="card p-3 h-100 custom-card">
+          <div class="card p-3 h-100 rounded-4 custom-card">
             <div class="d-flex justify-content-between align-items-center">
               <div>
                 <p class="text-muted mb-1 small fw-medium">Total Prospek (Leads)</p>
@@ -223,8 +258,10 @@ const branchOptions = computed(() => [
             </small>
           </div>
         </div>
+
+        <!-- KPI 2: Berhasil Closing -->
         <div class="col-sm-6 col-xl-3">
-          <div class="card p-3 h-100 custom-card">
+          <div class="card p-3 h-100 rounded-4 custom-card">
             <div class="d-flex justify-content-between align-items-center">
               <div>
                 <p class="text-muted mb-1 small fw-medium">Berhasil Closing</p>
@@ -247,15 +284,17 @@ const branchOptions = computed(() => [
                 "
               ></i>
               {{ stats.growth_closed_percent >= 0 ? "Naik" : "Turun" }}
-              {{ Math.abs(stats.growth_closed_percent) }}%
+              {{ Math.abs(stats.growth_closed_percent) }}% dari bulan lalu
             </small>
           </div>
         </div>
+
+        <!-- KPI 3: Rasio Closing -->
         <div class="col-sm-6 col-xl-3">
-          <div class="card p-3 h-100 custom-card">
+          <div class="card p-3 h-100 rounded-4 custom-card">
             <div class="d-flex justify-content-between align-items-center">
               <div>
-                <p class="text-muted mb-1 small fw-medium">Rata-rata Closing</p>
+                <p class="text-muted mb-1 small fw-medium">Rasio Closing</p>
                 <h3 class="fw-bold mb-0 text-primary">{{ stats.closing_rate }}%</h3>
               </div>
               <div class="stats-icon bg-primary bg-opacity-10 text-primary">
@@ -264,18 +303,35 @@ const branchOptions = computed(() => [
             </div>
             <small
               class="mt-3 d-block"
-              :class="stats.closing_rate >= 20 ? 'text-success' : 'text-danger'"
+              :class="stats.closing_rate >= 20 ? 'text-success' : 'text-warning'"
             >
-              {{ stats.closing_rate >= 20 ? "Performa Sehat" : "Perlu Evaluasi" }}
+              <i
+                class="bi me-1"
+                :class="
+                  stats.closing_rate >= 20 ? 'bi-check-circle' : 'bi-exclamation-circle'
+                "
+              ></i>
+              {{
+                stats.closing_rate >= 20
+                  ? "Konversi Sehat (≥ 20%)"
+                  : "Perlu Evaluasi (< 20%)"
+              }}
             </small>
           </div>
         </div>
+
+        <!-- KPI 4: Omset Masuk & Total Deal -->
         <div class="col-sm-6 col-xl-3">
-          <div class="card p-3 h-100 custom-card">
+          <div
+            class="card p-3 h-100 rounded-4 custom-card"
+            :title="`Total Deal: ${formatFullCurrency(
+              stats.total_deal
+            )} | Terbayar: ${formatFullCurrency(stats.total_nominal)}`"
+          >
             <div class="d-flex justify-content-between align-items-center">
               <div>
-                <p class="text-muted mb-1 small fw-medium">Nominal Closing</p>
-                <h3 class="fw-bold mb-0 fs-4">
+                <p class="text-muted mb-1 small fw-medium">Omset Masuk (Terbayar)</p>
+                <h3 class="fw-bold mb-0 fs-4 text-dark">
                   {{ formatShortCurrency(stats.total_nominal) }}
                 </h3>
               </div>
@@ -283,28 +339,34 @@ const branchOptions = computed(() => [
                 <i class="bi bi-cash-stack"></i>
               </div>
             </div>
-            <small class="text-success mt-3 d-block">
-              {{ stats.lunas_rate }}% Lunas Terbayar
+            <small class="text-muted mt-3 d-block">
+              Dari total deal
+              <strong class="text-dark">{{
+                formatShortCurrency(stats.total_deal)
+              }}</strong>
+              (<span class="text-success fw-semibold">{{ stats.lunas_rate }}%</span>)
             </small>
           </div>
         </div>
 
+        <!-- Grafik Konversi Funnel -->
         <div class="col-12">
           <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <div>
-                <h6 class="fw-bold mb-1">Statistik Konversi Funnel</h6>
-                <p class="text-muted small">
-                  Tren prospek masuk vs closing selama 1 bulan
+                <h6 class="fw-bold mb-1">Statistik Konversi Funnel Harian</h6>
+                <p class="text-muted small mb-0">
+                  Perbandingan prospek masuk vs closing selama bulan
+                  {{ selectedMonthName }} {{ filters.year }}
                 </p>
               </div>
-              <!-- <div class="badge bg-light text-dark border">Harian</div> -->
+              <span class="badge bg-light text-dark border">Harian</span>
             </div>
 
-            <div class="py-2 mt-auto" style="height: 400px">
+            <div class="py-2 mt-2" style="height: 380px">
               <chart-bar
                 type="bar"
-                :height="400"
+                :height="380"
                 :labels="funnelLabels"
                 :datasets="funnelChartData"
                 tooltip-suffix=" Leads"
@@ -314,6 +376,7 @@ const branchOptions = computed(() => [
           </div>
         </div>
 
+        <!-- Rincian 1: Sebaran Status Prospek (Lengkap 4 Status) -->
         <div class="col-lg-4">
           <div class="card rounded-4 p-4 h-100 custom-card">
             <h6 class="fw-bold mb-4">Sebaran Status Prospek</h6>
@@ -328,7 +391,8 @@ const branchOptions = computed(() => [
                   class="progress-bar bg-info"
                   :style="{
                     width:
-                      (stats.status?.new / Math.max(stats.total_leads, 1)) * 100 + '%',
+                      ((stats.status?.new || 0) / Math.max(stats.total_leads, 1)) * 100 +
+                      '%',
                   }"
                 ></div>
               </div>
@@ -344,7 +408,28 @@ const branchOptions = computed(() => [
                   class="progress-bar bg-warning"
                   :style="{
                     width:
-                      (stats.status?.follow_up / Math.max(stats.total_leads, 1)) * 100 +
+                      ((stats.status?.follow_up || 0) / Math.max(stats.total_leads, 1)) *
+                        100 +
+                      '%',
+                  }"
+                ></div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Berhasil Closing (Won)</span>
+                <span class="fw-bold text-success">{{
+                  stats.status?.closed_won || 0
+                }}</span>
+              </div>
+              <div class="progress" style="height: 8px">
+                <div
+                  class="progress-bar bg-success"
+                  :style="{
+                    width:
+                      ((stats.status?.closed_won || 0) / Math.max(stats.total_leads, 1)) *
+                        100 +
                       '%',
                   }"
                 ></div>
@@ -354,14 +439,18 @@ const branchOptions = computed(() => [
             <div class="mb-0">
               <div class="d-flex justify-content-between small mb-1">
                 <span class="text-muted">Gagal (Lost)</span>
-                <span class="fw-bold">{{ stats.status?.closed_lost || 0 }}</span>
+                <span class="fw-bold text-danger">{{
+                  stats.status?.closed_lost || 0
+                }}</span>
               </div>
               <div class="progress" style="height: 8px">
                 <div
                   class="progress-bar bg-danger"
                   :style="{
                     width:
-                      (stats.status?.closed_lost / Math.max(stats.total_leads, 1)) * 100 +
+                      ((stats.status?.closed_lost || 0) /
+                        Math.max(stats.total_leads, 1)) *
+                        100 +
                       '%',
                   }"
                 ></div>
@@ -370,34 +459,31 @@ const branchOptions = computed(() => [
           </div>
         </div>
 
+        <!-- Rincian 2: Kualitas Leads (Temperature) -->
         <div class="col-lg-4">
           <div class="card rounded-4 p-4 h-100 custom-card">
             <h6 class="fw-bold mb-4">Kualitas Leads (Temperature)</h6>
 
             <div
-              class="d-flex border border-danger align-items-center gap-3 mb-3 p-2 bg-danger bg-opacity-10 rounded-3"
+              class="d-flex border border-danger align-items-center gap-3 mb-3 p-2 px-3 bg-danger bg-opacity-10 rounded-3"
             >
               <div class="fs-4 text-danger"><i class="bi bi-fire"></i></div>
               <div class="flex-grow-1">
-                <div class="d-flex justify-content-between mb-1">
+                <div class="d-flex justify-content-between align-items-center">
                   <span class="small fw-bold text-danger">HOT (Siap Closing)</span>
-                  <span class="small fw-bold text-danger">{{
-                    stats.temperature?.hot || 0
-                  }}</span>
+                  <span class="badge bg-danger">{{ stats.temperature?.hot || 0 }}</span>
                 </div>
               </div>
             </div>
 
             <div
-              class="d-flex border border-warning align-items-center gap-3 mb-3 p-2 bg-warning bg-opacity-10 rounded-3"
+              class="d-flex border border-warning align-items-center gap-3 mb-3 p-2 px-3 bg-warning bg-opacity-10 rounded-3"
             >
               <div class="fs-4 text-warning"><i class="bi bi-sun"></i></div>
               <div class="flex-grow-1">
-                <div class="d-flex justify-content-between mb-1">
-                  <span class="small fw-bold text-warning"
-                    >WARM (Masih Mempertimbangkan)</span
-                  >
-                  <span class="small fw-bold text-warning">{{
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="small fw-bold text-dark">WARM (Mempertimbangkan)</span>
+                  <span class="badge bg-warning text-dark">{{
                     stats.temperature?.warm || 0
                   }}</span>
                 </div>
@@ -405,13 +491,13 @@ const branchOptions = computed(() => [
             </div>
 
             <div
-              class="d-flex border border-info align-items-center gap-3 p-2 bg-info bg-opacity-10 rounded-3"
+              class="d-flex border border-info align-items-center gap-3 p-2 px-3 bg-info bg-opacity-10 rounded-3"
             >
               <div class="fs-4 text-info"><i class="bi bi-snow"></i></div>
               <div class="flex-grow-1">
-                <div class="d-flex justify-content-between mb-1">
+                <div class="d-flex justify-content-between align-items-center">
                   <span class="small fw-bold text-info">COLD (Minat Rendah)</span>
-                  <span class="small fw-bold text-info">{{
+                  <span class="badge bg-info text-dark">{{
                     stats.temperature?.cold || 0
                   }}</span>
                 </div>
@@ -420,27 +506,45 @@ const branchOptions = computed(() => [
           </div>
         </div>
 
+        <!-- Rincian 3: Status Pembayaran & Sisa Piutang -->
         <div class="col-lg-4">
           <div
-            class="card rounded-4 p-4 h-100 text-center d-flex flex-column justify-content-center custom-card"
+            class="card rounded-4 p-4 h-100 d-flex flex-column justify-content-between custom-card"
           >
-            <h6 class="fw-bold mb-4 text-start">Status Transaksi</h6>
+            <h6 class="fw-bold mb-3 text-start">Status Pembayaran Transaksi</h6>
 
-            <div class="d-flex justify-content-around">
+            <div class="d-flex justify-content-around text-center my-auto py-2">
               <div>
-                <h2 class="fw-bold text-success mb-0">{{ stats.payment?.lunas || 0 }}</h2>
-                <p class="text-muted small">Lunas</p>
+                <h2 class="fw-bold text-success mb-1">{{ stats.payment?.lunas || 0 }}</h2>
+                <span
+                  class="badge bg-success-subtle text-success border border-success-subtle"
+                >
+                  Transaksi Lunas
+                </span>
               </div>
               <div class="border-end"></div>
               <div>
-                <h2 class="fw-bold text-primary mb-0">{{ stats.payment?.dp || 0 }}</h2>
-                <p class="text-muted small">Dana Awal (DP)</p>
+                <h2 class="fw-bold text-primary mb-1">{{ stats.payment?.dp || 0 }}</h2>
+                <span
+                  class="badge bg-primary-subtle text-primary border border-primary-subtle"
+                >
+                  Transaksi DP
+                </span>
               </div>
             </div>
 
-            <div class="mt-4 p-3 bg-light rounded-3 text-start small text-muted border-0">
-              💡 Data ini merepresentasikan tagihan transaksi yang masuk ke dalam sistem
-              pada bulan berjalan.
+            <div class="mt-3 p-3 bg-light rounded-3 text-start small border">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted">Sisa Piutang Belum Lunas:</span>
+                <strong
+                  :class="
+                    (stats.remaining_bill || 0) > 0 ? 'text-danger' : 'text-success'
+                  "
+                  :title="formatFullCurrency(stats.remaining_bill)"
+                >
+                  {{ formatShortCurrency(stats.remaining_bill) }}
+                </strong>
+              </div>
             </div>
           </div>
         </div>
@@ -450,14 +554,13 @@ const branchOptions = computed(() => [
 </template>
 <style scoped>
 .custom-card {
-  cursor: pointer;
   border: 1px solid #dee2e6;
   transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
 
 .custom-card:hover {
   border-color: #0d6efd;
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: 0 5px 12px rgba(0, 0, 0, 0.08);
 }
 </style>

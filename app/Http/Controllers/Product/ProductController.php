@@ -92,27 +92,13 @@ class ProductController extends Controller
         return redirect()->back()->with('message', 'Perubahan data dari produk ' . ucwords($product->name) . ' berhasil diperbarui!');
     }
 
-    public function destroy(string $id)
+    public function destroy(ProductRequest $request, string $id)
     {
-        $product = ProductModel::findOrFail($id);
-
-        if (!$product) {
-            throw ValidationException::withMessages([
-                'error' => 'Data produk tidak ditemukan atau sudah dihapus.'
-            ]);
-        }
-
-        // policy penghapusan data
-        $this->authorize('delete', $product);
-
+        $product = $request->resolveProductModel();
         $user = auth()->user();
-        $this->services->delete($product);
 
-        if (!$product->trashed()) {
-            throw ValidationException::withMessages([
-                'error' => "Gagal menghapus data {$product->name} secara aman."
-            ]);
-        }
+        $this->authorize('delete', $product); // policy penghapusan data
+        $this->services->delete($product);
         $this->clearProductCaches(
             $product,
             $user->id,

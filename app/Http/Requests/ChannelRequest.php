@@ -24,7 +24,10 @@ class ChannelRequest extends FormRequest
      */
     public function rules(): array
     {
-        $routeParam = $this->route('id') ?? $this->route('channel') ?? $this->route('channels');
+        if ($this->isMethod('DELETE')) {
+            return [];
+        }
+        $routeParam = $this->routeParameters();
         return [
             'name' => ['required', Rule::unique('channels', 'name')->ignore($routeParam, 'id_channel')],
             'code' => ['required', Rule::unique('channels', 'code')->ignore($routeParam, 'id_channel')],
@@ -42,13 +45,16 @@ class ChannelRequest extends FormRequest
             'icon.required' => 'Icon channel harus dipilih',
         ];
     }
+    public function routeParameters()
+    {
+        return $this->route('id') ?? $this->route('channel') ?? $this->route('channels');
+    }
     public function resolveChannelModel()
     {
         if ($this->channel) {
             return $this->channel;
         }
-        // Cek parameter route (bisa bernama 'id', 'sale', atau 'sales' tergantung routes/web.php Anda)
-        $routeParam = $this->route('id') ?? $this->route('channel') ?? $this->route('channels');
+        $routeParam = $this->routeParameters();
         if ($routeParam instanceof ChannelModel) {
             return $this->channel = $routeParam;
         }
@@ -56,5 +62,23 @@ class ChannelRequest extends FormRequest
             return $this->channel = ChannelModel::findOrFail($routeParam);
         }
         return null;
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+
+            $channel = $this->resolveChannelModel();
+            if (!$channel) {
+                return;
+            }
+
+            if ($this->isMethod('DELETE') && $channel->leads()->exists()) {
+                $validator->errors()->add(
+                    'error',
+                    'Tidak dapat menghapus sumber trafik ' . ucwords($channel->name) . ' karena masih memiliki data leads.'
+                );
+            }
+        });
     }
 }

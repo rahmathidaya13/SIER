@@ -32,6 +32,7 @@ use App\Notifications\Lead\LeadCreateNotification;
 use App\Notifications\Lead\LeadDeleteNotification;
 use App\Notifications\Lead\LeadUpdateNotification;
 use App\Services\Authorization\ScopeResolverService;
+use App\Services\Dashboard\DashboardService;
 
 class LeadController extends Controller
 {
@@ -53,24 +54,33 @@ class LeadController extends Controller
     {
         $this->authorize('viewAny', LeadModel::class);
 
+        $allBranches = BranchModel::select('id_branch', 'name')->get();
+        $allowedBranchNames = $allBranches->pluck('name')->implode(',');
+
         $validated = $request->validate([
             'keyword' => 'nullable|string|max:255',
             'limit' => 'nullable|integer|min:1|max:100',
             'periode' => 'nullable|date|date_format:Y-m',
             'status' => 'nullable|string|in:all,active,new,follow_up,closed_won,closed_lost',
             'order_by' => 'nullable|string|in:oldest,latest',
-            'branch' => 'nullable|string|in:all,' . implode(',', BranchModel::pluck('name')->toArray()),
+            'branch' => 'nullable|string|in:all' . ($allowedBranchNames ? ',' . $allowedBranchNames : ''),
             'page' => 'nullable|integer|min:1',
         ]);
 
         $filters = $request->only(array_keys($validated));
         $filters = app(ScopeResolverService::class)->filters($filters); // Gunakan ScopeResolverService untuk memproses filter berdasarkan scope yang diperlukan
-        $cleanFilters = Arr::except($filters, ['scope']); // Hapus 'scope' dan 'page' dari $filters sebelumnya
 
-        $leads = $this->repository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
+        $user = auth()->user();
+
+        // $scopeKey = match (true) {
+        //     $user->hasAnyRole(['developer', 'super_admin']) => ScopeKey::GLOBAL_SUPER_ADMIN,
+        //     !empty($user->id_branch) => ScopeKey::branch($user->id_branch),
+        //     default => ScopeKey::user($user->id),
+        // };
+
+        $leads = $this->repository->getCached($filters['scope'], $filters, $filters['page'] ?? 1);
 
         $channels = ChannelModel::select('id_channel', 'name', 'icon')->get();
-        $branch = BranchModel::select('id_branch', 'name')->get();
 
         return inertia(
             'Leads/Index',
@@ -78,30 +88,22 @@ class LeadController extends Controller
                 'leads' => $leads,
                 'filters' => $filters,
                 'channels' => $channels,
-                'branches' => $branch
+                'branches' => $allBranches ?? []
             ]
         );
     }
 
     public function store(LeadRequest $request)
     {
-        // policy lead
         $this->authorize('create', LeadModel::class, 'unauthorized_action');
-
         $validated = $request->validated();
-
         $user = auth()->user();
-
-        // proses penyimpanan data ke DB
-        $leads = $this->leadServices->store($validated, $user);
-
-        // Eksekusi notifikasi & cache clearance hanya berjalan jika store() berhasil
-        $recipients = $this->getLeadNotificationRecipients($leads, $user);
+        $leads = $this->leadServices->store($validated, $user);  // proses penyimpanan data ke DB
+        $recipients = $this->getLeadNotificationRecipients($leads, $user); // Eksekusi notifikasi & cache clearance hanya berjalan jika store() berhasil
         Notification::send($recipients, new LeadCreateNotification($leads, $user));
         $this->clearLeadCaches($leads, $user->id);
-
         return redirect()->back()->with([
-            'message' => 'Lead dari ' . strtoupper($leads->customer->name) . ' berhasil dibuat',
+            'message' => 'Lead dari pelanggan' . strtoupper($leads->customer->name) . ' berhasil dibuat',
         ]);
     }
 
@@ -110,13 +112,7 @@ class LeadController extends Controller
         $validated = $request->validated();
         $user = auth()->user();
 
-        $leads = LeadModel::find($id);
-
-        if (!$leads) {
-            throw ValidationException::withMessages([
-                'error' => 'Data lead tidak ditemukan atau sudah dihapus.'
-            ]);
-        }
+        $leads = $request->resolveLeadModel();
 
         // cek policy
         $this->authorize('update', $leads, 'unauthorized_action');
@@ -127,6 +123,10 @@ class LeadController extends Controller
             'updated_by' => $leads->getOriginal('updated_by'),
             'id_branch'  => $leads->getOriginal('id_branch')
         ];
+
+        $oldBranchId  = $leads->id_branch;
+        $oldCreatorId = $leads->created_by;
+        $oldUpdaterId = $leads->updated_by;
 
         $leads = $this->leadServices->update($leads, $validated, $user);
 
@@ -143,7 +143,7 @@ class LeadController extends Controller
                 $user
             )
         );
-        $this->clearLeadCaches($leads, $user->id, ...array_values($oldData));
+        $this->clearLeadCaches($leads, $user->id, $oldBranchId, $oldCreatorId, $oldUpdaterId);
         return redirect()->back()->with('message', 'Lead ' . ucwords($leads->customer->name) . ' berhasil diperbarui!');
     }
 
@@ -202,22 +202,10 @@ class LeadController extends Controller
 
         return LeadActivityResource::collection($activities);
     }
-    public function destroy(string $id)
+    public function destroy(LeadRequest $request, string $id)
     {
         $user = auth()->user();
-        $leads = LeadModel::find($id);
-
-        if (!$leads) {
-            throw ValidationException::withMessages([
-                'error' => 'Data lead tidak ditemukan atau sudah dihapus.'
-            ]);
-        }
-
-        if ($leads->sales()->exists()) {
-            throw ValidationException::withMessages([
-                'error' => 'Tidak dapat menghapus lead yang memiliki transaksi.'
-            ]);
-        }
+        $leads = $request->resolveLeadModel();
 
         $this->authorize('delete', $leads);
 
@@ -249,7 +237,7 @@ class LeadController extends Controller
 
     public function productSearch(Request $request)
     {
-        $keyword = $request->input('keyword');
+        $keyword = trim((string) $request->input('keyword', ''));
         $products = ProductModel::with('prices:id_product,status')
             ->whereHas('prices', function ($q) {
                 $q->where('status', 'published');
@@ -312,21 +300,22 @@ class LeadController extends Controller
     public function clearLeadCaches(
         LeadModel $leads,
         ?string $actorUserId = null,
+        ?string $oldBranchId = null,
         ?string $oldCreatedBy = null,
-        ?string $oldUpdatedBy = null,
-        ?string $oldBranchId = null
+        ?string $oldUpdatedBy = null
     ) {
-        $cacheScopes = [
+
+        $scopes = array_values(array_unique(array_filter([
+            ScopeKey::GLOBAL,
+            ScopeKey::GLOBAL_SUPER_ADMIN,
             $actorUserId ? ScopeKey::user($actorUserId) : null,
             $oldCreatedBy ? ScopeKey::user($oldCreatedBy) : null,
             $oldUpdatedBy ? ScopeKey::user($oldUpdatedBy) : null,
             $oldBranchId ? ScopeKey::branch($oldBranchId) : null,
             ScopeKey::user($leads->created_by),
             ScopeKey::user($leads->updated_by),
-            ScopeKey::branch($leads->id_branch),
-            ScopeKey::GLOBAL,
-            ScopeKey::GLOBAL_SUPER_ADMIN,
-        ];
+            ScopeKey::branch($leads->id_branch)
+        ])));
 
         $this->invalidateCaches(
             [
@@ -335,7 +324,19 @@ class LeadController extends Controller
                 SaleRepository::class,
                 ChannelRepository::class,
             ],
-            $cacheScopes
+            $scopes
         );
+
+        // Segarkan cache dashboard untuk cabang & sales saat ini
+        DashboardService::invalidate($leads->id_branch, $leads->created_by);
+
+        // Jika lead dipindah cabang atau dialihkan ke sales lain, segarkan juga data lama
+        if ($oldBranchId && $oldBranchId !== $leads->id_branch) {
+            DashboardService::invalidate($oldBranchId, null);
+        }
+
+        if ($oldCreatedBy && $oldCreatedBy !== $leads->created_by) {
+            DashboardService::invalidate(null, $oldCreatedBy);
+        }
     }
 }

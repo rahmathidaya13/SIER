@@ -88,7 +88,7 @@ class ProductModel extends Model
     }
     public function leads()
     {
-        return $this->hasMany(LeadModel::class, 'id_product', 'id_product');
+        return $this->hasMany(LeadModel::class);
     }
     public function leadProduct()
     {

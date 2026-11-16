@@ -132,7 +132,7 @@ const selectIcon = (iconClass) => {
 
             <div class="mb-3">
               <label for="code_input" class="form-label fw-semibold text-muted small"
-                >Kode (Unik)</label
+                >Nama Singkat / Alias</label
               >
               <input-text
                 name="code"

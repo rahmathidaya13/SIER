@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\Home;
 
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use App\Models\BranchModel;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use App\Http\Controllers\Controller;
 use App\Services\Dashboard\DashboardService;
 
 class HomeController extends Controller
@@ -12,91 +13,61 @@ class HomeController extends Controller
     /**
      * Display a listing of the resource.
      */
-    protected $repository;
-    public function __construct(DashboardService $repository)
+    protected $services;
+    public function __construct(protected DashboardService $dashboardService)
     {
-        $this->repository = $repository;
+        $this->services = $dashboardService;
     }
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $isGlobalAdmin = $user->hasAnyRole(['developer', 'super_admin']);
+
+        // Ambil daftar cabang 1 kali saja untuk validasi sekaligus dropdown admin pusat
+        $allBranches = BranchModel::select('id_branch', 'name', 'status')->get();
+
         $validated = $request->validate([
             'month' => 'nullable|integer|min:1|max:12',
             'year' => 'nullable|integer|min:2000|max:9999',
-            'branch' => 'nullable|string:in:all,' . implode(',', BranchModel::pluck('name')->toArray()),
+            'branch' => ['nullable', 'string', Rule::in($allBranches->pluck('name')->all())],
         ]);
+
         $month = $validated['month'] ?? now()->month;
         $year  = $validated['year'] ?? now()->year;
-        $branchName = $validated['branch'] ?? 'all';
 
 
-        $branchId = null;
-        if (!empty($branchName)) {
-            $branch = BranchModel::where('name', $branchName)->first();
-            $branchId = $branch ? $branch->id_branch : null;
+        if ($isGlobalAdmin) {
+            // Prioritaskan pilihan dropdown; jika kosong, otomatis arahkan ke cabang berstatus 'official'
+            $defaultBranch = $allBranches->firstWhere('status', 'official')
+                ?? $allBranches->firstWhere('id_branch', $user->id_branch)
+                ?? $allBranches->first();
+
+            $selectedBranch = !empty($validated['branch'])
+                ? $allBranches->firstWhere('name', $validated['branch'])
+                : $defaultBranch;
+
+            $branchId   = $selectedBranch?->id_branch;
+            $branchName = $selectedBranch?->name ?? '';
+        } else {
+            // Supervisor dan role di bawahnya selalu terkunci ke cabangnya sendiri
+            $branchId   = $user->id_branch;
+            $branchName = $allBranches->firstWhere('id_branch', $user->id_branch)?->name ?? '';
         }
 
-        // tampilkan semua cabang jika user super admin
-        $user = auth()->user();
-        $branches = [];
-        if ($user->hasRole('super_admin')) {
-            $branches = BranchModel::select('id_branch', 'name')->get();
-        }
+        // $branchId = null;
+        // if ($isGlobalAdmin && $branchName !== 'all') {
+        //     $branchId = $allBranches->where('name', $branchName)->first()->id_branch;
+        // }
+
+
         return inertia('Home/Index', [
-            'stats' => $this->repository->getStats($month, $year, $branchId),
-            'branches' => $branches,
+            'stats' => $this->services->getStats($month, $year, $branchId),
+            'branches' => $isGlobalAdmin ? $allBranches : [],
             'filters' => [
                 'month' => (int) $month,
                 'year'  => (int) $year,
                 'branch' => $branchName
             ]
         ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
     }
 }

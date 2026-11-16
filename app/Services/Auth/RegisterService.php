@@ -71,9 +71,9 @@ class RegisterService
                 'customer-delete',
 
                 'closing-view',
+                // 'closing-create',
                 'closing-remaining',
                 'closing-payment_cancel',
-                'closing-create',
 
                 'data-export'
             ],
@@ -94,7 +94,7 @@ class RegisterService
                 'closing-view',
                 'closing-remaining',
                 // 'closing-payment_cancel',
-                'closing-create',
+                // 'closing-create',
 
 
                 'data-export'
@@ -116,7 +116,7 @@ class RegisterService
                 'closing-view',
                 'closing-remaining',
                 // 'closing-payment_cancel',
-                'closing-create',
+                // 'closing-create',
 
 
                 'data-export'
@@ -138,7 +138,7 @@ class RegisterService
                 'closing-view',
                 'closing-remaining',
                 // 'closing-payment_cancel',
-                'closing-create',
+                // 'closing-create',
 
 
                 'data-export'

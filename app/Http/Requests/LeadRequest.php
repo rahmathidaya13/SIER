@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class LeadRequest extends FormRequest
 {
+    public ?LeadModel $lead = null;
     /**
      * Tentukan apakah pengguna diizinkan membuat request ini.
      * Logika policy/gate bisa ditaruh di sini atau tetap di Controller.
@@ -31,12 +32,11 @@ class LeadRequest extends FormRequest
      */
     public function rules(): array
     {
-        // CEK APAKAH INI PROSES UPDATE ATAU STORE
-        // Jika di route ada parameter 'id' atau 'lead', berarti ini UPDATE.
-        $leadId = $this->route('id') ?? $this->route('lead');
+
+        if ($this->isMethod('DELETE')) return [];
 
         // Ambil data lama dari database HANYA JIKA ini proses Update
-        $lead = $leadId ? LeadModel::find($leadId) : null;
+        $lead = $this->resolveLeadModel();
         // 1. Aturan Dasar (Base Rules)
         $rules = [
             'id_customer' => ['required', 'exists:customers,id_customer'],
@@ -134,6 +134,25 @@ class LeadRequest extends FormRequest
             'bank_name.string'       => 'Nama bank harus berupa teks.',
         ];
     }
+    public function routeParameters()
+    {
+        return $this->route('id') ?? $this->route('lead') ?? $this->route('lead_id') ?? $this->route('leads');
+    }
+
+    public function resolveLeadModel()
+    {
+        if ($this->lead) {
+            return $this->lead;
+        }
+        $routeParam = $this->routeParameters();
+        if ($routeParam instanceof LeadModel) {
+            return $this->lead = $routeParam;
+        }
+        if ($routeParam) {
+            return $this->lead = LeadModel::findOrFail($routeParam);
+        }
+        return null;
+    }
 
     /**
      * Logika keamanan tambahan setelah rule dasar selesai divalidasi.
@@ -143,6 +162,9 @@ class LeadRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
+
+            $lead = $this->resolveLeadModel();
+
             // Hanya jalankan jika sedang proses closing dan berstatus DP
             if ($this->isClosing() && $this->input('payment_status') === 'DP') {
                 $dealPrice  = $this->input('deal_price', 0);
@@ -156,6 +178,18 @@ class LeadRequest extends FormRequest
                         "Uang muka (DP) minimal harus 50% (Minimal: Rp {$formattedMin})"
                     );
                 }
+            }
+
+            if (!$lead) {
+                return;
+            }
+
+
+            if ($this->isMethod('DELETE') && $lead->sales()->exists()) {
+                $validator->errors()->add(
+                    'error',
+                    'Tidak dapat menghapus lead yang memiliki transaksi.'
+                );
             }
         });
     }

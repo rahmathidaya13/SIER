@@ -30,7 +30,7 @@ class BranchPolicy
             : Response::deny('Anda tidak memiliki izin untuk melihat daftar cabang.');
     }
 
-    public function view(User $user): Response
+    public function view(User $user, BranchModel $branch): Response
     {
         return $user->can('branch-view')
             ? Response::allow()
@@ -63,20 +63,22 @@ class BranchPolicy
 
     private function authorizeModification(User $user,  BranchModel $branch, string $actionText): Response
     {
-        $creator = $branch->creator;
-        // Aturan untuk Supervisor (SPV):
-        // Boleh ubah/hapus semua data KECUALI data buatan super_admin / developer
+        // Ambil creator termasuk yang sudah di-soft delete agar role pembuat tetap terdeteksi
+        $creator =  $branch->creator;
+
+        // 1. Aturan untuk Supervisor (SPV):
+        // Boleh ubah/hapus semua data KECUALI data buatan super_admin / developer / sistem
         if ($user->hasRole('supervisor')) {
-            if ($creator && $creator->hasRole(['super_admin', 'developer'])) {
-                return Response::deny("Akses ditolak:  Tidak dapat {$actionText} data yang dibuat oleh Akun Official");
+            if (!$creator || $creator->hasAnyRole(['super_admin', 'developer'])) {
+                return Response::deny("Akses ditolak: Tidak dapat {$actionText} data yang dibuat oleh Akun Official.");
             }
 
             return Response::allow();
         }
 
-        // Aturan untuk Role di bawah SPV (Sales / Staff):
+        // 2. Aturan untuk Role di bawah SPV (Sales / Admin / Teknisi):
         // Dilarang ubah/hapus data buatan atasan, dan HANYA boleh ubah/hapus data buatannya sendiri
-        if ($creator && $creator->hasRole(['super_admin', 'developer', 'supervisor'])) {
+        if (!$creator || $creator->hasAnyRole(['super_admin', 'developer', 'supervisor'])) {
             return Response::deny("Akses ditolak: Anda tidak dapat {$actionText} data yang dibuat oleh atasan.");
         }
 

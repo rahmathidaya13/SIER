@@ -54,23 +54,9 @@ class BranchController extends Controller
         $validated = $request->validated();
         $user = auth()->user();
         $branch = $this->branchServices->store($validated, $user);
-        $this->invalidateCaches([
-            BranchRepository::class,
-            UserRepository::class,
-            LeadsRepository::class,
-            SaleRepository::class
-        ], [
-            ScopeKey::user($user->id),
-            ScopeKey::user($branch->created_by ?? $user->id),
-            ScopeKey::branch($user->id_branch ?? $branch->id_branch),
-            ScopeKey::branch($branch->id_branch ?? $user->id_branch),
-            ScopeKey::GLOBAL,
-            ScopeKey::GLOBAL_SUPER_ADMIN,
-        ]);
+        $this->clearBranchCaches($branch, $user, false);
         return redirect()->back()->with('message', 'Cabang baru ' . $branch->name . ' berhasil ditambahkan!');
     }
-
-
     public function show(string $id)
     {
         $branch = BranchModel::with('branchPhone:id_branch,phone')
@@ -78,7 +64,6 @@ class BranchController extends Controller
         $this->authorize('view', $branch);
         return response()->json($branch);
     }
-
     public function update(BranchRequest $request, string $id)
     {
         $validated = $request->validated();
@@ -86,52 +71,41 @@ class BranchController extends Controller
         $branch = $request->resolveBranchModel();
         $this->authorize('update', $branch, 'unauthorized_action');
         $this->branchServices->update($branch, $validated, $user);
-        $this->invalidateCaches([
-            BranchRepository::class,
-            UserRepository::class,
-            LeadsRepository::class,
-            SaleRepository::class
-        ], [
-            ScopeKey::user($user->id),
-            ScopeKey::user($branch->created_by ?? $user->id),
-            ScopeKey::user($branch->updated_by ?? $user->id),
-            ScopeKey::branch($user->id_branch ?? $branch->id_branch),
-            ScopeKey::branch($branch->id_branch ?? $user->id_branch),
-            ScopeKey::GLOBAL,
-            ScopeKey::GLOBAL_SUPER_ADMIN,
-        ]);
+        $this->clearBranchCaches($branch, $user, true);
         return redirect()->back()->with('message', 'Perubahan data dari cabang ' . $branch->name . ' berhasil diperbarui!');
     }
-
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(BranchRequest $request, string $id)
     {
         $user = auth()->user();
-
-        $branch = $request->resolveBranchModel();
-
+        $branch = BranchModel::findOrFail($id);
         $this->authorize('delete', $branch);
+        $this->branchServices->delete($branch);
+        $this->clearBranchCaches($branch, $user, true);
+        return redirect()->back()->with('message', 'Cabang ' . $branch->name . ' berhasil dihapus!');
+    }
 
-        DB::transaction(function () use ($branch) {
-            $branch->branchPhone()->delete();
-            $branch->delete();
-        });
+    protected function clearBranchCaches(BranchModel $branch, $user, bool $includeRelated = true): void
+    {
+        if (!$includeRelated) {
+            $this->invalidateCaches([BranchRepository::class], [ScopeKey::GLOBAL]);
+            return;
+        }
+
+        $scopes = array_values(array_unique(array_filter([
+            ScopeKey::GLOBAL,
+            ScopeKey::GLOBAL_SUPER_ADMIN,
+            ScopeKey::user($user->id),
+            ScopeKey::user($branch->created_by ?? $user->id),
+            ScopeKey::user($branch->updated_by ?? $user->id),
+            $user->id_branch ? ScopeKey::branch($user->id_branch) : null,
+            ScopeKey::branch($branch->id_branch),
+        ])));
+
         $this->invalidateCaches([
             BranchRepository::class,
             UserRepository::class,
             LeadsRepository::class,
-            SaleRepository::class
-        ], [
-            ScopeKey::user($user->id),
-            ScopeKey::user($branch->created_by),
-            ScopeKey::user($branch->updated_by),
-            ScopeKey::branch($user->id_branch),
-            ScopeKey::branch($branch->id_branch),
-            ScopeKey::GLOBAL,
-            ScopeKey::GLOBAL_SUPER_ADMIN,
-        ]);
-        return redirect()->back()->with('message', 'Cabang ' . $branch->name . ' berhasil dihapus!');
+            SaleRepository::class,
+        ], $scopes);
     }
 }

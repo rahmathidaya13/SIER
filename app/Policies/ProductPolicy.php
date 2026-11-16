@@ -96,6 +96,10 @@ class ProductPolicy
             return Response::deny("Akses ditolak: Anda tidak dapat {$actionText} produk yang dibuat oleh atasan.");
         }
 
+        if ((string) $product->created_by !== (string) $user->id) {
+            return Response::deny("Akses ditolak: Anda hanya dapat {$actionText} data yang Anda buat sendiri.");
+        }
+
         return Response::allow();
     }
 }

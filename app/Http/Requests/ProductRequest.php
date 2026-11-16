@@ -2,10 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Models\ProductModel;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProductRequest extends FormRequest
 {
+    public ?ProductModel $product = null;
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -21,6 +23,7 @@ class ProductRequest extends FormRequest
      */
     public function rules(): array
     {
+        if ($this->isMethod('DELETE')) return []; // tidak perlu validasi apabila DELETE
         return [
             'name'                => 'required|string|max:100',
             'category'            => 'required|string|max:100',
@@ -81,5 +84,49 @@ class ProductRequest extends FormRequest
             'image.max' => 'Ukuran file maksimal 2MB',
             'image.mimetypes' => 'Format file harus JPEG atau PNG',
         ];
+    }
+    public function routeParameters()
+    {
+        return $this->route('id') ?? $this->route('product') ?? $this->route('products');
+    }
+    public function resolveProductModel()
+    {
+        if ($this->product) {
+            return $this->product;
+        }
+        $routeParam = $this->routeParameters();
+        if ($routeParam instanceof ProductModel) {
+            return $this->product = $routeParam;
+        }
+        if ($routeParam) {
+            return $this->product = ProductModel::findOrFail($routeParam);
+        }
+        return null;
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+
+            $product = $this->resolveProductModel();
+
+            if (!$product) return;
+
+            if ($this->isMethod('DELETE')) {
+                if (!$product->trashed()) {
+                    $validator->errors()->add(
+                        'error',
+                        "Gagal menghapus data {$product->name} secara aman."
+                    );
+                }
+
+                if ($product && $product->leadProduct()->exists() || $product->salesProduct()->exists()) {
+                    $validator->errors()->add(
+                        'error',
+                        'Tidak dapat menghapus produk yang memiliki transaksi dan lead'
+                    );
+                }
+            };
+        });
     }
 }

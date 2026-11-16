@@ -154,6 +154,7 @@ class ScrapeProduct extends Command
 
                             $product = ProductModel::create([
                                 'created_by' => $createdById,
+                                'updated_by' => $createdById,
                                 'source' => 'scrape',
                                 'link' => $link,
                                 'name' => $nama,
@@ -193,6 +194,7 @@ class ScrapeProduct extends Command
 
                         $fields = [
                             'created_by' => $createdById,
+                            'updated_by' => $createdById,
                             'source' => 'scrape',
                             'name' => $nama,
                             'image_link' => $img,
@@ -233,6 +235,7 @@ class ScrapeProduct extends Command
                     }
                     $results[] = [
                         'created_by' => $createdById,
+                        'updated_by' => $createdById,
                         'source' => 'scrape',
                         'name' => $nama,
                         'image_link' => $img,

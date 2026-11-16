@@ -39,24 +39,24 @@ class SaleController extends Controller
     {
         $this->authorize('viewAny', SalesModel::class);
 
+        $branch     = BranchModel::select('id_branch', 'name')->get();
+        $allowedBranchNames = $branch->pluck('name')->implode(',');
+
         $validated = $request->validate([
             'keyword'  => 'nullable|string|max:255',
             'limit'    => 'nullable|integer|min:1|max:100',
             'order_by' => 'nullable|string|in:oldest,latest',
             'page'     => 'nullable|integer|min:1',
-            'branch'   => 'nullable|string|in:all,' . implode(',', BranchModel::pluck('name')->toArray()),
+            'branch'   => 'nullable|string|in:all,' . ($allowedBranchNames ? ',' . $allowedBranchNames : ''),
             'status'   => 'nullable|string|in:all,closing,cancelled',
         ]);
 
         $filters = $request->only(array_keys($validated));
-
-        // inject id_branch and id_user untuk unique cache
         $filters = app(ScopeResolverService::class)->filters($filters);
-        $cleanFilters = Arr::except($filters, ['scope']);
-        $sales   = $this->saleRepository->getCached($filters['scope'], $cleanFilters, $filters['page'] ?? 1);
 
-        $salesStats = $this->saleRepository->getSalesStats($filters);
-        $branch     = BranchModel::select('id_branch', 'name')->get();
+        $sales   = $this->saleRepository->getCached($filters['scope'], $filters, $filters['page'] ?? 1);
+
+        $salesStats = $this->saleRepository->getSalesStats($filters['scope'], $filters);
         return inertia(
             'Sales/Index',
             [
@@ -191,21 +191,7 @@ class SaleController extends Controller
 
         $this->paymentServices->payRemaining($sales, $validated);
 
-        $this->invalidateCaches(
-            [
-                SaleRepository::class,
-                LeadsRepository::class,
-                ChannelRepository::class
-            ],
-            [
-                ScopeKey::user($user->id),
-                ScopeKey::branch($user->id_branch),
-                ScopeKey::user($sales->created_by),
-                ScopeKey::branch($sales->id_branch),
-                ScopeKey::GLOBAL,
-                ScopeKey::GLOBAL_SUPER_ADMIN,
-            ]
-        );
+        $this->clearSalesCaches($sales, $user, false);
         return redirect()->back()->with('message', 'Pelunasan dari pelanggan ' . ucwords($sales->customer->name) . ' berhasil dilakukan');
     }
 
@@ -219,22 +205,24 @@ class SaleController extends Controller
         $this->authorize('paymentCancel', $sales, 'unauthorized_action');
 
         $this->paymentServices->payCancelled($sales, $validated);
-
-        $this->invalidateCaches(
-            [
-                SaleRepository::class,
-                LeadsRepository::class,
-                ChannelRepository::class,
-            ],
-            [
-                ScopeKey::user($user->id),
-                ScopeKey::user($sales->created_by),
-                ScopeKey::branch($sales->id_branch),
-                ScopeKey::branch($user->id_branch),
-                ScopeKey::GLOBAL,
-                ScopeKey::GLOBAL_SUPER_ADMIN,
-            ]
-        );
+        $this->clearSalesCaches($sales, $user);
         return redirect()->back()->with('message', 'Pembatalan Transaksi dari pelanggan ' . ucwords($sales->customer->name) . '  berhasil dilakukan');
+    }
+
+    protected function clearSalesCaches(SalesModel $sales, $user, bool $includeRelated = true): void
+    {
+        $scopes = array_values(array_unique(array_filter([
+            ScopeKey::GLOBAL,
+            ScopeKey::GLOBAL_SUPER_ADMIN,
+            $user?->id ? ScopeKey::user($user->id) : null,
+            $sales->created_by ? ScopeKey::user($sales->created_by) : null,
+            $sales->updated_by ? ScopeKey::user($sales->updated_by) : null,
+            $user?->id_branch ? ScopeKey::branch($user->id_branch) : null,
+            $sales->id_branch ? ScopeKey::branch($sales->id_branch) : null,
+        ])));
+        $repositories = $includeRelated
+            ? [SaleRepository::class, LeadsRepository::class, ChannelRepository::class]
+            : [SaleRepository::class];
+        $this->invalidateCaches($repositories, $scopes);
     }
 }

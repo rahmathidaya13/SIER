@@ -147,20 +147,26 @@ class SalesRequest extends FormRequest
             }
         });
     }
+    public function routeParameter(): string
+    {
+        return $this->route('id') ??
+            $this->route('sales') ??
+            $this->route('sale') ??
+            $this->route('id_sales');
+    }
     public function resolveSalesModel(): ?SalesModel
     {
         if ($this->salesRecord) {
             return $this->salesRecord;
         }
         // Cek parameter route (bisa bernama 'id', 'sale', atau 'sales' tergantung routes/web.php Anda)
-        $routeParam = $this->route('id') ?? $this->route('sales') ?? $this->route('sale');
+        $routeParam = $this->routeParameter();
         if ($routeParam instanceof SalesModel) {
             return $this->salesRecord = $routeParam;
         }
         if ($routeParam) {
             // Sekalian eager load creator (withTrashed) untuk kebutuhan SalesPolicy di Controller
-            return $this->salesRecord = SalesModel::with(['creator' => fn($q) => $q->withTrashed()])
-                ->findOrFail($routeParam);
+            return $this->salesRecord = SalesModel::findOrFail($routeParam);
         }
         return null;
     }

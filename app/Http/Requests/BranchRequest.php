@@ -23,6 +23,9 @@ class BranchRequest extends FormRequest
      */
     public function rules(): array
     {
+        if ($this->isMethod('DELETE')) {
+            return [];
+        }
         return [
             'name' => 'required|string|max:100',
             'address' => 'required|string|max:255',
@@ -77,8 +80,25 @@ class BranchRequest extends FormRequest
     {
         $validator->after(function ($validator) {
 
-            $routeParam = $this->routeParameters();
-            $branch = BranchModel::find($routeParam);
+            $branch = $this->resolveBranchModel();
+
+            // Validasi Cabang Official (Berlaku saat Tambah / POST maupun Edit / PUT / PATCH)
+            if ($this->isMethod('POST') || $this->isMethod('PUT') || $this->isMethod('PATCH')) {
+                if ($this->input('status') === 'official') {
+                    $officialExists = BranchModel::where('status', 'official')
+                        // Saat mode Edit, kecualikan cabang yang sedang diedit agar tidak memblokir dirinya sendiri
+                        ->when($branch, fn($query) => $query->where('id_branch', '!=', $branch->id_branch))
+                        ->exists();
+
+                    if ($officialExists) {
+                        $branchName = $this->input('name') ?? $branch?->name ?? 'ini';
+                        $validator->errors()->add(
+                            'status',
+                            'Tidak dapat menjadikan cabang ' . ucwords($branchName) . ' sebagai cabang resmi karena cabang resmi sudah ada.'
+                        );
+                    }
+                }
+            }
 
             if (!$branch) {
                 return;
@@ -86,6 +106,7 @@ class BranchRequest extends FormRequest
 
             $hasActiveUser = $branch->users()->where('is_active', true)->exists();
 
+            // Validasi Non-aktifkan Cabang (PUT / PATCH)
             if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
 
                 // Pastikan cabang asalnya aktif (true/1) DAN request barunya non-aktif (false/0/'0')
@@ -99,6 +120,7 @@ class BranchRequest extends FormRequest
                 }
             }
 
+            // Validasi Hapus Cabang (DELETE)
             if ($this->isMethod('DELETE')) {
                 if ($hasActiveUser) {
                     $validator->errors()->add(

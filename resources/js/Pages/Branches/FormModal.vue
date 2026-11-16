@@ -127,8 +127,9 @@ const removePhone = (index) => {
                     <input-label
                       for="name_input"
                       labelClass="fw-bold text-muted small mb-2"
-                      value="Nama Cabang"
-                    />
+                    >
+                      <span>Nama Cabang <span class="text-danger">*</span></span>
+                    </input-label>
                     <input-text
                       placeholder="Contoh: Kantor Cabang Sudirman"
                       name="name"
@@ -138,11 +139,9 @@ const removePhone = (index) => {
                     <input-error :message="form.errors.name" />
                   </div>
                   <div class="mb-3">
-                    <input-label
-                      labelClass="small mb-2 fw-bold text-muted"
-                      for="status"
-                      value="STATUS OPERASIONAL"
-                    />
+                    <input-label labelClass="small mb-2 fw-bold text-muted" for="status">
+                      <span>Status Operasional <span class="text-danger">*</span></span>
+                    </input-label>
                     <select-input
                       :error="form.errors.isActive"
                       name="status"
@@ -159,11 +158,12 @@ const removePhone = (index) => {
                     <input-label
                       labelClass="small mb-2 fw-bold text-muted"
                       for="status_input"
-                      value="TIPE CABANG"
-                    />
+                    >
+                      <span>Tipe Cabang <span class="text-danger">*</span> </span>
+                    </input-label>
                     <div class="d-flex align-items-center gap-2">
                       <div
-                        class="px-3 p-2 rounded-4 border transition-all"
+                        class="px-3 p-2 rounded-3 border transition-all"
                         :class="
                           form.status === 'official'
                             ? 'border-primary bg-primary bg-opacity-10 text-primary fw-bold'
@@ -178,7 +178,7 @@ const removePhone = (index) => {
                         />
                       </div>
                       <div
-                        class="px-2 p-2 rounded-4 border transition-all"
+                        class="px-2 p-2 rounded-3 border transition-all"
                         :class="
                           form.status === 'unofficial'
                             ? 'border-primary bg-primary bg-opacity-10 text-primary fw-bold'
@@ -199,10 +199,9 @@ const removePhone = (index) => {
                 <div class="col-12">
                   <div class="mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                      <input-label
-                        labelClass="small mb-0 fw-bold text-muted"
-                        value="NOMOR TELEPON CABANG"
-                      />
+                      <input-label labelClass="small mb-0 fw-bold text-muted">
+                        <span>No.Telp Cabang <span class="text-danger">*</span></span>
+                      </input-label>
                       <button
                         type="button"
                         class="btn btn-primary btn-sm py-1 fw-medium rounded-4"
@@ -256,11 +255,9 @@ const removePhone = (index) => {
                 </div>
                 <div class="col-12">
                   <div class="mb-3">
-                    <input-label
-                      labelClass="small mb-2 fw-bold text-muted"
-                      for="address"
-                      value="ALAMAT LENGKAP"
-                    />
+                    <input-label labelClass="small mb-2 fw-bold text-muted" for="address">
+                      <span>Alamat Cabang <span class="text-danger">*</span></span>
+                    </input-label>
                     <text-area
                       :error="form.errors.address"
                       name="address"

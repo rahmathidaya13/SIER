@@ -80,7 +80,7 @@ const deleted = async (nameRoute, data) => {
 
   if (setConfirm) {
     router.delete(route(nameRoute, data.id_branch), {
-      preserveScroll: false,
+      preserveScroll: true,
       replace: true,
       preserveState: true,
     });
@@ -234,7 +234,7 @@ onMounted(() => {
                         style="font-size: 14px; width: 350px"
                         :title="item.address"
                       >
-                        <i class="bi bi-geo-alt-fill text-danger me-2 mt-1"></i>
+                        <i class="bi bi-geo-alt-fill text-danger me-1"></i>
                         <span
                           class="text-truncate"
                           style="
@@ -258,7 +258,10 @@ onMounted(() => {
                           style="font-size: 13px"
                         >
                           <i class="bi bi-telephone-fill me-2 text-success"></i>
-                          <span class="fw-bold" v-html="highlight(phone.phone, filters.keyword)"></span>
+                          <span
+                            class="fw-bold"
+                            v-html="highlight(phone.phone, filters.keyword)"
+                          ></span>
                         </div>
 
                         <div
@@ -312,18 +315,27 @@ onMounted(() => {
                         {{ item.is_active === "active" ? "Aktif" : "Non-Aktif" }}
                       </span>
 
-                      <div 
-                      v-if="$page.props.auth?.user_id === item.created_by"
-                        class="text-muted"
+                      <div
+                        class="text-muted d-flex align-items-center flex-column"
                         style="font-size: 11px"
                       >
-                        Dibuat oleh: 
-                        <strong class="text-dark text-capitalize">{{ item.creator_name }}</strong>
+                        <div v-if="item.created_by">
+                          Dibuat oleh:
+                          <strong class="text-dark text-capitalize">{{
+                            item.creator_name || "No Author"
+                          }}</strong>
+                        </div>
+                        <div v-if="item.updated_by !== item.created_by">
+                          Diubah oleh:
+                          <strong class="text-dark text-capitalize">{{
+                            item.updater_name || "No Author"
+                          }}</strong>
+                        </div>
                       </div>
                     </div>
                   </td>
-                  
-                  <td class="align-middle">
+
+                  <td class="align-middle text-center">
                     <div
                       v-if="
                         canAccess('branch-edit', item, { strictOwner: true }) ||
